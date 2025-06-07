@@ -21,9 +21,9 @@ dependencies = [
     "opentelemetry-sdk>=1.30.0",
     "opentelemetry-exporter-otlp-proto-http>=1.30.0",
     # Data Handling
-    "chromadb>=0.5.23",
-    "tokenizers>=0.20.3",
-    "onnxruntime==1.22.0",
+    # "chromadb>=0.5.23", # Removed
+    # "tokenizers>=0.20.3", # Removed
+    # "onnxruntime==1.22.0", # Removed
     "openpyxl>=3.1.5",
     "pyvis>=0.3.2",
     # Authentication and Security
@@ -34,7 +34,7 @@ dependencies = [
     "appdirs>=1.4.4",
     "jsonref>=1.1.0",
     "json-repair>=0.25.2",
-    "uv>=0.4.25",
+    # "uv>=0.4.25", # Removed
     "tomli-w>=1.1.0",
     "tomli>=2.0.2",
     "blinker>=1.9.0",
@@ -68,6 +68,7 @@ docling = [
 aisuite = [
     "aisuite>=0.1.10",
 ]
+chroma = ["chromadb>=0.5.23"] # Added
 
 [tool.uv]
 dev-dependencies = [
@@ -88,6 +89,7 @@ dev-dependencies = [
     "pytest-recording>=0.13.2",
     "pytest-randomly>=3.16.0",
     "pytest-timeout>=2.3.1",
+    "chromadb>=0.5.23", # Ensured present
 ]
 
 [project.scripts]
