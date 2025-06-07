@@ -1,11 +1,12 @@
 from crewai import Agent
 # Import sub-agents - paths need to be relative to the q_ware root or use full paths
 from q_ware.agents.backend.auth_agent import auth_agent
-from q_ware.agents.backend.api_agent import api_agent
-from q_ware.agents.backend.database_agent import database_agent
+from q_ware.agents.backend.api_creator_agent import api_creator_agent
+from q_ware.agents.backend.data_model_agent import data_model_agent
 from q_ware.agents.backend.config_agent import config_agent
 from q_ware.agents.backend.storage_agent import storage_agent
 from q_ware.agents.backend.queue_agent import queue_agent
+from q_ware.agents.backend.sync_agent import sync_agent
 from .tools import my_tools # Tools specific to the coordinator
 
 backend_coordinator_agent = Agent(
@@ -22,11 +23,12 @@ backend_coordinator_agent = Agent(
         "- Report completion, blockers, or escalations to higher-level agents\n\n"
         "Available Subagents:\n"
         "- auth_agent\n"
-        "- api_agent\n"
-        "- database_agent\n"
+        "- api_creator_agent\n"
+        "- data_model_agent\n"
         "- config_agent\n"
         "- storage_agent\n"
-        "- queue_agent\n\n"
+        "- queue_agent\n"
+        "- sync_agent\n\n"
         "Input:\n"
         "You will receive a JSON backend feature specification from a top-level agent.\n\n"
         "Output:\n"
@@ -42,11 +44,12 @@ backend_coordinator_agent = Agent(
     # For now, we'll rely on the Crew definition to manage agent availability for delegation.
     # agents=[
     #     auth_agent,
-    #     api_agent,
-    #     database_agent,
+    #     api_creator_agent,
+    #     data_model_agent,
     #     config_agent,
     #     storage_agent,
-    #     queue_agent
+    #     queue_agent,
+    #     sync_agent
     # ],
     allow_delegation=True,
     verbose=True,
