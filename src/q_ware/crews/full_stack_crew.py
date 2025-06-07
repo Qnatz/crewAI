@@ -4,16 +4,16 @@ from q_ware.agents.auth.auth_coordinator.agent import auth_coordinator_agent
 from q_ware.agents.backend.agent import backend_coordinator_agent # Corrected import path
 # Import the new mobile_project_coordinator_agent
 from q_ware.agents.mobile.agent import mobile_project_coordinator_agent
-# (you’d import other coordinators here similarly)
-# from q_ware.agents.web.web_coordinator.agent import web_coordinator_agent # Placeholder for web
+# Import the new web_project_coordinator_agent
+from q_ware.agents.web.agent import web_project_coordinator_agent
 
 full_stack_crew = Crew(
     name="FullStackCrew",
     agents=[
         auth_coordinator_agent,
         backend_coordinator_agent,
-        mobile_project_coordinator_agent, # Add the mobile coordinator
-        # web_coordinator_agent, # Placeholder for web
+        mobile_project_coordinator_agent,
+        web_project_coordinator_agent, # Add the web coordinator
     ],
     tasks=[
         Task(
@@ -24,11 +24,14 @@ full_stack_crew = Crew(
             agent=backend_coordinator_agent,
             description="Orchestrate and develop all backend systems and APIs based on project requirements."
         ),
-        Task( # Add a task for the mobile coordinator
+        Task(
             agent=mobile_project_coordinator_agent,
             description="Coordinate the design and development of Android and iOS mobile applications."
         ),
-        # Task(agent=web_coordinator_agent, description="…"), # Placeholder for web
+        Task( # Add a task for the web coordinator
+            agent=web_project_coordinator_agent,
+            description="Coordinate the design and development of the project website and web applications."
+        ),
     ]
 )
 
