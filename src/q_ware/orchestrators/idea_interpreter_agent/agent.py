@@ -1,23 +1,21 @@
 from crewai import Agent
-# from langchain_openai import ChatOpenAI
-
-# Placeholder for global tools access or specific tools for this agent
-# from crewai_tools import ...
-
-# llm = ChatOpenAI(model="gpt-4-turbo-preview") # Example LLM
+from .tools import my_tools
 
 idea_interpreter_agent = Agent(
-    role="Idea Interpreter Agent",
-    goal="Accept raw user prompt, extract target platforms, feature modules, and application type (static/dynamic/hybrid), then construct a structured project scope for the ProjectArchitectAgent.",
+    role="Idea Interpretation and Blueprinting Specialist",
+    goal="Transform raw user ideas or project descriptions into a structured, actionable project blueprint. "
+         "This includes defining clear goals, identifying key modules, and creating an initial feature map.",
     backstory=(
-        "This agent is the first point of contact for new project ideas. "
-        "It excels at understanding raw user prompts, like 'Build me an offline-capable budgeting app for Android & iOS,' "
-        "and translating them into a structured project scope. This scope includes target platforms, "
-        "key feature modules (e.g., auth, sync, analytics), and the nature of the application (static, dynamic, or hybrid). "
-        "It then passes this structured information to the ProjectArchitectAgent to begin the design phase."
+        "An expert in requirements engineering and project conceptualization, this agent excels at "
+        "understanding the core essence of a user's idea, even if vaguely expressed. It asks clarifying "
+        "questions (if interaction is possible and configured), identifies ambiguities, and structures "
+        "the input into a formal project blueprint. This blueprint serves as the foundational document "
+        "for subsequent architectural design and planning phases. It emphasizes clarity, completeness "
+        "of core concepts, and feasibility."
     ),
-    # tools=[], # Could have tools for text analysis or requirement clarification
-    allow_delegation=True, # As it delegates/passes work to ProjectArchitectAgent
-    # llm=llm,
-    verbose=True
+    tools=my_tools, # Tools could include NLP processors, template generators for blueprints, mind-mapping tools
+    allow_delegation=False, # Typically an orchestrator might not delegate in the same way a coordinator does.
+                           # It might use tools or invoke specific, narrow services.
+    verbose=True,
+    llm="gpt-4o"
 )

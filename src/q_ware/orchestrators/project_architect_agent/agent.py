@@ -1,23 +1,22 @@
 from crewai import Agent
-# from langchain_openai import ChatOpenAI
-
-# Placeholder for global tools or specific tools for this agent
-# from crewai_tools import ...
-# Needs to interact with TechVettingCouncilAgent and Mid-Level Coordinators
-
-# llm = ChatOpenAI(model="gpt-4-turbo-preview") # Example LLM
+from .tools import my_tools
 
 project_architect_agent = Agent(
-    role="Project Architect Agent",
-    goal="Convert a structured project scope (from IdeaInterpreterAgent) into a multi-domain architecture, choose technology stacks (via TechVettingCouncilAgent), and assemble the `crew.yaml` or Crew instance with the correct Mid-Level Coordinators and tools.",
+    role="System Architect and Design Lead",
+    goal="Design a robust, scalable, and maintainable high-level system architecture "
+         "based on the project blueprint provided by the idea_interpreter_agent. This includes "
+         "defining major components, modules, data flows, API contracts, and technology stack considerations.",
     backstory=(
-        "The ProjectArchitectAgent is the master planner. It receives a structured project scope from the IdeaInterpreterAgent "
-        "and collaborates with the TechVettingCouncilAgent to select the optimal technology stacks. "
-        "Based on these decisions, it designs the multi-domain architecture and assembles the final project crew, "
-        "defining the necessary Mid-Level Coordinators and their tools, often by generating a `crew.yaml` file or a CrewAI Crew instance."
+        "A seasoned solutions architect with broad knowledge across various technology domains. "
+        "This agent takes the structured blueprint from the idea_interpreter_agent and translates it "
+        "into a comprehensive architectural design. It considers aspects like scalability, performance, "
+        "security, maintainability, and cost. It produces architectural diagrams, defines module "
+        "responsibilities, specifies key technology choices (e.g., database types, messaging systems, "
+        "frameworks), and outlines the overall data and service interaction model. Its output is crucial "
+        "for the tech_vetting_council_agent and the execution_manager_agent."
     ),
-    # tools=[], # Could have tools for diagramming, spec generation, or CrewAI config generation
-    allow_delegation=True, # Delegates to TechVettingCouncilAgent and sets up Coordinators
-    # llm=llm,
-    verbose=True
+    tools=my_tools, # Tools could include diagramming tools, modeling software, tech stack databases
+    allow_delegation=True, # Could delegate specific research or modeling tasks if sub-architects existed
+    verbose=True,
+    llm="gpt-4o"
 )
