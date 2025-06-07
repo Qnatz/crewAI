@@ -1,174 +1,153 @@
-import contextlib
-import io
 import logging
-import os
-import shutil
 import uuid
 from typing import Any, Dict, List, Optional
 
-from chromadb.api import ClientAPI
-
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
-from crewai.utilities import EmbeddingConfigurator
-from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
-from crewai.utilities.paths import db_storage_path
+# Vector Store Interface and implementations
+from crewai.vectorstores.base import (VectorStoreInterface,
+                                     VectorStoreQueryResult)
+from crewai.vectorstores.chromadb_store import ChromaDBVectorStore
+from crewai.vectorstores.sqlite_store import SQLiteVectorStore
 
-
-@contextlib.contextmanager
-def suppress_logging(
-    logger_name="chromadb.segment.impl.vector.local_persistent_hnsw",
-    level=logging.ERROR,
-):
-    logger = logging.getLogger(logger_name)
-    original_level = logger.getEffectiveLevel()
-    logger.setLevel(level)
-    with (
-        contextlib.redirect_stdout(io.StringIO()),
-        contextlib.redirect_stderr(io.StringIO()),
-        contextlib.suppress(UserWarning),
-    ):
-        yield
-    logger.setLevel(original_level)
-
+logger = logging.getLogger(__name__)
 
 class RAGStorage(BaseRAGStorage):
     """
-    Extends Storage to handle embeddings for memory entries, improving
-    search efficiency.
+    Handles storage and retrieval of embeddings for memory entries using a
+    configurable vector store backend, improving search efficiency.
     """
 
-    app: ClientAPI | None = None
+    vector_store: Optional[VectorStoreInterface] = None
 
     def __init__(
-        self, type, allow_reset=True, embedder_config=None, crew=None, path=None
+        self,
+        storage_config: Dict[str, Any], # e.g., {"type": "sqlite", "collection_name": "my_rag", "persist_path": "/path/to/db"}
+        embedder_config: Optional[Dict[str, Any]] = None,
+        crew=None # crew object might be used for context, e.g. agent names for collection naming
     ):
-        super().__init__(type, allow_reset, embedder_config, crew)
-        agents = crew.agents if crew else []
-        agents = [self._sanitize_role(agent.role) for agent in agents]
-        agents = "_".join(agents)
-        self.agents = agents
-        self.storage_file_name = self._build_storage_file_name(type, agents)
+        # The 'type' argument for super() was for the memory type (e.g., 'short_term'),
+        # now collection_name is primary.
+        # We can derive a default collection_name if not in storage_config.
+        collection_name_from_config = storage_config.get("collection_name", "default_rag_collection")
 
-        self.type = type
+        # The original __init__ used 'type' (e.g. short_term_memory) as the collection name.
+        # We pass this 'type' (now collection_name_from_config) to super if it expects it.
+        # The BaseRAGStorage __init__ was: def __init__(self, type, allow_reset=True, embedder_config=None, crew=None):
+        # Let's assume the 'type' for BaseRAGStorage is informational and can be the collection_name.
+        super().__init__(type=collection_name_from_config, embedder_config=embedder_config, crew=crew)
 
-        self.allow_reset = allow_reset
-        self.path = path
-        self._initialize_app()
+        self.storage_config = storage_config
+        self.embedder_config = embedder_config # Stored by superclass as well
 
-    def _set_embedder_config(self):
-        configurator = EmbeddingConfigurator()
-        self.embedder_config = configurator.configure_embedder(self.embedder_config)
+        # The collection name for the vector store will be primarily from storage_config
+        self.collection_name = collection_name_from_config
 
-    def _initialize_app(self):
-        import chromadb
-        from chromadb.config import Settings
+        # The original RAGStorage used agent names to make storage_file_name unique.
+        # This responsibility should now ideally be part of the `persist_path` or `collection_name`
+        # logic when defining storage_config if such uniqueness per crew is needed.
+        # For now, we'll rely on collection_name from storage_config for uniqueness.
+        # If `crew` object is passed, it could be used to further refine collection_name or persist_path if needed.
+        # Example: self.collection_name = self._get_effective_collection_name(crew)
 
-        self._set_embedder_config()
-        chroma_client = chromadb.PersistentClient(
-            path=self.path if self.path else self.storage_file_name,
-            settings=Settings(allow_reset=self.allow_reset),
+        self._initialize_vector_store()
+
+
+    def _initialize_vector_store(self):
+        """Initializes the vector store based on the provided configuration."""
+        store_type = self.storage_config.get("type", "chromadb").lower()
+        # Use self.collection_name which might have been refined by __init__ logic
+        collection_name = self.collection_name
+        persist_path = self.storage_config.get("persist_path")
+
+        logger.info(
+            f"Initializing RAG vector store: type='{store_type}', collection='{collection_name}', persist_path='{persist_path}'"
         )
 
-        self.app = chroma_client
-
-        try:
-            self.collection = self.app.get_collection(
-                name=self.type, embedding_function=self.embedder_config
+        if store_type == "sqlite":
+            self.vector_store = SQLiteVectorStore(
+                collection_name=collection_name,
+                embedder_config=self.embedder_config, # self.embedder_config is set by super().__init__
+                persist_path=persist_path,
             )
-        except Exception:
-            self.collection = self.app.create_collection(
-                name=self.type, embedding_function=self.embedder_config
+        elif store_type == "chromadb":
+            self.vector_store = ChromaDBVectorStore(
+                collection_name=collection_name,
+                embedder_config=self.embedder_config,
+                persist_path=persist_path,
             )
+        else:
+            raise ValueError(f"Unsupported RAG vector store type: {store_type}")
 
-    def _sanitize_role(self, role: str) -> str:
-        """
-        Sanitizes agent roles to ensure valid directory names.
-        """
-        return role.replace("\n", "").replace(" ", "_").replace("/", "_")
+        if not self.vector_store:
+            raise Exception("Failed to initialize RAG vector store.")
 
-    def _build_storage_file_name(self, type: str, file_name: str) -> str:
-        """
-        Ensures file name does not exceed max allowed by OS
-        """
-        base_path = f"{db_storage_path()}/{type}"
-
-        if len(file_name) > MAX_FILE_NAME_LENGTH:
-            logging.warning(
-                f"Trimming file name from {len(file_name)} to {MAX_FILE_NAME_LENGTH} characters."
-            )
-            file_name = file_name[:MAX_FILE_NAME_LENGTH]
-
-        return f"{base_path}/{file_name}"
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
-        if not hasattr(self, "app") or not hasattr(self, "collection"):
-            self._initialize_app()
+        if not self.vector_store:
+            self._initialize_vector_store()
+            if not self.vector_store: # Check again after attempt
+                logger.error(f"RAG vector store not initialized for collection {self.collection_name}. Cannot save.")
+                raise Exception(f"RAG vector store not initialized for collection {self.collection_name}")
         try:
-            self._generate_embedding(value, metadata)
+            # RAGStorage previously used _generate_embedding, which added one doc at a time
+            self.vector_store.add(
+                documents=[str(value)], # Ensure value is string
+                metadatas=[metadata or {}],
+                ids=[str(uuid.uuid4())], # RAGStorage uses UUIDs for IDs
+            )
         except Exception as e:
-            logging.error(f"Error during {self.type} save: {str(e)}")
+            logger.error(f"Error during RAG storage save for collection {self.collection_name}: {str(e)}")
+            # Depending on desired behavior, may re-raise or handle
 
     def search(
         self,
         query: str,
         limit: int = 3,
-        filter: Optional[dict] = None,
+        filter_criteria: Optional[dict] = None, # Renamed from filter
         score_threshold: float = 0.35,
-    ) -> List[Any]:
-        if not hasattr(self, "app"):
-            self._initialize_app()
+        **kwargs
+    ) -> List[Dict[str, Any]]: # Return type changed to List[Dict] to match old behavior
+        if not self.vector_store:
+            self._initialize_vector_store()
+            if not self.vector_store:
+                 logger.error(f"RAG vector store not initialized for collection {self.collection_name}. Cannot search.")
+                 return []
 
         try:
-            with suppress_logging():
-                response = self.collection.query(query_texts=query, n_results=limit)
+            # VectorStoreInterface.search expects a list of query_texts
+            search_results_lists = self.vector_store.search(
+                query_texts=[query],
+                n_results=limit,
+                filter_criteria=filter_criteria,
+                **kwargs
+            )
 
             results = []
-            for i in range(len(response["ids"][0])):
-                result = {
-                    "id": response["ids"][0][i],
-                    "metadata": response["metadatas"][0][i],
-                    "context": response["documents"][0][i],
-                    "score": response["distances"][0][i],
-                }
-                if result["score"] >= score_threshold:
-                    results.append(result)
-
+            if search_results_lists and search_results_lists[0]: # We passed one query, so take first list of results
+                for res_item in search_results_lists[0]:
+                    # Ensure score is not None before comparison
+                    current_score = res_item.score if res_item.score is not None else -float('inf')
+                    if current_score >= score_threshold:
+                        results.append({
+                            "id": res_item.id,
+                            "context": res_item.document, # Map 'document' to 'context'
+                            "metadata": res_item.metadata,
+                            "score": res_item.score, # Score from VectorStoreQueryResult
+                        })
             return results
         except Exception as e:
-            logging.error(f"Error during {self.type} search: {str(e)}")
+            logger.error(f"Error during RAG storage search for collection {self.collection_name}: {str(e)}")
             return []
 
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
-        if not hasattr(self, "app") or not hasattr(self, "collection"):
-            self._initialize_app()
-
-        self.collection.add(
-            documents=[text],
-            metadatas=[metadata or {}],
-            ids=[str(uuid.uuid4())],
-        )
-
     def reset(self) -> None:
-        try:
-            if self.app:
-                self.app.reset()
-                shutil.rmtree(f"{db_storage_path()}/{self.type}")
-                self.app = None
-                self.collection = None
-        except Exception as e:
-            if "attempt to write a readonly database" in str(e):
-                # Ignore this specific error
-                pass
-            else:
-                raise Exception(
-                    f"An error occurred while resetting the {self.type} memory: {e}"
-                )
+        if self.vector_store:
+            logger.info(f"Resetting RAGStorage collection '{self.collection_name}' via vector store.")
+            self.vector_store.reset()
+        else:
+            logger.warning(f"RAG vector store not initialized for collection {self.collection_name}, nothing to reset.")
 
-    def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
-
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+    # Removed _sanitize_role, _build_storage_file_name, _set_embedder_config,
+    # _create_default_embedding_function, and _generate_embedding (logic moved to save)
+    # as these are now handled by the vector store configuration or are obsolete.
+    # The suppress_logging context manager is also removed as it was ChromaDB specific.
+    # Logging within vector store implementations should be handled there.

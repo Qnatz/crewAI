@@ -140,7 +140,7 @@ class Crew(FlowTrackable, BaseModel):
     )
     memory_config: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Configuration for the memory to be used for the crew.",
+        description="DEPRECATED: General memory configuration. Use agent or crew level storage/embedder configs instead. Will be removed in a future version.",
     )
     short_term_memory: Optional[InstanceOf[ShortTermMemory]] = Field(
         default=None,
@@ -162,9 +162,15 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="An Instance of the ExternalMemory to be used by the Crew",
     )
-    embedder: Optional[dict] = Field(
+    embedder_config: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Configuration for the embedder to be used for the crew.",
+        description="Default embedder configuration for the crew (e.g., for knowledge base, memory). Example: {'provider': 'openai', 'config': {'model': 'text-embedding-ada-002'}}",
+    )
+    default_kb_storage_config: Optional[Dict[str, Any]] = Field(
+        default=None, description="Default storage configuration for knowledge bases created by the crew. Example: {'type': 'sqlite', 'persist_path': './storage/kb'}"
+    )
+    default_memory_storage_config: Optional[Dict[str, Any]] = Field(
+        default=None, description="Default storage configuration for memory systems (STM, EM) created by the crew. Example: {'type': 'sqlite', 'persist_path': './storage/memory'}"
     )
     usage_metrics: Optional[UsageMetrics] = Field(
         default=None,
@@ -301,33 +307,49 @@ class Crew(FlowTrackable, BaseModel):
                 raise TypeError("user_memory must be a configuration dictionary")
 
     def _initialize_default_memories(self):
+        # ShortTermMemory
+        if not self._short_term_memory:
+            # Crew-wide STM uses crew-default configs.
+            # ShortTermMemory's __init__ was updated to accept storage_config and embedder_config.
+            # It has its own logic for default collection_name if not in storage_config.
+            self._short_term_memory = ShortTermMemory(
+                crew=self,
+                storage_config=self.default_memory_storage_config,
+                embedder_config=self.embedder_config,
+            )
+
+        # EntityMemory
+        if not self._entity_memory:
+            # Crew-wide EM uses crew-default configs.
+            # EntityMemory's __init__ was updated.
+            self._entity_memory = EntityMemory(
+                crew=self,
+                storage_config=self.default_memory_storage_config,
+                embedder_config=self.embedder_config,
+            )
+
+        # LongTermMemory - currently does not use RAGStorage, so no storage_config needed for it here.
         self._long_term_memory = self._long_term_memory or LongTermMemory()
-        self._short_term_memory = self._short_term_memory or ShortTermMemory(
-            crew=self,
-            embedder_config=self.embedder,
-        )
-        self._entity_memory = self.entity_memory or EntityMemory(
-            crew=self, embedder_config=self.embedder
-        )
+
 
     @model_validator(mode="after")
     def create_crew_memory(self) -> "Crew":
         """Initialize private memory attributes."""
         self._external_memory = (
-            # External memory doesn’t support a default value since it was designed to be managed entirely externally
             self.external_memory.set_crew(self) if self.external_memory else None
         )
 
-        self._long_term_memory = self.long_term_memory
-        self._short_term_memory = self.short_term_memory
-        self._entity_memory = self.entity_memory
+        # Retain user-provided instances if any
+        if self.long_term_memory: self._long_term_memory = self.long_term_memory
+        if self.short_term_memory: self._short_term_memory = self.short_term_memory
+        if self.entity_memory: self._entity_memory = self.entity_memory
 
-        # UserMemory is gonna to be deprecated in the future, but we have to initialize a default value for now
+        # UserMemory is being deprecated
         self._user_memory = None
 
-        if self.memory:
-            self._initialize_default_memories()
-            self._initialize_user_memory()
+        if self.memory: # If memory is enabled for the crew
+            self._initialize_default_memories() # Initializes STM, LTM, EM if not already set
+            self._initialize_user_memory() # Initializes user memory if configured
 
         return self
 
@@ -339,16 +361,30 @@ class Crew(FlowTrackable, BaseModel):
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
+                    crew_kb_collection_name = f"crew_{str(self.id).split('-')[0]}_knowledge"
+
+                    effective_kb_storage_config = self.default_kb_storage_config
+                    if not effective_kb_storage_config:
+                         effective_kb_storage_config = {
+                            "type": "chromadb", # Default if not specified at crew level
+                            "collection_name": crew_kb_collection_name,
+                            # persist_path will be defaulted by Knowledge class if not specified here
+                        }
+                    else: # Ensure collection_name is present
+                        effective_kb_storage_config.setdefault("collection_name", crew_kb_collection_name)
+
+
                     self.knowledge = Knowledge(
+                        collection_name=crew_kb_collection_name,
                         sources=self.knowledge_sources,
-                        embedder=self.embedder,
-                        collection_name="crew",
+                        embedder_config=self.embedder_config,
+                        storage_config=effective_kb_storage_config,
                     )
                     self.knowledge.add_sources()
 
             except Exception as e:
                 self._logger.log(
-                    "warning", f"Failed to init knowledge: {e}", color="yellow"
+                    "warning", f"Failed to init crew knowledge: {e}", color="yellow"
                 )
         return self
 
@@ -385,14 +421,29 @@ class Crew(FlowTrackable, BaseModel):
             )
 
         if self.config:
-            self._setup_from_config()
+            self._setup_from_config() # This will now also pass down default configs
 
         if self.agents:
-            for agent in self.agents:
+            for agent_instance in self.agents: # Renamed variable to avoid conflict
                 if self.cache:
-                    agent.set_cache_handler(self._cache_handler)
+                    agent_instance.set_cache_handler(self._cache_handler)
                 if self.max_rpm:
-                    agent.set_rpm_controller(self._rpm_controller)
+                    agent_instance.set_rpm_controller(self._rpm_controller)
+
+                # Ensure agent has necessary configs, falling back to crew defaults
+                # This is important if agents are added directly to the crew list
+                # or if they were created with None for these configs.
+                if agent_instance.embedder is None: # Agent's general embedder
+                     agent_instance.embedder = self.embedder_config
+
+                if agent_instance.kb_storage_config is None and self.default_kb_storage_config:
+                    agent_instance.kb_storage_config = self.default_kb_storage_config
+                # For kb_embedder_config, if None, Agent.set_knowledge will use agent_instance.embedder
+
+                if agent_instance.memory_storage_config is None and self.default_memory_storage_config:
+                    agent_instance.memory_storage_config = self.default_memory_storage_config
+                if agent_instance.memory_embedder_config is None: # Memory specific embedder
+                    agent_instance.memory_embedder_config = self.embedder_config
         return self
 
     @model_validator(mode="after")
@@ -531,7 +582,27 @@ class Crew(FlowTrackable, BaseModel):
             )
 
         self.process = self.config.get("process", self.process)
-        self.agents = [Agent(**agent) for agent in self.config["agents"]]
+
+        # Pass default configs from crew to agent if agent is missing them during config-based setup
+        agents_data_configs = []
+        for agent_dict_config in self.config["agents"]:
+            # Agent's general embedder config
+            if agent_dict_config.get("embedder") is None:
+                agent_dict_config["embedder"] = self.embedder_config
+
+            # KnowledgeBase specific configs
+            if agent_dict_config.get("kb_storage_config") is None and self.default_kb_storage_config:
+                agent_dict_config["kb_storage_config"] = self.default_kb_storage_config
+            # For kb_embedder_config, if None, Agent.set_knowledge will use agent_dict_config["embedder"]
+
+            # Memory specific configs
+            if agent_dict_config.get("memory_storage_config") is None and self.default_memory_storage_config:
+                agent_dict_config["memory_storage_config"] = self.default_memory_storage_config
+            if agent_dict_config.get("memory_embedder_config") is None:
+                 agent_dict_config["memory_embedder_config"] = self.embedder_config # Defaults to crew's general embedder
+            agents_data_configs.append(agent_dict_config)
+
+        self.agents = [Agent(**agent_data) for agent_data in agents_data_configs]
         self.tasks = [self._create_task(task) for task in self.config["tasks"]]
 
     def _create_task(self, task_config: Dict[str, Any]) -> Task:
@@ -638,19 +709,35 @@ class Crew(FlowTrackable, BaseModel):
 
             i18n = I18N(prompt_file=self.prompt_file)
 
-            for agent in self.agents:
-                agent.i18n = i18n
-                # type: ignore[attr-defined] # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
-                agent.crew = self  # type: ignore[attr-defined]
-                agent.set_knowledge(crew_embedder=self.embedder)
-                # TODO: Create an AgentFunctionCalling protocol for future refactoring
-                if not agent.function_calling_llm:  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
-                    agent.function_calling_llm = self.function_calling_llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
+            for agent_instance in self.agents: # Renamed to agent_instance
+                agent_instance.i18n = i18n
+                agent_instance.crew = self # type: ignore[attr-defined]
 
-                if not agent.step_callback:  # type: ignore # "BaseAgent" has no attribute "step_callback"
-                    agent.step_callback = self.step_callback  # type: ignore # "BaseAgent" has no attribute "step_callback"
+                # Propagate crew-level defaults to agent if not set on agent
+                if agent_instance.embedder is None:
+                    agent_instance.embedder = self.embedder_config # Agent's general embedder
 
-                agent.create_agent_executor()
+                if agent_instance.kb_storage_config is None: # KB specific storage
+                    agent_instance.kb_storage_config = self.default_kb_storage_config
+                if agent_instance.kb_embedder_config is None: # KB specific embedder
+                    # If no specific kb_embedder_config, it will use agent_instance.embedder (set above)
+                    pass
+
+                if agent_instance.memory_storage_config is None: # Memory specific storage
+                    agent_instance.memory_storage_config = self.default_memory_storage_config
+                if agent_instance.memory_embedder_config is None: # Memory specific embedder
+                    agent_instance.memory_embedder_config = self.embedder_config # Defaults to crew's general embedder
+
+                # Now set_knowledge will use agent's configs (which might have been set by crew defaults)
+                agent_instance.set_knowledge() # crew_embedder argument removed
+
+                if not agent_instance.function_calling_llm:  # type: ignore
+                    agent_instance.function_calling_llm = self.function_calling_llm  # type: ignore
+
+                if not agent_instance.step_callback:  # type: ignore
+                    agent_instance.step_callback = self.step_callback  # type: ignore
+
+                agent_instance.create_agent_executor()
 
             if self.planning:
                 self._handle_crew_planning()

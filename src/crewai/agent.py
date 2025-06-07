@@ -41,6 +41,7 @@ from crewai.utilities.events.knowledge_events import (
     KnowledgeSearchQueryFailedEvent,
 )
 from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.paths import db_storage_path # For default persist_path
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -67,7 +68,11 @@ class Agent(BaseAgent):
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
             knowledge_sources: Knowledge sources for the agent.
-            embedder: Embedder configuration for the agent.
+            embedder: Embedder configuration for the agent (used as default for KB if kb_embedder_config is not set).
+            kb_storage_config: Storage configuration for the agent's knowledge base.
+            kb_embedder_config: Embedder configuration specifically for the agent's knowledge base.
+            memory_storage_config: Storage configuration for the agent's memory system.
+            memory_embedder_config: Embedder configuration for the agent's memory system.
     """
 
     _times_executed: int = PrivateAttr(default=0)
@@ -135,9 +140,21 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
     )
-    embedder: Optional[Dict[str, Any]] = Field(
+    embedder: Optional[Dict[str, Any]] = Field( # General embedder, can be overridden by specific ones
         default=None,
-        description="Embedder configuration for the agent.",
+        description="Default embedder configuration for the agent (used for KB if kb_embedder_config is None).",
+    )
+    kb_storage_config: Optional[Dict[str, Any]] = Field(
+        default=None, description="Storage configuration for the agent's knowledge base."
+    )
+    kb_embedder_config: Optional[Dict[str, Any]] = Field(
+        default=None, description="Embedder configuration for the agent's knowledge base."
+    )
+    memory_storage_config: Optional[Dict[str, Any]] = Field(
+        default=None, description="Storage configuration for the agent's memory system."
+    )
+    memory_embedder_config: Optional[Dict[str, Any]] = Field(
+        default=None, description="Embedder configuration for the agent's memory system."
     )
     agent_knowledge_context: Optional[str] = Field(
         default=None,
@@ -186,23 +203,42 @@ class Agent(BaseAgent):
         self.set_cache_handler(self.cache_handler)
 
     def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
+        """Initializes the knowledge base for the agent using provided or agent-specific configurations."""
         try:
-            if self.embedder is None and crew_embedder:
-                self.embedder = crew_embedder
+            # Determine the embedder configuration for the knowledge base
+            # Priority: 1. kb_embedder_config, 2. self.embedder (agent's default), 3. crew_embedder
+            final_kb_embedder_config = self.kb_embedder_config or self.embedder or crew_embedder
+
+            # Determine the storage configuration for the knowledge base
+            final_kb_storage_config = self.kb_storage_config
+            if not final_kb_storage_config:
+                # Default storage config if none provided at agent level
+                default_kb_persist_path = str(db_storage_path() / "agent_knowledge" / self.role.lower().replace(" ", "_"))
+                final_kb_storage_config = {
+                    "type": "chromadb", # Default type
+                    "collection_name": self.role.lower().replace(" ", "_") + "_kb",
+                    "persist_path": default_kb_persist_path,
+                }
+            else: # Ensure collection_name is set if using a provided storage_config
+                final_kb_storage_config.setdefault("collection_name", self.role.lower().replace(" ", "_") + "_kb")
+                final_kb_storage_config.setdefault("persist_path", str(db_storage_path() / "agent_knowledge" / final_kb_storage_config["collection_name"]))
+
 
             if self.knowledge_sources:
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
                     self.knowledge = Knowledge(
+                        collection_name=final_kb_storage_config["collection_name"], # Passed to Knowledge for its default or direct use
                         sources=self.knowledge_sources,
-                        embedder=self.embedder,
-                        collection_name=self.role,
-                        storage=self.knowledge_storage or None,
+                        embedder_config=final_kb_embedder_config,
+                        storage_config=final_kb_storage_config, # Pass the full storage config
+                        # storage=self.knowledge_storage or None, # This line is removed as Knowledge now handles its storage init
                     )
                     self.knowledge.add_sources()
         except (TypeError, ValueError) as e:
-            raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
+            raise ValueError(f"Invalid Knowledge Configuration for agent {self.role}: {str(e)}")
+
 
     def _is_any_available_memory(self) -> bool:
         """Check if any memory is available."""

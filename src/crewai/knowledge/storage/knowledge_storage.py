@@ -1,203 +1,174 @@
-import contextlib
 import hashlib
-import io
 import logging
-import os
-import shutil
 from typing import Any, Dict, List, Optional, Union
 
-import chromadb
-import chromadb.errors
-from chromadb.api import ClientAPI
-from chromadb.api.types import OneOrMany
-from chromadb.config import Settings
-
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-from crewai.utilities import EmbeddingConfigurator
-from crewai.utilities.chromadb import sanitize_collection_name
-from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
-from crewai.utilities.paths import db_storage_path
+# Vector Store Interface and implementations
+from crewai.vectorstores.base import (VectorStoreInterface,
+                                     VectorStoreQueryResult)
+from crewai.vectorstores.chromadb_store import ChromaDBVectorStore
+from crewai.vectorstores.sqlite_store import SQLiteVectorStore
 
-
-@contextlib.contextmanager
-def suppress_logging(
-    logger_name="chromadb.segment.impl.vector.local_persistent_hnsw",
-    level=logging.ERROR,
-):
-    logger = logging.getLogger(logger_name)
-    original_level = logger.getEffectiveLevel()
-    logger.setLevel(level)
-    with (
-        contextlib.redirect_stdout(io.StringIO()),
-        contextlib.redirect_stderr(io.StringIO()),
-        contextlib.suppress(UserWarning),
-    ):
-        yield
-    logger.setLevel(original_level)
-
+logger = logging.getLogger(__name__)
 
 class KnowledgeStorage(BaseKnowledgeStorage):
     """
-    Extends Storage to handle embeddings for memory entries, improving
-    search efficiency.
+    Handles storage and retrieval of knowledge embeddings, using a configurable
+    vector store backend.
     """
 
-    collection: Optional[chromadb.Collection] = None
-    collection_name: Optional[str] = "knowledge"
-    app: Optional[ClientAPI] = None
+    vector_store: Optional[VectorStoreInterface] = None
 
     def __init__(
         self,
-        embedder: Optional[Dict[str, Any]] = None,
-        collection_name: Optional[str] = None,
+        storage_config: Dict[str, Any],
+        embedder_config: Optional[Dict[str, Any]] = None,
     ):
-        self.collection_name = collection_name
-        self._set_embedder_config(embedder)
+        self.storage_config = storage_config
+        self.embedder_config = embedder_config
+        self._initialize_vector_store()
+
+    def _initialize_vector_store(self):
+        """Initializes the vector store based on the provided configuration."""
+        store_type = self.storage_config.get("type", "chromadb").lower()
+        collection_name = self.storage_config.get("collection_name", "crewai_knowledge")
+        persist_path = self.storage_config.get("persist_path")
+
+        logger.info(
+            f"Initializing vector store: type='{store_type}', collection='{collection_name}', persist_path='{persist_path}'"
+        )
+
+        if store_type == "sqlite":
+            self.vector_store = SQLiteVectorStore(
+                collection_name=collection_name,
+                embedder_config=self.embedder_config,
+                persist_path=persist_path,
+            )
+        elif store_type == "chromadb":
+            self.vector_store = ChromaDBVectorStore(
+                collection_name=collection_name,
+                embedder_config=self.embedder_config,
+                persist_path=persist_path,
+            )
+        else:
+            raise ValueError(f"Unsupported vector store type: {store_type}")
+
+        if not self.vector_store:
+             raise Exception("Failed to initialize vector store.")
+
 
     def search(
         self,
         query: List[str],
         limit: int = 3,
-        filter: Optional[dict] = None,
+        filter_criteria: Optional[dict] = None, # Renamed from filter to filter_criteria
         score_threshold: float = 0.35,
+        **kwargs # Allow additional arguments for specific vector store implementations
     ) -> List[Dict[str, Any]]:
-        with suppress_logging():
-            if self.collection:
-                fetched = self.collection.query(
-                    query_texts=query,
-                    n_results=limit,
-                    where=filter,
-                )
-                results = []
-                for i in range(len(fetched["ids"][0])):  # type: ignore
-                    result = {
-                        "id": fetched["ids"][0][i],  # type: ignore
-                        "metadata": fetched["metadatas"][0][i],  # type: ignore
-                        "context": fetched["documents"][0][i],  # type: ignore
-                        "score": fetched["distances"][0][i],  # type: ignore
-                    }
-                    if result["score"] >= score_threshold:
-                        results.append(result)
-                return results
-            else:
-                raise Exception("Collection not initialized")
+        if not self.vector_store:
+            self._initialize_vector_store() # Ensure store is initialized
+            if not self.vector_store:
+                 raise Exception("Vector store not initialized after attempt.")
 
-    def initialize_knowledge_storage(self):
-        base_path = os.path.join(db_storage_path(), "knowledge")
-        chroma_client = chromadb.PersistentClient(
-            path=base_path,
-            settings=Settings(allow_reset=True),
+        # The interface search method expects List[str] for query_texts
+        search_results_lists = self.vector_store.search(
+            query_texts=query,
+            n_results=limit,
+            filter_criteria=filter_criteria,
+            **kwargs
         )
 
-        self.app = chroma_client
+        results = []
+        # Process results, assuming we primarily care about the first query if multiple were sent,
+        # or that the calling context expects a flat list from the first query's results.
+        # This part might need adjustment based on how multiple query_texts are handled upstream.
+        if search_results_lists: # It's a list of lists
+            for result_list_for_one_query in search_results_lists:
+                for res_item in result_list_for_one_query:
+                    # Ensure score is not None before comparison
+                    current_score = res_item.score if res_item.score is not None else -float('inf')
+                    if current_score >= score_threshold:
+                        results.append({
+                            "id": res_item.id,
+                            "context": res_item.document, # Map 'document' to 'context'
+                            "metadata": res_item.metadata,
+                            "score": res_item.score, # Score from VectorStoreQueryResult (higher is better)
+                        })
 
-        try:
-            collection_name = (
-                f"knowledge_{self.collection_name}"
-                if self.collection_name
-                else "knowledge"
-            )
-            if self.app:
-                self.collection = self.app.get_or_create_collection(
-                    name=sanitize_collection_name(collection_name),
-                    embedding_function=self.embedder,
-                )
-            else:
-                raise Exception("Vector Database Client not initialized")
-        except Exception:
-            raise Exception("Failed to create or get collection")
+        # If KnowledgeStorage.search is expected to return only for the first query,
+        # and VectorStoreInterface.search returns List[List[...]], then:
+        # processed_results_for_first_query = []
+        # if search_results_lists and search_results_lists[0]:
+        #     for res_item in search_results_lists[0]:
+        #         current_score = res_item.score if res_item.score is not None else -float('inf')
+        #         if current_score >= score_threshold:
+        #             processed_results_for_first_query.append(...)
+        # return processed_results_for_first_query
+        # For now, returning all results that meet threshold, assuming multiple queries might be intended to be aggregated
+        return results
+
 
     def reset(self):
-        base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
-        if not self.app:
-            self.app = chromadb.PersistentClient(
-                path=base_path,
-                settings=Settings(allow_reset=True),
-            )
+        if self.vector_store:
+            logger.info(f"Resetting KnowledgeStorage collection via vector store.")
+            self.vector_store.reset()
+        else:
+            logger.warning("Vector store not initialized, nothing to reset.")
 
-        self.app.reset()
-        shutil.rmtree(base_path)
-        self.app = None
-        self.collection = None
 
     def save(
         self,
         documents: List[str],
-        metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
+        metadata: Optional[Union[Dict[str, Any], List[Optional[Dict[str, Any]]]]] = None,
     ):
-        if not self.collection:
-            raise Exception("Collection not initialized")
+        if not self.vector_store:
+            self._initialize_vector_store()
+            if not self.vector_store:
+                raise Exception("Vector store not initialized.")
 
         try:
-            # Create a dictionary to store unique documents
-            unique_docs = {}
-
-            # Generate IDs and create a mapping of id -> (document, metadata)
+            unique_docs_map: Dict[str, Tuple[str, Optional[Dict[str, Any]]]] = {}
             for idx, doc in enumerate(documents):
                 doc_id = hashlib.sha256(doc.encode("utf-8")).hexdigest()
-                doc_metadata = None
-                if metadata is not None:
+                doc_metadata: Optional[Dict[str, Any]] = None
+                if metadata:
                     if isinstance(metadata, list):
-                        doc_metadata = metadata[idx]
-                    else:
+                        doc_metadata = metadata[idx] if idx < len(metadata) else None
+                    else: # isinstance(metadata, dict)
                         doc_metadata = metadata
-                unique_docs[doc_id] = (doc, doc_metadata)
+                unique_docs_map[doc_id] = (doc, doc_metadata)
 
-            # Prepare filtered lists for ChromaDB
-            filtered_docs = []
-            filtered_metadata = []
-            filtered_ids = []
+            if not unique_docs_map:
+                return
 
-            # Build the filtered lists
-            for doc_id, (doc, meta) in unique_docs.items():
-                filtered_docs.append(doc)
-                filtered_metadata.append(meta)
-                filtered_ids.append(doc_id)
+            final_ids = list(unique_docs_map.keys())
+            final_docs = [unique_docs_map[doc_id][0] for doc_id in final_ids]
+            final_metadatas = [unique_docs_map[doc_id][1] for doc_id in final_ids]
 
-            # If we have no metadata at all, set it to None
-            final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
-                None if all(m is None for m in filtered_metadata) else filtered_metadata
+            # Ensure final_metadatas is List[Optional[Dict[str, Any]]]
+            # The add method of VectorStoreInterface expects List[Optional[Dict[str, Any]]]
+            # If a document had no metadata, its entry in final_metadatas should be None or {}
+            # The SQLite store handles None as {} in its add method currently.
+
+            self.vector_store.add(
+                documents=final_docs,
+                metadatas=final_metadatas, # type: ignore
+                ids=final_ids,
             )
-
-            self.collection.upsert(
-                documents=filtered_docs,
-                metadatas=final_metadata,
-                ids=filtered_ids,
-            )
-        except chromadb.errors.InvalidDimensionException as e:
-            Logger(verbose=True).log(
-                "error",
-                "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
-                "red",
-            )
-            raise ValueError(
-                "Embedding dimension mismatch. Make sure you're using the same embedding model "
-                "across all operations with this collection."
-                "Try resetting the collection using `crewai reset-memories -a`"
-            ) from e
-        except Exception as e:
-            Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
-            raise
-
-    def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
-
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
-
-    def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
-        """Set the embedding configuration for the knowledge storage.
-
-        Args:
-            embedder_config (Optional[Dict[str, Any]]): Configuration dictionary for the embedder.
-                If None or empty, defaults to the default embedding function.
-        """
-        self.embedder = (
-            EmbeddingConfigurator().configure_embedder(embedder)
-            if embedder
-            else self._create_default_embedding_function()
-        )
+        except Exception as e: # Catching a broader exception category
+            # Log the specific error for debugging
+            logger.error(f"Failed to save documents to vector store: {type(e).__name__} - {e}")
+            # Re-raise a more generic error or the original error if preferred
+            # For example, if it's a known type like ValueError from dimension mismatch:
+            if "dimension mismatch" in str(e).lower(): # Simple check
+                 Logger(verbose=True).log(
+                    "error",
+                    "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection.",
+                    "red",
+                )
+                 raise ValueError(
+                    "Embedding dimension mismatch. Make sure you're using the same embedding model "
+                    "across all operations with this collection. Try resetting the collection."
+                ) from e
+            raise Exception(f"Failed to save documents: {e}") from e
