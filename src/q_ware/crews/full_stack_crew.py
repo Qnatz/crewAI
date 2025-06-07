@@ -8,6 +8,8 @@ from q_ware.agents.mobile.agent import mobile_project_coordinator_agent
 from q_ware.agents.web.agent import web_project_coordinator_agent
 # Import the new offline_support_coordinator_agent
 from q_ware.agents.offline.agent import offline_support_coordinator_agent
+# Import the new devops_and_integration_coordinator_agent
+from q_ware.agents.devops.agent import devops_and_integration_coordinator_agent
 
 
 full_stack_crew = Crew(
@@ -17,7 +19,8 @@ full_stack_crew = Crew(
         backend_coordinator_agent,
         mobile_project_coordinator_agent,
         web_project_coordinator_agent,
-        offline_support_coordinator_agent, # Add the offline coordinator
+        offline_support_coordinator_agent,
+        devops_and_integration_coordinator_agent, # Add the devops coordinator
     ],
     tasks=[
         Task(
@@ -36,9 +39,13 @@ full_stack_crew = Crew(
             agent=web_project_coordinator_agent,
             description="Coordinate the design and development of the project website and web applications."
         ),
-        Task( # Add a task for the offline coordinator
+        Task(
             agent=offline_support_coordinator_agent,
             description="Coordinate the implementation of offline-first capabilities, including local storage and data synchronization."
+        ),
+        Task( # Add a task for the devops coordinator
+            agent=devops_and_integration_coordinator_agent,
+            description="Manage CI/CD pipelines, environment configurations, containerization, and overall integration testing."
         ),
     ]
 )
