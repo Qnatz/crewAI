@@ -6,9 +6,6 @@ from .tools import my_tools
 # For now, we'll list them in the backstory for clarity.
 # from .android import android_ui_agent, android_storage_agent, android_api_client_agent
 # from .ios import ios_ui_agent, ios_storage_agent, ios_api_client_agent
-from q_ware.llm_config import get_llm # Added import
-
-llm_instance = get_llm() # Added instance
 
 mobile_project_coordinator_agent = Agent(
     role="Mobile Project Coordinator",
@@ -32,5 +29,5 @@ mobile_project_coordinator_agent = Agent(
     tools=my_tools,
     allow_delegation=True, # This agent coordinates sub-agents
     verbose=True,
-    llm=llm_instance # Updated llm parameter
+    llm="gemini/gemini-1.5-pro-latest"
 )

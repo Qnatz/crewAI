@@ -1,5 +1,7 @@
 from crewai import Agent
 from .tools import my_tools
+# No get_llm import needed as we are hardcoding the string directly from crewai.agent default
+# from q_ware.llm_config import get_llm
 
 # Placeholder LLM configuration
 # from langchain_openai import ChatOpenAI
@@ -11,6 +13,6 @@ asset_manager_agent = Agent(
     backstory="A specialist in web asset optimization and management, ensuring images are compressed, SEO tags are correctly implemented, and all media assets are efficiently handled.",
     tools=my_tools,
     allow_delegation=False,
-    # llm=llm, # Uncomment and configure if an LLM is to be used
+    llm="gemini/gemini-1.5-pro-latest", # Uncomment and configure if an LLM is to be used
     verbose=True
 )

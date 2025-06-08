@@ -1,8 +1,6 @@
 from crewai import Agent
 from q_ware.orchestrators.tech_stack_committee.tools.tech_stack_tools import TechResearchTool
-from q_ware.llm_config import get_llm
 
-llm = get_llm()
 StackAdvisorAgent = Agent(
     role='Technology Advisor',
     goal='Recommend the most suitable technologies for frontend, backend, database, and infrastructure',
@@ -12,6 +10,6 @@ StackAdvisorAgent = Agent(
     ),
     tools=[TechResearchTool()], # Now uses the correctly imported tool
     allow_delegation=False,
-    llm=llm,
+    llm="gemini/gemini-1.5-pro-latest",
     verbose=True
 )

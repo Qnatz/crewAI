@@ -10,12 +10,10 @@ from q_ware.agents.web.agent import web_project_coordinator_agent
 from q_ware.agents.offline.agent import offline_support_coordinator_agent
 # Import the new devops_and_integration_coordinator_agent
 from q_ware.agents.devops.agent import devops_and_integration_coordinator_agent
-from q_ware.llm_config import get_llm
 
-llm = get_llm()
 full_stack_crew = Crew(
     name="FullStackCrew",
-    llm=llm,
+    llm="gemini/gemini-1.5-pro-latest",
     agents=[
         auth_coordinator_agent,
         backend_coordinator_agent,

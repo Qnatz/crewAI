@@ -3,9 +3,6 @@ from .tools import my_tools # Tools specific to this coordinator
 # Potentially import tester_agent or config_agent if direct delegation/use is intended
 # from q_ware.agents.dev_utilities.tester_agent import tester_agent
 # from q_ware.agents.backend.config_agent import config_agent
-from q_ware.llm_config import get_llm # Added import
-
-llm_instance = get_llm() # Added instance
 
 
 devops_and_integration_coordinator_agent = Agent(
@@ -24,5 +21,5 @@ devops_and_integration_coordinator_agent = Agent(
     tools=my_tools,
     allow_delegation=True, # May delegate to tester_agent or future deployment agents
     verbose=True,
-    llm=llm_instance # Updated llm parameter
+    llm="gemini/gemini-1.5-pro-latest"
 )

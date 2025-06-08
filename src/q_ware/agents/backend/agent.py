@@ -8,9 +8,6 @@ from q_ware.agents.backend.storage_agent import storage_agent
 from q_ware.agents.backend.queue_agent import queue_agent
 from q_ware.agents.backend.sync_agent import sync_agent
 from .tools import my_tools # Tools specific to the coordinator
-from q_ware.llm_config import get_llm # Added import
-
-llm_instance = get_llm() # Added instance
 
 backend_coordinator_agent = Agent(
     role="Backend Coordination Agent",
@@ -56,5 +53,5 @@ backend_coordinator_agent = Agent(
     # ],
     allow_delegation=True,
     verbose=True,
-    llm=llm_instance # Updated llm parameter
+    llm="gemini/gemini-1.5-pro-latest"
 )

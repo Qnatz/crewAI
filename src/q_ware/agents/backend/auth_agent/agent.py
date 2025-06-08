@@ -1,8 +1,5 @@
 from crewai import Agent
 from .tools import my_tools # Assuming tools will be defined in tools.py
-from q_ware.llm_config import get_llm # Added import
-
-llm_instance = get_llm() # Added instance
 
 auth_agent = Agent(
     role="Authentication and Authorization Specialist", # Slightly broader role
@@ -18,5 +15,5 @@ auth_agent = Agent(
     tools=my_tools,
     allow_delegation=False,
     verbose=True,
-    llm=llm_instance # Updated llm parameter
+    llm="gemini/gemini-1.5-pro-latest"
 )

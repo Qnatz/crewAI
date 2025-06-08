@@ -1,8 +1,5 @@
 from crewai import Agent
 from .tools import my_tools
-from q_ware.llm_config import get_llm # Added import
-
-llm_instance = get_llm() # Added instance
 
 otp_verifier_agent = Agent(
     role="OTP Verifier",
@@ -13,5 +10,5 @@ otp_verifier_agent = Agent(
     ),
     tools=my_tools,
     allow_delegation=False,
-    llm=llm_instance # Updated llm parameter
+    llm="gemini/gemini-1.5-pro-latest"
 )

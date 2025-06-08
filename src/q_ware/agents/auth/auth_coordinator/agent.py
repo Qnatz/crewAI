@@ -3,9 +3,6 @@ from crewai import Task
 # Ensure the import path is correct based on the new directory structure
 from q_ware.agents.auth.otp_verifier.agent import otp_verifier_agent
 from q_ware.agents.auth.otp_verifier.tools import verify_otp
-from q_ware.llm_config import get_llm # Added import
-
-llm_instance = get_llm() # Added instance
 
 auth_coordinator_agent = Agent(
     role="Auth Coordinator",
@@ -16,7 +13,7 @@ auth_coordinator_agent = Agent(
     ),
     tools=[verify_otp], # Assuming verify_otp is a tool it can use directly or delegate
     allow_delegation=True,
-    llm=llm_instance # Updated llm parameter
+    llm="gemini/gemini-1.5-pro-latest"
 )
 
 # Define its internal workflow

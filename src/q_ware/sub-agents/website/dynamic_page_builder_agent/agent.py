@@ -11,6 +11,6 @@ dynamic_page_builder_agent = Agent(
     backstory="Expert in modern frontend frameworks, capable of scaffolding complex dynamic web applications with a focus on component-based architecture.",
     tools=my_tools,
     allow_delegation=False,
-    # llm=llm, # Uncomment and configure if an LLM is to be used
+    llm="gemini/gemini-1.5-pro-latest",
     verbose=True
 )
