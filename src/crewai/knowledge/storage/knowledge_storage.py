@@ -12,6 +12,7 @@ from crewai.vectorstores.base import (VectorStoreInterface,
 # or be a placeholder that the next step definitively replaces.
 # For now, let's ensure it's the original problematic import, which will be fixed by aliasing.
 from crewai.vectorstores.sqlite_store import SQLiteVectorStore as ChromaDBVectorStore
+from crewai.vectorstores.lancedb_store import LanceDBVectorStore # Added import
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,12 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
         elif store_type == "chromadb": # This will use the aliased SQLiteVectorStore
             self.vector_store = ChromaDBVectorStore(
+                collection_name=collection_name,
+                embedder_config=self.embedder_config,
+                persist_path=persist_path,
+            )
+        elif store_type == "lancedb": # Added lancedb condition
+            self.vector_store = LanceDBVectorStore(
                 collection_name=collection_name,
                 embedder_config=self.embedder_config,
                 persist_path=persist_path,
@@ -115,14 +122,14 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 raise Exception("Vector store not initialized.")
 
         try:
-            unique_docs_map: Dict[str, Tuple[str, Optional[Dict[str, Any]]]] = {}
+            unique_docs_map: Dict[str, tuple[str, Optional[Dict[str, Any]]]] = {} # Corrected tuple type hint
             for idx, doc in enumerate(documents):
                 doc_id = hashlib.sha256(doc.encode("utf-8")).hexdigest()
                 doc_metadata: Optional[Dict[str, Any]] = None
                 if metadata:
                     if isinstance(metadata, list):
                         doc_metadata = metadata[idx] if idx < len(metadata) else None
-                    else:
+                    else: # If metadata is a single dict, apply to all
                         doc_metadata = metadata
                 unique_docs_map[doc_id] = (doc, doc_metadata)
 
@@ -135,7 +142,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
             self.vector_store.add(
                 documents=final_docs,
-                metadatas=final_metadatas, # type: ignore
+                metadatas=final_metadatas, # type: ignore # Metadatas type should be List[Optional[Dict[str, Any]]]
                 ids=final_ids,
             )
         except Exception as e:
