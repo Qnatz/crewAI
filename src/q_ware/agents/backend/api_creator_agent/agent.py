@@ -1,5 +1,8 @@
 from crewai import Agent
 from .tools import my_tools
+from q_ware.llm_config import get_llm # Added import
+
+llm_instance = get_llm() # Added instance
 
 api_creator_agent = Agent( # Renamed variable
     role="API Endpoint Creator", # Updated role
@@ -14,5 +17,5 @@ api_creator_agent = Agent( # Renamed variable
     tools=my_tools,
     allow_delegation=False,
     verbose=True,
-    llm="gpt-4o"
+    llm=llm_instance # Updated llm parameter
 )

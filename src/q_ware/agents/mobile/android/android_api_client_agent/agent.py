@@ -1,5 +1,8 @@
 from crewai import Agent
 from .tools import my_tools
+from q_ware.llm_config import get_llm # Added import
+
+llm_instance = get_llm() # Added instance
 
 android_api_client_agent = Agent(
     role="Android API Client Specialist",
@@ -15,5 +18,5 @@ android_api_client_agent = Agent(
     tools=my_tools, # Tools might include Retrofit interface generators, DTO converters, etc.
     allow_delegation=False,
     verbose=True,
-    llm="gpt-4o"
+    llm=llm_instance # Updated llm parameter
 )

@@ -1,5 +1,8 @@
 from crewai import Agent
 from .tools import my_tools
+from q_ware.llm_config import get_llm # Added import
+
+llm_instance = get_llm() # Added instance
 
 logger_agent = Agent(
     role="Logging Strategy Implementer",
@@ -14,5 +17,5 @@ logger_agent = Agent(
     tools=my_tools, # Tools might include log configuration generators or best-practice checkers
     allow_delegation=False,
     verbose=True,
-    llm="gpt-4o"
+    llm=llm_instance # Updated llm parameter
 )

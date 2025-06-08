@@ -1,5 +1,8 @@
 from crewai import Agent
 from .tools import my_tools
+from q_ware.llm_config import get_llm # Added import
+
+llm_instance = get_llm() # Added instance
 
 debugger_agent = Agent(
     role="Automated Debugging Specialist",
@@ -15,5 +18,5 @@ debugger_agent = Agent(
     tools=my_tools, # Tools could include code analyzers, symbolic executors (simulated), etc.
     allow_delegation=False,
     verbose=True,
-    llm="gpt-4o"
+    llm=llm_instance # Updated llm parameter
 )

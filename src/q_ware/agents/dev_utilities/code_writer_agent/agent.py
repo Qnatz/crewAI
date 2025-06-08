@@ -1,5 +1,8 @@
 from crewai import Agent
 from .tools import my_tools
+from q_ware.llm_config import get_llm # Added import
+
+llm_instance = get_llm() # Added instance
 
 code_writer_agent = Agent(
     role="Production Code Writer",
@@ -15,5 +18,5 @@ code_writer_agent = Agent(
     tools=my_tools, # Tools might include linters, formatters, or code snippet libraries
     allow_delegation=False, # Typically, a writer agent executes directly
     verbose=True,
-    llm="gpt-4o" # A powerful LLM is crucial for code generation
+    llm=llm_instance # Updated llm parameter
 )
