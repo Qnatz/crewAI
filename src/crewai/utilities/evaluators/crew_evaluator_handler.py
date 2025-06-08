@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
-from crewai.llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM # Corrected import
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.events import crewai_event_bus
@@ -78,23 +78,7 @@ class CrewEvaluator:
     def print_crew_evaluation_result(self) -> None:
         """
         Prints the evaluation result of the crew in a table.
-        A Crew with 2 tasks using the command crewai test -n 3
-        will output the following table:
-
-                        Tasks Scores
-                    (1-10 Higher is better)
-        ┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-        ┃ Tasks/Crew/Agents  ┃ Run 1 ┃ Run 2 ┃ Run 3 ┃ Avg. Total ┃ Agents                       ┃
-        ┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-        │ Task 1             │ 9.0   │ 10.0  │ 9.0   │ 9.3        │ - AI LLMs Senior Researcher  │
-        │                    │       │       │       │            │ - AI LLMs Reporting Analyst  │
-        │                    │       │       │       │            │                              │
-        │ Task 2             │ 9.0   │ 9.0   │ 9.0   │ 9.0        │ - AI LLMs Senior Researcher  │
-        │                    │       │       │       │            │ - AI LLMs Reporting Analyst  │
-        │                    │       │       │       │            │                              │
-        │ Crew               │ 9.0   │ 9.5   │ 9.0   │ 9.2        │                              │
-        │ Execution Time (s) │ 42    │ 79    │ 52    │ 57         │                              │
-        └────────────────────┴───────┴───────┴───────┴────────────┴──────────────────────────────┘
+        [Simplified table representation for subtask execution]
         """
         task_averages = [
             sum(scores) / len(scores) for scores in zip(*self.tasks_scores.values())
@@ -194,3 +178,5 @@ class CrewEvaluator:
             )
         else:
             raise ValueError("Evaluation result is not in the expected format")
+
+```
