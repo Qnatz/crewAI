@@ -9,6 +9,13 @@ from q_ware.agents.backend.queue_agent import queue_agent
 from q_ware.agents.backend.sync_agent import sync_agent
 from .tools import my_tools # Tools specific to the coordinator
 
+# LLM Interaction Note for Delegation:
+# When this agent uses delegation tools (e.g., the built-in 'Delegate work to coworker' tool,
+# enabled by `allow_delegation=True`), the LLM must be guided to provide arguments
+# like 'task', 'context', and 'coworker' as direct strings.
+# These arguments should not be formatted as dictionaries (e.g., `{"description": "..."}`).
+# The agent's backstory has been updated with instructions to encourage correct formatting.
+# Incorrect formatting can lead to errors like "unhashable type: 'dict'".
 backend_coordinator_agent = Agent(
     role="Backend Coordination Agent",
     goal="Orchestrate all backend-related subagents by delegating tasks and ensuring integration between them.",
@@ -34,7 +41,15 @@ backend_coordinator_agent = Agent(
         "Output:\n"
         "- Subagent task queue\n"
         "- Integration plan\n"
-        "- Status report"
+        "- Status report\n\n"
+        "---\n"
+        "Important Note on Tool Usage:\n"
+        "When using tools, especially for delegation (like 'Delegate work to coworker'):\n"
+        "- The 'task' argument must be a plain string describing the task.\n"
+        "- The 'context' argument must be a plain string providing all necessary context.\n"
+        "- The 'coworker' argument must be a plain string identifying the coworker (e.g., 'data_model_agent').\n"
+        "Do NOT format these arguments as JSON objects or dictionaries; provide direct string values. For example, if a tool expects `{\"task\": \"some string\", \"coworker\": \"agent_name\" ...}`, ensure your input is exactly in that format with string values.\n"
+        "---"
     ),
     tools=my_tools, # Add any tools the coordinator itself might use (e.g., for planning, code analysis)
     # List of agents that can be delegated to.

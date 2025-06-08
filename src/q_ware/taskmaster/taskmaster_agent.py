@@ -73,6 +73,14 @@ class TaskmasterAgent:
             # Fallback to default_handler using CodeWritingCrew
             return self.default_handler(task_description)
 
+    # --- API Rate Limit Note for Default Handler ---
+    # This default_handler uses `CodeWritingCrew`, which relies on an LLM (e.g., Gemini).
+    # If a `RateLimitError` (HTTP 429) occurs when tasks are routed here,
+    # it indicates that the API quota for the configured LLM has been exceeded.
+    # This is an external issue related to API usage limits and billing,
+    # not a bug within this code. Users should check their LLM provider's dashboard
+    # for quota details and upgrade their plan if necessary.
+    # ---
     def default_handler(self, prompt: str):
         # Use CodeWritingCrew for generic code writing tasks
         crew = CodeWritingCrew(prompt=prompt)

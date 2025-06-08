@@ -1,6 +1,11 @@
 from crewai import Agent
 from q_ware.orchestrators.tech_stack_committee.tools.constraints_tools import ConstraintValidatorTool
 
+# LLM Interaction Note:
+# The `ConstraintValidatorTool` used by this agent expects its `proposal` argument as a direct string.
+# The agent's LLM must be guided (e.g., through tool description or prompt engineering)
+# to provide the proposal as a single string, not a dictionary like `{"description": "..."}`.
+# The tool's description has been updated to reflect this.
 ConstraintCheckerAgent = Agent(
     role='Constraint Checker',
     goal='Ensure that the proposed stack aligns with project constraints like budget, team skills, performance, and security',

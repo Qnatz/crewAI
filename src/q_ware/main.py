@@ -1,6 +1,17 @@
 # --- Main Q-Ware Entrypoint ---
 from q_ware.project_crew_factory import create_project_orchestrator # Updated import
 
+# --- IMPORTANT NOTE ON API RATE LIMITS ---
+# The third example, "Default handler (CodeWritingCrew)", invokes a crew that uses a Gemini LLM.
+# If you encounter a `RateLimitError` (e.g., HTTP 429 Too Many Requests) while running this example,
+# it means you have exceeded your current API quota for the Gemini API.
+# This is not an error in the code itself but an external quota issue.
+# To resolve this, you will need to:
+# 1. Check your Google Cloud project's billing status and ensure it's active.
+# 2. Review the Gemini API quotas and usage limits in your Google Cloud Console.
+# 3. If necessary, request a quota increase or upgrade your plan.
+# These errors are particularly common on free tiers or with new accounts.
+# ---
 def run_examples():
     # Get the orchestrator (TaskmasterAgent by default for now) from the factory
     # project_specs could be loaded from a file, command line, or user input in a real app

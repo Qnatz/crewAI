@@ -2,7 +2,7 @@ from crewai.tools import BaseTool
 
 class ConstraintValidatorTool(BaseTool):
     name: str = "Constraint Validator" # Explicitly defining name
-    description: str = "Validates tech choices against project constraints like team skill level, cost, performance, and security."
+    description: str = "Validates tech choices against project constraints like team skill level, cost, performance, and security. The 'proposal' argument must be a single string containing the entire tech stack proposal."
 
     def _run(self, proposal: str) -> str: # proposal should be typed as str
         return f"Validated constraints for: {proposal}"
