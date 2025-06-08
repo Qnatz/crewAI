@@ -1,4 +1,4 @@
-from crewai_tools import tool
+from crewai.tools import tool
 
 @tool
 def placeholder_testing_tool(test_suite_path: str, test_type: str) -> str:

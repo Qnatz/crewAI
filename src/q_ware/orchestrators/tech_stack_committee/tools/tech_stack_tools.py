@@ -1,4 +1,4 @@
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 
 class TechResearchTool(BaseTool):
     name: str = "Tech Research Tool" # Explicitly defining name as per BaseTool requirements

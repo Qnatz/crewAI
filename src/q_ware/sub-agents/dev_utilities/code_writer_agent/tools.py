@@ -1,4 +1,4 @@
-from crewai_tools import tool
+from crewai.tools import tool
 
 @tool
 def placeholder_code_writing_tool(file_path: str, code_content: str) -> str:

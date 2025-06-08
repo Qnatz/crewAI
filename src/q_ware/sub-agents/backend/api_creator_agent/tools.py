@@ -1,4 +1,4 @@
-from crewai_tools import tool
+from crewai.tools import tool
 
 @tool
 def placeholder_tool(param: str) -> str:

@@ -1,4 +1,4 @@
-from crewai_tools import tool
+from crewai.tools import tool
 
 @tool
 def placeholder_debugging_tool(stack_trace: str, logs: str) -> str:

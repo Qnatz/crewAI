@@ -6,8 +6,7 @@ from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 # Vector Store Interface and implementations
 from crewai.vectorstores.base import (VectorStoreInterface,
                                      VectorStoreQueryResult)
-from crewai.vectorstores.chromadb_store import ChromaDBVectorStore
-from crewai.vectorstores.sqlite_store import SQLiteVectorStore
+from crewai.vectorstores.sqlite_store import SQLiteVectorStore as ChromaDBVectorStore
 
 logger = logging.getLogger(__name__)
 

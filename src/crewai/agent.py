@@ -248,11 +248,11 @@ class Agent(BaseAgent):
         memory_attributes = [
             "memory",
             "memory_config",
-            "_short_term_memory",
-            "_long_term_memory",
-            "_entity_memory",
-            "_user_memory",
-            "_external_memory",
+            "short_term_memory",
+            "long_term_memory",
+            "entity_memory",
+            "user_memory",
+            "external_memory",
         ]
 
         return any(getattr(self.crew, attr) for attr in memory_attributes)
@@ -333,11 +333,11 @@ class Agent(BaseAgent):
         if self._is_any_available_memory():
             contextual_memory = ContextualMemory(
                 self.crew.memory_config,
-                self.crew._short_term_memory,
-                self.crew._long_term_memory,
-                self.crew._entity_memory,
-                self.crew._user_memory,
-                self.crew._external_memory,
+                self.crew.short_term_memory,
+                self.crew.long_term_memory,
+                self.crew.entity_memory,
+                self.crew.user_memory,
+                self.crew.external_memory,
             )
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":

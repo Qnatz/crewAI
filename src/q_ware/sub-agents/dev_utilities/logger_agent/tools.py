@@ -1,4 +1,4 @@
-from crewai_tools import tool
+from crewai.tools import tool
 
 @tool
 def placeholder_logging_tool(log_message: str, log_level: str) -> str:

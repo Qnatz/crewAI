@@ -25,15 +25,18 @@ class TechVettingCouncilCrew:
             tasks=[
                 Task(
                     agent=StackAdvisorAgent, # Agent class
-                    description=f"Propose a tech stack for: {self.project_idea}"
+                    description=f"Propose a tech stack for: {self.project_idea}",
+                    expected_output="Successful completion of the task."
                 ),
                 Task(
                     agent=ConstraintCheckerAgent, # Agent class
-                    description=f"Validate the proposal against: {self.constraints}"
+                    description=f"Validate the proposal against: {self.constraints}",
+                    expected_output="Successful completion of the task."
                 ),
                 Task(
                     agent=DocumentationWriterAgent, # Agent class
-                    description="Write TECH_STACK.md from the validated proposal"
+                    description="Write TECH_STACK.md from the validated proposal",
+                    expected_output="Successful completion of the task."
                 )
             ],
             verbose=True

@@ -1,4 +1,4 @@
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 
 class ConstraintValidatorTool(BaseTool):
     name: str = "Constraint Validator" # Explicitly defining name

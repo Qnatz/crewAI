@@ -1,4 +1,4 @@
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 
 class MarkdownWriterTool(BaseTool):
     name: str = "Markdown Writer" # Explicitly defining name

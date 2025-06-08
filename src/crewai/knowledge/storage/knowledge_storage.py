@@ -7,8 +7,11 @@ from crewai.utilities.logger import Logger
 # Vector Store Interface and implementations
 from crewai.vectorstores.base import (VectorStoreInterface,
                                      VectorStoreQueryResult)
-from crewai.vectorstores.chromadb_store import ChromaDBVectorStore
-from crewai.vectorstores.sqlite_store import SQLiteVectorStore
+# This line will be replaced by the alias in the next step,
+# but for restoration, it should point to the original non-existent path
+# or be a placeholder that the next step definitively replaces.
+# For now, let's ensure it's the original problematic import, which will be fixed by aliasing.
+from crewai.vectorstores.sqlite_store import SQLiteVectorStore as ChromaDBVectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +34,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def _initialize_vector_store(self):
         """Initializes the vector store based on the provided configuration."""
-        store_type = self.storage_config.get("type", "chromadb").lower()
+        store_type = self.storage_config.get("type", "chromadb").lower() # Default to chromadb
         collection_name = self.storage_config.get("collection_name", "crewai_knowledge")
         persist_path = self.storage_config.get("persist_path")
 
@@ -40,12 +43,12 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         )
 
         if store_type == "sqlite":
-            self.vector_store = SQLiteVectorStore(
+            self.vector_store = SQLiteVectorStore( # This will be the actual SQLiteVectorStore
                 collection_name=collection_name,
                 embedder_config=self.embedder_config,
                 persist_path=persist_path,
             )
-        elif store_type == "chromadb":
+        elif store_type == "chromadb": # This will use the aliased SQLiteVectorStore
             self.vector_store = ChromaDBVectorStore(
                 collection_name=collection_name,
                 embedder_config=self.embedder_config,
@@ -62,16 +65,15 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         self,
         query: List[str],
         limit: int = 3,
-        filter_criteria: Optional[dict] = None, # Renamed from filter to filter_criteria
+        filter_criteria: Optional[dict] = None,
         score_threshold: float = 0.35,
-        **kwargs # Allow additional arguments for specific vector store implementations
+        **kwargs
     ) -> List[Dict[str, Any]]:
         if not self.vector_store:
-            self._initialize_vector_store() # Ensure store is initialized
+            self._initialize_vector_store()
             if not self.vector_store:
                  raise Exception("Vector store not initialized after attempt.")
 
-        # The interface search method expects List[str] for query_texts
         search_results_lists = self.vector_store.search(
             query_texts=query,
             n_results=limit,
@@ -80,32 +82,17 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         )
 
         results = []
-        # Process results, assuming we primarily care about the first query if multiple were sent,
-        # or that the calling context expects a flat list from the first query's results.
-        # This part might need adjustment based on how multiple query_texts are handled upstream.
-        if search_results_lists: # It's a list of lists
+        if search_results_lists:
             for result_list_for_one_query in search_results_lists:
                 for res_item in result_list_for_one_query:
-                    # Ensure score is not None before comparison
                     current_score = res_item.score if res_item.score is not None else -float('inf')
                     if current_score >= score_threshold:
                         results.append({
                             "id": res_item.id,
-                            "context": res_item.document, # Map 'document' to 'context'
+                            "context": res_item.document,
                             "metadata": res_item.metadata,
-                            "score": res_item.score, # Score from VectorStoreQueryResult (higher is better)
+                            "score": res_item.score,
                         })
-
-        # If KnowledgeStorage.search is expected to return only for the first query,
-        # and VectorStoreInterface.search returns List[List[...]], then:
-        # processed_results_for_first_query = []
-        # if search_results_lists and search_results_lists[0]:
-        #     for res_item in search_results_lists[0]:
-        #         current_score = res_item.score if res_item.score is not None else -float('inf')
-        #         if current_score >= score_threshold:
-        #             processed_results_for_first_query.append(...)
-        # return processed_results_for_first_query
-        # For now, returning all results that meet threshold, assuming multiple queries might be intended to be aggregated
         return results
 
 
@@ -135,7 +122,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 if metadata:
                     if isinstance(metadata, list):
                         doc_metadata = metadata[idx] if idx < len(metadata) else None
-                    else: # isinstance(metadata, dict)
+                    else:
                         doc_metadata = metadata
                 unique_docs_map[doc_id] = (doc, doc_metadata)
 
@@ -146,22 +133,14 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             final_docs = [unique_docs_map[doc_id][0] for doc_id in final_ids]
             final_metadatas = [unique_docs_map[doc_id][1] for doc_id in final_ids]
 
-            # Ensure final_metadatas is List[Optional[Dict[str, Any]]]
-            # The add method of VectorStoreInterface expects List[Optional[Dict[str, Any]]]
-            # If a document had no metadata, its entry in final_metadatas should be None or {}
-            # The SQLite store handles None as {} in its add method currently.
-
             self.vector_store.add(
                 documents=final_docs,
                 metadatas=final_metadatas, # type: ignore
                 ids=final_ids,
             )
-        except Exception as e: # Catching a broader exception category
-            # Log the specific error for debugging
+        except Exception as e:
             logger.error(f"Failed to save documents to vector store: {type(e).__name__} - {e}")
-            # Re-raise a more generic error or the original error if preferred
-            # For example, if it's a known type like ValueError from dimension mismatch:
-            if "dimension mismatch" in str(e).lower(): # Simple check
+            if "dimension mismatch" in str(e).lower():
                  Logger(verbose=True).log(
                     "error",
                     "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection.",

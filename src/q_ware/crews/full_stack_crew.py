@@ -25,27 +25,33 @@ full_stack_crew = Crew(
     tasks=[
         Task(
           agent=auth_coordinator_agent,
-          description="Set up authentication subsystem"
+          description="Set up authentication subsystem",
+          expected_output="Successful completion of the task."
         ),
         Task(
             agent=backend_coordinator_agent,
-            description="Orchestrate and develop all backend systems and APIs based on project requirements."
+            description="Orchestrate and develop all backend systems and APIs based on project requirements.",
+            expected_output="Successful completion of the task."
         ),
         Task(
             agent=mobile_project_coordinator_agent,
-            description="Coordinate the design and development of Android and iOS mobile applications."
+            description="Coordinate the design and development of Android and iOS mobile applications.",
+            expected_output="Successful completion of the task."
         ),
         Task(
             agent=web_project_coordinator_agent,
-            description="Coordinate the design and development of the project website and web applications."
+            description="Coordinate the design and development of the project website and web applications.",
+            expected_output="Successful completion of the task."
         ),
         Task(
             agent=offline_support_coordinator_agent,
-            description="Coordinate the implementation of offline-first capabilities, including local storage and data synchronization."
+            description="Coordinate the implementation of offline-first capabilities, including local storage and data synchronization.",
+            expected_output="Successful completion of the task."
         ),
         Task( # Add a task for the devops coordinator
             agent=devops_and_integration_coordinator_agent,
-            description="Manage CI/CD pipelines, environment configurations, containerization, and overall integration testing."
+            description="Manage CI/CD pipelines, environment configurations, containerization, and overall integration testing.",
+            expected_output="Successful completion of the task."
         ),
     ]
 )
