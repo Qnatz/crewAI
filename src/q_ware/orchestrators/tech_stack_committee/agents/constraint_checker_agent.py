@@ -10,6 +10,6 @@ ConstraintCheckerAgent = Agent(
     ),
     tools=[ConstraintValidatorTool()], # Now uses the correctly imported tool
     allow_delegation=False,
-    llm="gemini/gemini-1.5-pro-latest",
+    llm="gemini/gemini-1.5-flash-latest",
     verbose=True
 )

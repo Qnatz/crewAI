@@ -18,6 +18,6 @@ tech_vetting_council_agent = Agent(
     ),
     # tools=[], # Potentially an LLMTool or custom tools for voting/ranking
     allow_delegation=True, # May delegate to an LLMToolAgent or specialized analysis tools
-    llm=llm, # Could use a powerful model for debate/analysis
+    llm="gemini/gemini-1.5-flash-latest", # Could use a powerful model for debate/analysis
     verbose=True
 )

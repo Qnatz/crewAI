@@ -13,6 +13,6 @@ asset_manager_agent = Agent(
     backstory="A specialist in web asset optimization and management, ensuring images are compressed, SEO tags are correctly implemented, and all media assets are efficiently handled.",
     tools=my_tools,
     allow_delegation=False,
-    llm="gemini/gemini-1.5-pro-latest", # Uncomment and configure if an LLM is to be used
+    llm="gemini/gemini-1.5-flash-latest", # Uncomment and configure if an LLM is to be used
     verbose=True
 )

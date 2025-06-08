@@ -1,5 +1,4 @@
 from crewai import Agent
-from q_ware.llm_config import get_llm
 
 # Placeholder for importing sub-agents that will be delegated to.
 # Example:
@@ -13,12 +12,12 @@ from q_ware.llm_config import get_llm
 # Placeholder LLM configuration
 # from langchain_openai import ChatOpenAI
 # llm = ChatOpenAI(model="gpt-4-turbo-preview")
-llm = get_llm()
+
 backend_project_coordinator_agent = Agent(
     role="Backend Project Coordinator",
     goal="Decide DB and auth stack, manage model/API creation order, handle offline sync if flagged, and run debug/test pipeline for backend projects.",
     backstory="This lead agent orchestrates backend development. It determines the appropriate database and authentication stack, sequences the creation of data models and APIs, manages offline synchronization logic by delegating to SyncAgent, and oversees the debugging and testing pipeline through DebuggerAgent and TesterAgent.",
     allow_delegation=True,
-    llm=llm,
+    llm="gemini/gemini-1.5-flash-latest",
     verbose=True
 )

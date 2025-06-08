@@ -1,5 +1,4 @@
 from crewai import Agent
-from q_ware.llm_config import get_llm
 
 # Placeholder for importing sub-agents
 # Example:
@@ -13,12 +12,12 @@ from q_ware.llm_config import get_llm
 # Placeholder LLM configuration
 # from langchain_openai import ChatOpenAI
 # llm = ChatOpenAI(model="gpt-4-turbo-preview")
-llm = get_llm()
+
 offline_support_coordinator_agent = Agent(
     role="Offline Support Coordinator",
     goal="Add offline-first support to web/mobile apps, ensure sync reconciliation and fallbacks.",
     backstory="This lead agent specializes in enabling offline capabilities for applications. It coordinates LocalStorageAgents, SyncAgents, and platform-specific storage agents to implement robust offline-first experiences, including data reconciliation and fallback mechanisms.",
     allow_delegation=True,
-    llm=llm,
+    llm="gemini/gemini-1.5-flash-latest",
     verbose=True
 )

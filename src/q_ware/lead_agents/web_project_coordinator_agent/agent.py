@@ -1,5 +1,4 @@
 from crewai import Agent
-from q_ware.llm_config import get_llm
 
 # Placeholder for importing sub-agents that will be delegated to.
 # Example:
@@ -13,13 +12,13 @@ from q_ware.llm_config import get_llm
 # Placeholder LLM configuration
 # from langchain_openai import ChatOpenAI
 # llm = ChatOpenAI(model="gpt-4-turbo-preview") # Or another appropriate model for coordination
-llm = get_llm()
+
 web_project_coordinator_agent = Agent(
     role="Web Project Coordinator",
     goal="Determine site type (static/dynamic), sequence asset preparation, page generation, and coordinate test coverage and final assembly for web projects.",
     backstory="A lead agent responsible for orchestrating web development projects. It intelligently delegates tasks to specialized sub-agents like StaticPageBuilder, DynamicPageBuilder, AssetManager, APICreator, Tester, and CodeWriter to ensure efficient project execution from asset preparation to final assembly and testing.",
     # tools=[], # Coordinator agents might not have tools directly
     allow_delegation=True, # This agent delegates to sub-agents
-    llm=llm,
+    llm="gemini/gemini-1.5-flash-latest",
     verbose=True
 )

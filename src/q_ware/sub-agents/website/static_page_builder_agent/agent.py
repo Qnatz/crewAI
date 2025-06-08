@@ -11,6 +11,6 @@ static_page_builder_agent = Agent(
     backstory="Specialized in crafting efficient and clean static web pages. Understands the nuances of HTML, CSS, and JavaScript for static content delivery.",
     tools=my_tools,
     allow_delegation=False,
-    llm="gemini/gemini-1.5-pro-latest",
+    llm="gemini/gemini-1.5-flash-latest",
     verbose=True
 )
