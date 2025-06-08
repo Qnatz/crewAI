@@ -11,6 +11,6 @@ debugger_agent = Agent(
     backstory="An analytical agent skilled in diagnosing software issues. It can analyze stack traces, strategically insert logging statements to gather more information, and suggest potential fixes for bugs.",
     tools=my_tools,
     allow_delegation=False, # Could potentially delegate to a CodeWriterAgent to insert logs
-    llm="gemini/gemini-1.5-flash-latest",
+    llm="gemini/gemini-2.0-flash",
     verbose=True
 )

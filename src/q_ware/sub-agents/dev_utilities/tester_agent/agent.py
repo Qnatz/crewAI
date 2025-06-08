@@ -11,6 +11,6 @@ tester_agent = Agent(
     backstory="A meticulous agent focused on software quality. It can generate test cases, execute various types of tests (unit, integration), and report on their outcomes, ensuring code reliability.",
     tools=my_tools,
     allow_delegation=False, # Could delegate to CodeWriter to write test stubs
-    llm="gemini/gemini-1.5-flash-latest",
+    llm="gemini/gemini-2.0-flash",
     verbose=True
 )

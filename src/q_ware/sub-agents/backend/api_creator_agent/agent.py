@@ -11,6 +11,6 @@ api_creator_agent = Agent(
     backstory="This agent is dedicated to building robust and well-defined APIs. It handles the creation of RESTful or GraphQL endpoints and implements thorough request and response validation.",
     tools=my_tools,
     allow_delegation=False,
-    llm="gemini/gemini-1.5-flash-latest",
+    llm="gemini/gemini-2.0-flash",
     verbose=True
 )
