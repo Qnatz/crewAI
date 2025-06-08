@@ -37,10 +37,31 @@ class TaskmasterAgent:
             constraints = task_context.get("constraints", "") if task_context else ""
             crew_instance = crew_cls(project_idea=project_idea, constraints=constraints)
             return crew_instance.run()
-        elif "execute" in task_description.lower() or "implement" in task_description.lower(): # Example routing for execution
+        elif "execute" in task_description.lower() or "implement" in task_description.lower():
             crew_cls = self.active_crew_classes["execution_manager"]
-            # ExecutionManagerCrew placeholder takes task_input; adapt as needed
-            crew_instance = crew_cls(task_input=task_description)
+            project_plan = task_context.get("project_plan") if task_context else None
+
+            if not isinstance(project_plan, dict):
+                # Fallback: create a minimal plan from task_description if no dict plan is provided
+                print(f"Warning: No detailed project_plan (dict) provided for execution task. Using task_description as summary for ExecutionManagerCrew.")
+                project_plan = {
+                    "project_name": "AdHoc Execution Project",
+                    "summary": task_description,
+                    # Indicate that specific requirements are not broken down yet
+                    "backend_requirements": "As per overall summary" if "backend" in task_description.lower() else None,
+                    "frontend_requirements": "As per overall summary" if "frontend" in task_description.lower() or "web" in task_description.lower() else None,
+                    "mobile_requirements": "As per overall summary" if "mobile" in task_description.lower() else None,
+                    # Add other potential keys based on keywords in task_description or leave them out
+                }
+                # Filter out None values to keep plan clean
+                project_plan = {k: v for k, v in project_plan.items() if v is not None}
+
+            if not project_plan: # If it's still None or empty after fallback attempt
+                 error_msg = "Error: Execution task routed, but no valid project_plan (dict) found in context, and could not form basic plan from description."
+                 print(error_msg)
+                 return error_msg # Or raise an exception
+
+            crew_instance = crew_cls(project_plan=project_plan)
             return crew_instance.run()
         elif "assemble" in task_description.lower() or "finalize" in task_description.lower() or "package solution" in task_description.lower():
             crew_cls = self.active_crew_classes["final_assembly"]
