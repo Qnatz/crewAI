@@ -1,12 +1,11 @@
 from crewai import Agent
-from q_ware.llm_config import get_llm
 # from langchain_openai import ChatOpenAI
 
 # Placeholder for global tools or specific tools like an LLMTool for debate/ranking
 # from crewai.tools import LLMTool # If it exists or a similar concept
 
 # llm = ChatOpenAI(model="gpt-4-turbo-preview") # Example LLM
-llm = get_llm()
+
 tech_vetting_council_agent = Agent(
     role="Tech Vetting Council Agent",
     goal="Select the best tools/stacks (e.g., frontend frameworks, backend choices, mobile native vs hybrid) using group agent voting logic or LLM-driven debate and ranking.",

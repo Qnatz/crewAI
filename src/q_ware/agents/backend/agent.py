@@ -53,5 +53,5 @@ backend_coordinator_agent = Agent(
     # ],
     allow_delegation=True,
     verbose=True,
-    llm="gemini/gemini-1.5-pro-latest"
+    llm="gemini/gemini-1.5-flash-latest"
 )

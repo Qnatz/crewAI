@@ -10,5 +10,5 @@ otp_verifier_agent = Agent(
     ),
     tools=my_tools,
     allow_delegation=False,
-    llm="gemini/gemini-1.5-pro-latest"
+    llm="gemini/gemini-1.5-flash-latest"
 )

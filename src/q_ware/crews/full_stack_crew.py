@@ -13,7 +13,7 @@ from q_ware.agents.devops.agent import devops_and_integration_coordinator_agent
 
 full_stack_crew = Crew(
     name="FullStackCrew",
-    llm="gemini/gemini-1.5-pro-latest",
+    llm="gemini/gemini-1.5-flash-latest",
     agents=[
         auth_coordinator_agent,
         backend_coordinator_agent,

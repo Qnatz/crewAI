@@ -13,7 +13,7 @@ class FinalAssemblyCrew:
             name="FinalAssemblyCrew",
             agents=[self.agent_instance],
             tasks=[Task(agent=self.agent_instance, description=assembly_instructions, expected_output="Successfully assembled and packaged solution.")],
-            llm="gemini/gemini-1.5-pro-latest",
+            llm="gemini/gemini-1.5-flash-latest",
             verbose=True
         )
     def run(self):

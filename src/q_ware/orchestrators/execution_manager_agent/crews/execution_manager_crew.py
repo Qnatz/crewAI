@@ -63,7 +63,7 @@ class ExecutionManagerCrew:
         self.crew = Crew(
             name=self.crew_name,
             agents=self.coordinator_agents,
-            llm="gemini/gemini-1.5-pro-latest",
+            llm="gemini/gemini-1.5-flash-latest",
             tasks=self.managed_tasks,
             verbose=True
             # memory=True, # Example: enable memory for the crew if needed

@@ -29,5 +29,5 @@ mobile_project_coordinator_agent = Agent(
     tools=my_tools,
     allow_delegation=True, # This agent coordinates sub-agents
     verbose=True,
-    llm="gemini/gemini-1.5-pro-latest"
+    llm="gemini/gemini-1.5-flash-latest"
 )

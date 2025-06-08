@@ -17,6 +17,7 @@ class TechVettingCouncilCrew:
         # If not, they would need to be instantiated: StackAdvisorAgent(), etc.
         self.crew = Crew(
             name="TechVettingCouncilCrew", # Added a name for the crew
+            llm="gemini/gemini-1.5-flash-latest",
             agents=[
                 StackAdvisorAgent,
                 ConstraintCheckerAgent,

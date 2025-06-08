@@ -21,5 +21,5 @@ devops_and_integration_coordinator_agent = Agent(
     tools=my_tools,
     allow_delegation=True, # May delegate to tester_agent or future deployment agents
     verbose=True,
-    llm="gemini/gemini-1.5-pro-latest"
+    llm="gemini/gemini-1.5-flash-latest"
 )

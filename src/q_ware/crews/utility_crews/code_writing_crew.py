@@ -18,7 +18,7 @@ class CodeWritingCrew:
             name="CodeWritingCrew", # Added a name for the crew
             agents=[self.agent_instance], # Must be a list of agent instances
             tasks=[Task(agent=self.agent_instance, description=prompt, expected_output="Generated code based on the prompt.")],
-            llm="gemini/gemini-1.5-pro-latest",
+            llm="gemini/gemini-1.5-flash-latest",
             verbose=True # Or as per desired default
         )
     def run(self):

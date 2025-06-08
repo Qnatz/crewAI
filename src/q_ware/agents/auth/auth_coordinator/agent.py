@@ -13,7 +13,7 @@ auth_coordinator_agent = Agent(
     ),
     tools=[verify_otp], # Assuming verify_otp is a tool it can use directly or delegate
     allow_delegation=True,
-    llm="gemini/gemini-1.5-pro-latest"
+    llm="gemini/gemini-1.5-flash-latest"
 )
 
 # Define its internal workflow
