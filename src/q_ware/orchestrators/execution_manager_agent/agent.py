@@ -1,11 +1,12 @@
 from crewai import Agent
+from q_ware.llm_config import get_llm
 # from langchain_openai import ChatOpenAI
 
 # Placeholder for global tools or specific tools for this agent
 # Needs to interact with Mid-Level Coordinators and Logger, Debugger, Tester sub-agents
 
 # llm = ChatOpenAI(model="gpt-4-turbo-preview") # Example LLM
-
+llm = get_llm()
 execution_manager_agent = Agent(
     role="Execution Manager Agent",
     goal="Start the actual execution by kicking off Mid-Level Coordinators in the correct order, track agent progress, errors, and outcomes, and restart failed flows.",
@@ -18,6 +19,6 @@ execution_manager_agent = Agent(
     ),
     # tools=[], # Tools for process management, monitoring, logging
     allow_delegation=True, # Delegates to Coordinators and utility sub-agents
-    # llm=llm,
+    llm=llm,
     verbose=True
 )

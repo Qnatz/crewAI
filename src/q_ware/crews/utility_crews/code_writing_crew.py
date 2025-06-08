@@ -8,17 +8,19 @@ from q_ware.agents.dev_utilities.code_writer_agent.agent import code_writer_agen
 # the import would be: from q_ware.agents.dev_utilities.code_writer_agent.agent import CodeWriterAgent
 # and then CodeWriterAgent() would be used below.
 # For now, assuming the exported `code_writer_agent` instance is what's intended for use.
+from q_ware.llm_config import get_llm
 
 class CodeWritingCrew:
     def __init__(self, prompt: str):
         # If code_writer_agent is an instance:
         self.agent_instance = code_writer_agent
         # If CodeWriterAgent was a class, it would be: self.agent_instance = CodeWriterAgent()
-
+        llm = get_llm()
         self.crew = Crew(
             name="CodeWritingCrew", # Added a name for the crew
             agents=[self.agent_instance], # Must be a list of agent instances
-            tasks=[Task(agent=self.agent_instance, description=prompt)],
+            tasks=[Task(agent=self.agent_instance, description=prompt, expected_output="Generated code based on the prompt.")],
+            llm=llm,
             verbose=True # Or as per desired default
         )
     def run(self):

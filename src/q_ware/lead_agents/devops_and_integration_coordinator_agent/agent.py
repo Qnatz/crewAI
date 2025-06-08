@@ -1,4 +1,5 @@
 from crewai import Agent
+from q_ware.llm_config import get_llm
 
 # Placeholder for importing sub-agents
 # Example:
@@ -10,12 +11,12 @@ from crewai import Agent
 # Placeholder LLM configuration
 # from langchain_openai import ChatOpenAI
 # llm = ChatOpenAI(model="gpt-4-turbo-preview")
-
+llm = get_llm()
 devops_and_integration_coordinator_agent = Agent(
     role="DevOps and Integration Coordinator",
     goal="Ensure code integration pipelines, collect logs from all agents, and run test and debug passes pre-deploy.",
     backstory="This lead agent focuses on the operational aspects of development. It coordinates TesterAgents, DebuggerAgents, and LoggerAgents to ensure smooth code integration, comprehensive logging, and thorough pre-deployment quality checks. It is designed to interface with CI/CD systems in the future.",
     allow_delegation=True,
-    # llm=llm,
+    llm=llm,
     verbose=True
 )

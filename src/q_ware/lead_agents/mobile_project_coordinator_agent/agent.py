@@ -1,4 +1,5 @@
 from crewai import Agent
+from q_ware.llm_config import get_llm
 
 # Placeholder for importing sub-agents
 # Android specific:
@@ -17,12 +18,12 @@ from crewai import Agent
 # Placeholder LLM configuration
 # from langchain_openai import ChatOpenAI
 # llm = ChatOpenAI(model="gpt-4-turbo-preview")
-
+llm = get_llm()
 mobile_project_coordinator_agent = Agent(
     role="Mobile Project Coordinator",
     goal="Detect platform(s) needed, trigger UI -> API -> storage flow, set up offline logic (if needed), and monitor error logging and test coverage for mobile projects.",
     backstory="This lead agent orchestrates mobile application development for Android and iOS. It determines the target platforms, manages the development workflow from UI to API to storage by delegating to platform-specific sub-agents, and integrates shared services like synchronization, logging, and testing.",
     allow_delegation=True,
-    # llm=llm,
+    llm=llm,
     verbose=True
 )

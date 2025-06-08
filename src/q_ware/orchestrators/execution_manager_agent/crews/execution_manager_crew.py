@@ -60,10 +60,12 @@ class ExecutionManagerCrew:
                 agent=self.coordinator_agents[0] # Assign to the first available coordinator as a general task
             ))
 
-
+        from q_ware.llm_config import get_llm
+        llm = get_llm()
         self.crew = Crew(
             name=self.crew_name,
             agents=self.coordinator_agents,
+            llm=llm,
             tasks=self.managed_tasks,
             verbose=True
             # memory=True, # Example: enable memory for the crew if needed

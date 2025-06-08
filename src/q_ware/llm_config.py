@@ -5,29 +5,31 @@ import os
 # For this placeholder, we'll just simulate the structure.
 # Replace 'PlaceholderGeminiLLM' with the actual class and import.
 
-class PlaceholderGeminiLLM:
-    """
-    This is a placeholder for the actual Gemini LLM client.
-    Replace this with the actual library import and instantiation, e.g.:
-    from langchain_google_vertexai import ChatVertexAI
-    llm = ChatVertexAI(model_name=model_name, project="your-gcp-project")
-    or from crewai.llms import ChatGoogleGenerativeAI (if available)
-    llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key)
-    """
-    def __init__(self, model_name: str, api_key: str = None):
-        self.model_name = model_name
-        self.api_key = api_key
-        if not api_key:
-            print(f"Warning: PlaceholderGeminiLLM for '{model_name}' initialized without a specific API key. "
-                  "Ensure the environment is configured for default authentication if this is intentional for the actual library.")
-        print(f"PlaceholderGeminiLLM initialized with model: {self.model_name}")
+# class PlaceholderGeminiLLM:
+#     """
+#     This is a placeholder for the actual Gemini LLM client.
+#     Replace this with the actual library import and instantiation, e.g.:
+#     from langchain_google_vertexai import ChatVertexAI
+#     llm = ChatVertexAI(model_name=model_name, project="your-gcp-project")
+#     or from crewai.llms import ChatGoogleGenerativeAI (if available)
+#     llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key)
+#     """
+#     def __init__(self, model_name: str, api_key: str = None):
+#         self.model_name = model_name
+#         self.api_key = api_key
+#         if not api_key:
+#             print(f"Warning: PlaceholderGeminiLLM for '{model_name}' initialized without a specific API key. "
+#                   "Ensure the environment is configured for default authentication if this is intentional for the actual library.")
+#         print(f"PlaceholderGeminiLLM initialized with model: {self.model_name}")
 
-    def __repr__(self):
-        return f"PlaceholderGeminiLLM(model_name='{self.model_name}')"
+#     def __repr__(self):
+#         return f"PlaceholderGeminiLLM(model_name='{self.model_name}')"
 
 # Global LLM instance to be reused by agents
 # This helps in making only one LLM object for the application if configuration doesn't change.
 _llm_instance = None
+
+from crewai import LLM # Changed import
 
 def get_llm():
     """
@@ -62,7 +64,12 @@ def get_llm():
     # _llm_instance = ChatVertexAI(model_name=model_name, project=project_id) # API key often handled by gcloud auth
     #
     # For now, using the placeholder:
-    _llm_instance = PlaceholderGeminiLLM(model_name=model_name, api_key=api_key)
+    # _llm_instance = PlaceholderGeminiLLM(model_name=model_name, api_key=api_key)
+    _llm_instance = LLM( # Changed to LLM
+        model=model_name,
+        api_key=api_key # TODO: Replace with your actual Gemini API key or ensure GEMINI_API_KEY env var is set.
+        # base_url="https://generativelanguage.googleapis.com/v1beta" # Removed base_url
+    )
 
     print(f"LLM instance created/retrieved: {_llm_instance}")
     return _llm_instance
