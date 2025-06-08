@@ -1,4 +1,4 @@
 # This package will contain the crew definition for the TechStackCommittee.
-from .tech_stack_committee_crew import run_tech_stack_committee
+from .tech_vetting_council_crew import TechVettingCouncilCrew # Updated import
 
-__all__ = ["run_tech_stack_committee"]
+__all__ = ["TechVettingCouncilCrew"] # Updated export
