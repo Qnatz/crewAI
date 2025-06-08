@@ -172,6 +172,10 @@ class Agent(BaseAgent):
         default=None,
         description="The Agent's role to be used from your repository.",
     )
+    agent_module_path: Optional[str] = Field(
+        default=None,
+        description="Module path of the agent, used for model selection configuration."
+    )
 
     @model_validator(mode="before")
     def validate_from_repository(cls, v):
@@ -183,11 +187,40 @@ class Agent(BaseAgent):
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
 
-        self.llm = create_llm(self.llm)
+        # Auto-populate agent_module_path first
+        try:
+            module_name = self.__module__
+            if module_name and isinstance(module_name, str):
+                path_parts = module_name.split('.')
+                if path_parts:
+                    if path_parts[0] in ['crewai', 'q_ware', 'src']:
+                        if path_parts[0] == 'src':
+                            file_path = "/".join(path_parts) + ".py"
+                        else:
+                            file_path = "src/" + "/".join(path_parts) + ".py"
+                    else:
+                        file_path = "/".join(path_parts) + ".py"
+
+                    if "/" in file_path and file_path.endswith(".py"):
+                        self.agent_module_path = file_path
+        except AttributeError:
+            pass
+        except Exception:
+            pass
+
+        self.llm = create_llm(
+            self.llm,
+            agent_module_path=self.agent_module_path,
+            complexity_score=None
+        )
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
         ):
-            self.function_calling_llm = create_llm(self.function_calling_llm)
+            self.function_calling_llm = create_llm(
+                self.function_calling_llm,
+                agent_module_path=self.agent_module_path,
+                complexity_score=None
+            )
 
         if not self.agent_executor:
             self._setup_agent_executor()
@@ -406,6 +439,55 @@ class Agent(BaseAgent):
                 )
 
         tools = tools or self.tools or []
+
+        # Re-evaluate LLM based on task complexity score
+        task_complexity_score = task.complexity_score
+        agent_module_path = self.agent_module_path # Populated in post_init_setup
+
+        # Update self.llm
+        if self.llm:
+            current_llm_model_name = None
+            if isinstance(self.llm, BaseLLM):
+                current_llm_model_name = self.llm.model_name # Consistent attribute for model name
+            elif isinstance(self.llm, str): # Should ideally be BaseLLM by now
+                current_llm_model_name = self.llm
+
+            if current_llm_model_name: # Proceed if we have a current model name
+                from crewai.llm import LLMConfig # Import here to avoid circular dependency issues at module level
+                selected_llm_model_name = LLMConfig.select_model(
+                    agent_module_path=agent_module_path,
+                    complexity_score=task_complexity_score,
+                    current_model_name=current_llm_model_name,
+                )
+                if selected_llm_model_name != current_llm_model_name:
+                    self.llm = create_llm(
+                        llm_value=selected_llm_model_name,
+                        agent_module_path=agent_module_path,
+                        complexity_score=task_complexity_score,
+                    )
+
+        # Update self.function_calling_llm
+        if self.function_calling_llm:
+            current_fcllm_model_name = None
+            if isinstance(self.function_calling_llm, BaseLLM):
+                current_fcllm_model_name = self.function_calling_llm.model_name
+            elif isinstance(self.function_calling_llm, str):
+                current_fcllm_model_name = self.function_calling_llm
+
+            if current_fcllm_model_name:
+                from crewai.llm import LLMConfig # Import here
+                selected_fcllm_model_name = LLMConfig.select_model(
+                    agent_module_path=agent_module_path,
+                    complexity_score=task_complexity_score,
+                    current_model_name=current_fcllm_model_name,
+                )
+                if selected_fcllm_model_name != current_fcllm_model_name:
+                    self.function_calling_llm = create_llm(
+                        llm_value=selected_fcllm_model_name,
+                        agent_module_path=agent_module_path,
+                        complexity_score=task_complexity_score,
+                    )
+
         self.create_agent_executor(tools=tools, task=task)
 
         if self.crew and self.crew._train:

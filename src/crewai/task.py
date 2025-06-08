@@ -158,6 +158,7 @@ class Task(BaseModel):
     end_time: Optional[datetime.datetime] = Field(
         default=None, description="End time of the task execution"
     )
+    complexity_score: Optional[int] = Field(default=None, description="Complexity score for the task, used for model selection.")
 
     @field_validator("guardrail")
     @classmethod

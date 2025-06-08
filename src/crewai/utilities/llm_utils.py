@@ -2,12 +2,14 @@ import os
 from typing import Any, Dict, List, Optional, Union
 
 from crewai.cli.constants import DEFAULT_LLM_MODEL, ENV_VARS, LITELLM_PARAMS
-from crewai.llm import LLM, BaseLLM
+from crewai.llm import LLM, BaseLLM, LLMConfig
 
 
 def create_llm(
     llm_value: Union[str, LLM, Any, None] = None,
-) -> Optional[LLM | BaseLLM]:
+    agent_module_path: Optional[str] = None,
+    complexity_score: Optional[int] = None,
+) -> Optional[Union[LLM, BaseLLM]]:
     """
     Creates or returns an LLM instance based on the given llm_value.
 
@@ -28,26 +30,49 @@ def create_llm(
 
     # 2) If llm_value is a string (model name)
     if isinstance(llm_value, str):
+        initial_model_name = llm_value
+        # Apply model selection
+        selected_model_name = LLMConfig.select_model(
+            agent_module_path, complexity_score, initial_model_name
+        )
+        model_name_to_use = selected_model_name
         try:
-            created_llm = LLM(model=llm_value)
+            created_llm = LLM(model=model_name_to_use)
             return created_llm
         except Exception as e:
-            print(f"Failed to instantiate LLM with model='{llm_value}': {e}")
+            print(f"Failed to instantiate LLM with model='{model_name_to_use}': {e}")
             return None
 
     # 3) If llm_value is None, parse environment variables or use default
     if llm_value is None:
-        return _llm_via_environment_or_fallback()
+        return _llm_via_environment_or_fallback(
+            agent_module_path=agent_module_path, complexity_score=complexity_score
+        )
 
     # 4) Otherwise, attempt to extract relevant attributes from an unknown object
     try:
         # Extract attributes with explicit types
-        model = (
+        model_candidate = (
             getattr(llm_value, "model", None)
             or getattr(llm_value, "model_name", None)
             or getattr(llm_value, "deployment_name", None)
-            or str(llm_value)
         )
+
+        if isinstance(model_candidate, str):
+            initial_model_name = model_candidate
+            model = LLMConfig.select_model(
+                agent_module_path, complexity_score, initial_model_name
+            )
+        elif model_candidate is not None: # It's not a string but not None, pass it through
+            model = model_candidate
+        else: # Fallback to string representation if no known attribute is found or if they are None
+            model = str(llm_value)
+            # If model becomes a string here, and we want to apply selection:
+            if isinstance(model, str):
+                 initial_model_name = model
+                 model = LLMConfig.select_model(agent_module_path, complexity_score, initial_model_name)
+
+
         temperature: Optional[float] = getattr(llm_value, "temperature", None)
         max_tokens: Optional[int] = getattr(llm_value, "max_tokens", None)
         logprobs: Optional[int] = getattr(llm_value, "logprobs", None)
@@ -72,19 +97,27 @@ def create_llm(
         return None
 
 
-def _llm_via_environment_or_fallback() -> Optional[LLM]:
+def _llm_via_environment_or_fallback(
+    agent_module_path: Optional[str] = None, complexity_score: Optional[int] = None
+) -> Optional[LLM]:
     """
     Helper function: if llm_value is None, we load environment variables or fallback default model.
+    Applies model selection using LLMConfig.
     """
-    model_name = (
+    initial_model_name = (
         os.environ.get("MODEL")
         or os.environ.get("MODEL_NAME")
         or os.environ.get("OPENAI_MODEL_NAME")
         or DEFAULT_LLM_MODEL
     )
 
+    # Apply model selection
+    model_name = LLMConfig.select_model(
+        agent_module_path, complexity_score, initial_model_name
+    )
+
     # Initialize parameters with correct types
-    model: str = model_name
+    model: str = model_name # Use the selected model name
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
     max_completion_tokens: Optional[int] = None
