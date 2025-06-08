@@ -3,6 +3,8 @@ from crewai import Task # Assuming Task is used for internal representation
 from q_ware.orchestrators.tech_stack_committee.crews.tech_vetting_council_crew import TechVettingCouncilCrew
 # Import the CodeWritingCrew class
 from q_ware.crews.utility_crews.code_writing_crew import CodeWritingCrew
+# Import the FinalAssemblyCrew class
+from q_ware.crews.utility_crews.final_assembly_crew import FinalAssemblyCrew
 # Import the CodeWriterAgent instance for the default handler (as per original structure, though CodeWritingCrew is preferred)
 # from q_ware.agents.dev_utilities.code_writer_agent.agent import code_writer_agent
 # Import the actual ExecutionManagerCrew
@@ -19,6 +21,7 @@ class TaskmasterAgent:
         return {
             "tech_vetting": TechVettingCouncilCrew,
             "execution_manager": ExecutionManagerCrew,
+            "final_assembly": FinalAssemblyCrew,
             # Add more crew classes as they come online
         }
 
@@ -38,6 +41,12 @@ class TaskmasterAgent:
             crew_cls = self.active_crew_classes["execution_manager"]
             # ExecutionManagerCrew placeholder takes task_input; adapt as needed
             crew_instance = crew_cls(task_input=task_description)
+            return crew_instance.run()
+        elif "assemble" in task_description.lower() or "finalize" in task_description.lower() or "package solution" in task_description.lower():
+            crew_cls = self.active_crew_classes["final_assembly"]
+            # FinalAssemblyCrew expects assembly_instructions
+            assembly_instructions = task_description # Or derive from context
+            crew_instance = crew_cls(assembly_instructions=assembly_instructions)
             return crew_instance.run()
         else:
             # Fallback to default_handler using CodeWritingCrew

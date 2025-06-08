@@ -1,3 +1,3 @@
 from .code_writing_crew import CodeWritingCrew
-
-__all__ = ["CodeWritingCrew"]
+from .final_assembly_crew import FinalAssemblyCrew
+__all__ = ["CodeWritingCrew", "FinalAssemblyCrew"]
