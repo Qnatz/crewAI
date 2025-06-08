@@ -33,10 +33,10 @@ class CrewAgentExecutorMixin:
         ):
             try:
                 if (
-                    hasattr(self.crew, "_short_term_memory")
-                    and self.crew._short_term_memory
+                    hasattr(self.crew, "short_term_memory")
+                    and self.crew.short_term_memory
                 ):
-                    self.crew._short_term_memory.save(
+                    self.crew.short_term_memory.save(
                         value=output.text,
                         metadata={
                             "observation": self.task.description,
@@ -53,11 +53,11 @@ class CrewAgentExecutorMixin:
             self.crew
             and self.agent
             and self.task
-            and hasattr(self.crew, "_external_memory")
-            and self.crew._external_memory
+            and hasattr(self.crew, "external_memory")
+            and self.crew.external_memory
         ):
             try:
-                self.crew._external_memory.save(
+                self.crew.external_memory.save(
                     value=output.text,
                     metadata={
                         "description": self.task.description,
@@ -72,8 +72,8 @@ class CrewAgentExecutorMixin:
         """Create and save long-term and entity memory items based on evaluation."""
         if (
             self.crew
-            and self.crew._long_term_memory
-            and self.crew._entity_memory
+            and self.crew.long_term_memory
+            and self.crew.entity_memory
             and self.task
             and self.agent
         ):
@@ -95,7 +95,7 @@ class CrewAgentExecutorMixin:
                         "quality": evaluation.quality,
                     },
                 )
-                self.crew._long_term_memory.save(long_term_memory)
+                self.crew.long_term_memory.save(long_term_memory)
 
                 for entity in evaluation.entities:
                     entity_memory = EntityMemoryItem(
@@ -106,7 +106,7 @@ class CrewAgentExecutorMixin:
                             [f"- {r}" for r in entity.relationships]
                         ),
                     )
-                    self.crew._entity_memory.save(entity_memory)
+                    self.crew.entity_memory.save(entity_memory)
             except AttributeError as e:
                 print(f"Missing attributes for long term memory: {e}")
                 pass
@@ -115,8 +115,8 @@ class CrewAgentExecutorMixin:
                 pass
         elif (
             self.crew
-            and self.crew._long_term_memory
-            and self.crew._entity_memory is None
+            and self.crew.long_term_memory
+            and self.crew.entity_memory is None
         ):
             self._printer.print(
                 content="Long term memory is enabled, but entity memory is not enabled. Please configure entity memory or set memory=True to automatically enable it.",
