@@ -39,7 +39,14 @@ dependencies = [
     "json5>=0.10.0",
     # Added for ObjectBox and TFLite embedding
     "objectbox>=4.0.0",
-    "tflite-runtime>=2.14.0",
+    # NOTE: Finding a compatible tflite-runtime wheel for Python 3.12 on
+    # Android aarch64 is challenging. Version 2.16.0 is specified here
+    # as a candidate that *should* support Python 3.12.
+    # Users on specific platforms like Android aarch64 (Python 3.12)
+    # may need to compile from source, find a third-party wheel,
+    # or use a Python environment (e.g., 3.11) for which official wheels
+    # are more readily available if this version cannot be installed.
+    "tflite-runtime==2.16.0",
     "transformers>=4.0.0",
 ]
 
