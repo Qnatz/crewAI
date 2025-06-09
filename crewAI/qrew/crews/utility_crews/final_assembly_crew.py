@@ -1,100 +1,97 @@
 from crewai import Crew, Process, Agent, Task
-from crewai.project import CrewBase, agent, crew, task
+from crewAI.project import CrewBase, agent, crew, task
 
-# Placeholder for agent loading
-# Example:
-# from crewAI.qrew.orchestrators.final_assembler_agent.agent import final_assembler_agent
-# from crewAI.qrew.documentation.agent import documentation_agent # Assuming a doc agent exists
+# Import best-fit actual agents
+from crewAI.qrew.orchestrators.final_assembler_agent import final_assembler_agent
+# Using the tech_stack_committee's documentation writer, acknowledging it might be broader here.
+from crewAI.qrew.orchestrators.tech_stack_committee.documentation_writer_agent import documentation_writer_agent as project_documentation_writer_agent
+from crewAI.qrew.agents.dev_utilities import tester_agent # For final QA review
 
 @CrewBase
 class FinalAssemblyCrew:
-    """FinalAssemblyCrew is responsible for integrating various components and preparing the final project output."""
+    """
+    FinalAssemblyCrew is responsible for integrating various components,
+    generating final documentation, and performing a final review of the project output.
+    """
+    # tasks_config = 'config/final_assembly_crew_tasks.yaml' # Example
 
-    @agent
-    def project_integrator(self) -> Agent:
-        return Agent(
-            role='Project Integrator',
-            goal='Integrate all project components, ensuring they work together seamlessly. Input: {list_of_components} and {integration_guidelines}.',
-            backstory='An experienced engineer who specializes in system integration and ensuring all parts of a project fit together perfectly.',
-            allow_delegation=True, # May delegate specific integration tasks
-            verbose=True
-        )
+    @property
+    def assembler(self) -> Agent:
+        return final_assembler_agent
 
-    @agent
-    def documentation_specialist(self) -> Agent:
-        return Agent(
-            role='Documentation Specialist',
-            goal='Generate comprehensive and user-friendly documentation for the project. Input: {project_details} and {documentation_standards}.',
-            backstory='A technical writer with a talent for creating clear, concise, and helpful documentation.',
-            allow_delegation=False,
-            verbose=True
-        )
+    @property
+    def documenter(self) -> Agent:
+        return project_documentation_writer_agent
 
-    @agent
-    def final_reviewer(self) -> Agent:
-        return Agent(
-            role='Final Reviewer',
-            goal='Perform a final review of the assembled project and documentation to ensure quality and completeness. Input: {assembled_project} and {review_checklist}.',
-            backstory='A meticulous quality assurance lead with an eye for detail, responsible for the final sign-off.',
-            allow_delegation=False,
-            verbose=True
+    @property
+    def reviewer(self) -> Agent:
+        return tester_agent
+
+    # Tasks defined by this crew
+    @task
+    def component_integration_and_packaging_task(self) -> Task:
+        return Task(
+            description="Assemble all final project components: {list_of_code_modules}, {data_artifacts}, "
+                        "and {configuration_files}. Package them according to {packaging_specifications} "
+                        "for final delivery or deployment. "
+                        "Input: {list_of_code_modules}, {data_artifacts}, {configuration_files}, {packaging_specifications}.",
+            expected_output="A complete, packaged version of the project, including all components, "
+                            "ready for deployment or handover. A manifest of package contents.",
+            agent=self.assembler # type: ignore[attr-defined]
         )
 
     @task
-    def integration_task(self) -> Task:
+    def final_documentation_generation_task(self) -> Task:
         return Task(
-            description='Integrate the following project components: {list_of_components}. '
-                        'Follow the {integration_guidelines} to ensure all parts function correctly together.',
-            expected_output='A fully integrated project where all specified {list_of_components} are connected and operational. '
-                            'A report detailing the integration process and any issues encountered.',
-            agent=self.project_integrator() # type: ignore[attr-defined]
+            description="Generate the final set of project documentation, including user manuals, release notes, "
+                        "and system overview based on {compiled_project_information} and {documentation_requirements}. "
+                        "Ensure all documentation is accurate and complete. "
+                        "Input: {compiled_project_information}, {documentation_requirements}, {template_files_path}.",
+            expected_output="A complete set of final project documentation, formatted and ready for distribution.",
+            agent=self.documenter, # type: ignore[attr-defined]
+            context=[self.component_integration_and_packaging_task] # Documentation after assembly
         )
 
     @task
-    def documentation_generation_task(self) -> Task:
+    def final_quality_assurance_review_task(self) -> Task:
         return Task(
-            description='Generate comprehensive documentation for the project based on {project_details}. '
-                        'Adhere to {documentation_standards}. The documentation should cover {documentation_sections}.',
-            expected_output='A complete set of project documentation, including user guides, API references (if applicable), and system architecture overview, formatted according to {documentation_standards}.',
-            agent=self.documentation_specialist(), # type: ignore[attr-defined]
-            context=[self.integration_task()] # Documentation is typically done on an integrated system
-        )
-
-    @task
-    def final_review_task(self) -> Task:
-        return Task(
-            description='Conduct a final review of the {assembled_project} and its documentation. '
-                        'Verify against the {review_checklist} for quality, completeness, and adherence to requirements.',
-            expected_output='A final review report summarizing findings, highlighting any outstanding issues, '
-                            'and providing a go/no-go recommendation for project release or handoff.',
-            agent=self.final_reviewer(), # type: ignore[attr-defined]
-            context=[self.documentation_generation_task()] # Review happens after documentation is ready
+            description="Perform a final quality assurance review of the assembled project package and its documentation. "
+                        "Verify against the {final_checklist_items} and {user_acceptance_criteria}. "
+                        "Report any outstanding issues. "
+                        "Input: {assembled_project_package_path}, {final_documentation_path}, {final_checklist_items}, {user_acceptance_criteria}.",
+            expected_output="A final QA review report, summarizing findings, "
+                            "confirming adherence to checklist and acceptance criteria, or detailing any critical issues found.",
+            agent=self.reviewer, # type: ignore[attr-defined]
+            context=[self.final_documentation_generation_task] # Review the final package and docs
         )
 
     @crew
     def crew(self) -> Crew:
         """Creates the Final Assembly Utility crew"""
         return Crew(
-            agents=self.agents,
+            agents=[self.assembler, self.documenter, self.reviewer],
             tasks=self.tasks,
-            process=Process.sequential,
+            process=Process.sequential, # Assembly, Ddcing, then Review is a logical sequence
             verbose=True
         )
 
-# Example of how this crew might be run:
+# Example usage (conceptual)
 # if __name__ == "__main__":
 #     inputs = {
-#         'list_of_components': ['backend_api_module', 'frontend_ui_module', 'user_database_module'],
-#         'integration_guidelines': 'standard_integration_protocol_v2.md', # Placeholder
-#         'project_details': 'Project Alpha: User Management System - All developed components',
-#         'documentation_standards': 'company_documentation_style_guide.pdf', # Placeholder
-#         'documentation_sections': 'Introduction, Setup, API Usage, Troubleshooting',
-#         'assembled_project': 'integrated_project_bundle_v1.0', # Placeholder
-#         'review_checklist': 'final_quality_assurance_checklist.xlsx' # Placeholder
+#         'list_of_code_modules': ['module_A.jar', 'module_B.whl', 'frontend_dist.zip'],
+#         'data_artifacts': ['initial_db_schema.sql', 'sample_data.csv'],
+#         'configuration_files': ['prod_config.json', 'service_endpoints.yaml'],
+#         'packaging_specifications': 'Create a Docker image and a ZIP archive.',
+#         'compiled_project_information': 'Links to all component READMEs, API docs, and architecture diagrams.',
+#         'documentation_requirements': 'User manual for non-technical users, deployment guide for ops.',
+#         'template_files_path': './docs/templates/',
+#         'assembled_project_package_path': './dist/project_final_v1.0.zip', # or Docker image ID
+#         'final_documentation_path': './dist/docs_v1.0/',
+#         'final_checklist_items': 'Security scan passed, all modules versioned, license files included.',
+#         'user_acceptance_criteria': 'Key user flows X, Y, Z are functional as per UAT plan.'
 #     }
-#     final_assembly_crew = FinalAssemblyCrew()
-#     print("Starting Final Assembly Crew execution...")
-#     result = final_assembly_crew.crew().kickoff(inputs=inputs)
+#     final_assembly_crew_instance = FinalAssemblyCrew()
+#     result = final_assembly_crew_instance.crew().kickoff(inputs=inputs)
 #     print("\n\nFinal Assembly Crew execution finished.")
 #     print("Result:")
 #     print(result)

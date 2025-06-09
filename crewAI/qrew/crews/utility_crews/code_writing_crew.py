@@ -1,106 +1,94 @@
 from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
-# Placeholder for agent loading - similar to FullStackCrew, these would ideally be imported
-# from their actual definition files.
-# Example:
-# from crewAI.qrew.agents.dev_utilities.code_writer_agent.agent import code_writer_agent
-# from crewAI.qrew.agents.dev_utilities.debugger_agent.agent import debugger_agent
-# from crewAI.qrew.agents.dev_utilities.tester_agent.agent import tester_agent
+# Import actual dev utility agents
+from crewAI.qrew.agents.dev_utilities import (
+    code_writer_agent,
+    debugger_agent,
+    tester_agent
+)
 
 @CrewBase
 class CodeWritingCrew:
-    """CodeWritingCrew focuses on code generation, debugging, and testing tasks."""
+    """
+    CodeWritingCrew focuses on code generation, debugging, and testing tasks,
+    utilizing specialized agents from dev_utilities.
+    """
+    # tasks_config = 'config/code_writing_crew_tasks.yaml' # Example path
 
-    # Define placeholder agents
-    @agent
-    def senior_code_writer(self) -> Agent:
-        return Agent(
-            role='Senior Code Writer',
-            goal='Write high-quality, efficient, and well-documented code based on provided specifications. Input: {code_requirements}.',
-            backstory='An experienced software engineer specializing in code generation and best practices.',
-            allow_delegation=True, # Might delegate to a specialized language expert or refactoring agent
-            verbose=True
-        )
+    @property
+    def writer(self) -> Agent: # Renamed for brevity
+        return code_writer_agent
 
-    @agent
-    def meticulous_debugger(self) -> Agent:
-        return Agent(
-            role='Meticulous Debugger',
-            goal='Identify, analyze, and fix bugs in existing or newly written code. Input: {code_to_debug} and {issue_description}.',
-            backstory='A detail-oriented debugger with a knack for finding the root cause of complex issues.',
-            allow_delegation=False,
-            verbose=True
-        )
+    @property
+    def debugger(self) -> Agent: # Renamed for brevity
+        return debugger_agent
 
-    @agent
-    def comprehensive_tester(self) -> Agent:
-        return Agent(
-            role='Comprehensive Tester',
-            goal='Design and execute thorough tests (unit, integration) to ensure code quality and correctness. Input: {code_to_test} and {test_specifications}.',
-            backstory='A dedicated QA engineer focused on creating robust test suites and ensuring software reliability.',
-            allow_delegation=False,
-            verbose=True
-        )
+    @property
+    def tester(self) -> Agent: # Renamed for brevity
+        return tester_agent
 
-    # Define placeholder tasks
+    # Tasks defined by this crew, now assigned to actual agents
     @task
     def code_generation_task(self) -> Task:
         return Task(
-            description='Generate code based on the following requirements: {code_requirements}. '
-                        'Ensure the code is clean, follows coding standards, and includes necessary comments.',
-            expected_output='Well-written and functional code that meets all specified {code_requirements}, '
-                            'along with inline documentation.',
-            agent=self.senior_code_writer() # type: ignore[attr-defined]
+            description="Generate code based on the following requirements: {code_requirements}. "
+                        "Ensure the code is clean, follows coding standards, and includes necessary comments and basic error handling. "
+                        "Input: {code_requirements}, {target_language_or_framework}.",
+            expected_output="Well-written and functional code for {code_requirements} in {target_language_or_framework}, "
+                            "including inline documentation and ready for initial review or testing.",
+            agent=self.writer # type: ignore[attr-defined]
         )
 
     @task
     def debugging_task(self) -> Task:
         return Task(
-            description='Debug the provided {code_to_debug} to resolve the reported {issue_description}. '
-                        'Identify the root cause and implement a robust fix.',
-            expected_output='Corrected code with the identified bug fixed. '
-                            'A brief explanation of the bug and the fix applied.',
-            agent=self.meticulous_debugger(), # type: ignore[attr-defined]
-            context=[self.code_generation_task()] # Assumes debugging might occur after initial code generation
+            description="Debug the provided {code_to_debug_snippet_or_path} to resolve the reported {issue_description}. "
+                        "Identify the root cause, implement a robust fix, and explain the changes. "
+                        "Input: {code_to_debug_snippet_or_path}, {issue_description}, {steps_to_reproduce_bug}.",
+            expected_output="Corrected code with the identified bug fixed. "
+                            "A brief report detailing the root cause, the fix applied, and verification steps.",
+            agent=self.debugger, # type: ignore[attr-defined]
+            context=[self.code_generation_task] # Optional context: debugging might follow initial generation
         )
 
     @task
-    def testing_task(self) -> Task:
+    def unit_testing_task(self) -> Task: # Made more specific to unit testing
         return Task(
-            description='Test the {code_to_test} according to {test_specifications}. '
-                        'This includes writing and running unit tests and integration tests where applicable.',
-            expected_output='A test summary report, including pass/fail status for all tests, '
-                            'and a list of any identified issues or regressions. Test scripts should also be provided.',
-            agent=self.comprehensive_tester(), # type: ignore[attr-defined]
-            context=[self.debugging_task()] # Assumes testing occurs after debugging
+            description="Write and execute unit tests for the {code_module_or_function} to ensure its correctness and reliability. "
+                        "Achieve a target of {target_coverage_percentage}% code coverage if specified. "
+                        "Input: {code_module_or_function_path}, {test_specifications_or_requirements}, {target_coverage_percentage}.",
+            expected_output="A suite of unit tests for {code_module_or_function}. "
+                            "A test execution report showing all tests passing and code coverage achieved. "
+                            "Any identified bugs from testing should be reported.",
+            agent=self.tester, # type: ignore[attr-defined]
+            context=[self.debugging_task] # Testing usually follows debugging (or initial dev)
         )
 
     @crew
     def crew(self) -> Crew:
         """Creates the Code Writing Utility crew"""
         return Crew(
-            agents=self.agents,
+            agents=[self.writer, self.debugger, self.tester],
             tasks=self.tasks,
-            process=Process.sequential,
+            process=Process.sequential, # These tasks often follow a sequence
             verbose=True
         )
 
-# Example of how this crew might be run:
+# Example usage (conceptual)
 # if __name__ == "__main__":
 #     inputs = {
-#         'code_requirements': 'a Python function to calculate Fibonacci sequence up to n',
-#         'code_to_debug': 'EXISTING_CODE_SNIPPET_main_with_bug', # Placeholder for actual code
-#         'issue_description': 'function returns incorrect value for n=5',
-#         'code_to_test': 'GENERATED_OR_DEBUGGED_CODE_SNIPPET', # Placeholder
-#         'test_specifications': 'test with n=0, 1, 5, 10 and edge cases'
+#         'code_requirements': 'a Python class for managing a simple TO-DO list with add, remove, and view functionalities',
+#         'target_language_or_framework': 'Python',
+#         'code_to_debug_snippet_or_path': 'todo_list_v1.py', # Assume this file has the generated code or existing buggy code
+#         'issue_description': 'Removing an item from an empty list causes a crash.',
+#         'steps_to_reproduce_bug': '1. Create an empty TodoList. 2. Call remove_item("any_item").',
+#         'code_module_or_function_path': 'todo_list_v2.py', # Assume this is the debugged version
+#         'test_specifications_or_requirements': 'Test all public methods, including edge cases like empty list, item not found.',
+#         'target_coverage_percentage': '90'
 #     }
-#     code_writing_crew = CodeWritingCrew()
-#     print("Starting Code Writing Crew execution...")
-#     # This crew could be used in a sequence: first generate, then debug the output, then test.
-#     # Or, tasks could be used individually depending on the need.
-#     # For a sequential run of all tasks as defined:
-#     result = code_writing_crew.crew().kickoff(inputs=inputs)
+#     code_writing_crew_instance = CodeWritingCrew()
+#     result = code_writing_crew_instance.crew().kickoff(inputs=inputs)
 #     print("\n\nCode Writing Crew execution finished.")
 #     print("Result:")
 #     print(result)

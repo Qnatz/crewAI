@@ -4,25 +4,28 @@ from crewAI.qrew.crews.utility_crews.code_writing_crew import CodeWritingCrew
 class TestCodeWritingCrew(unittest.TestCase):
 
     def test_code_writing_crew_instantiation_and_kickoff(self):
-        """Test that CodeWritingCrew can be instantiated and kickoff runs without immediate error."""
+        """Test that the refactored CodeWritingCrew can be instantiated and kickoff runs."""
         try:
             crew_instance = CodeWritingCrew()
         except Exception as e:
             self.fail(f"CodeWritingCrew instantiation failed: {e}")
 
-        # Define dummy inputs for the placeholder tasks
+        # Updated dummy inputs for the refactored CodeWritingCrew tasks
         inputs = {
-            'code_requirements': 'a function to add two numbers',
-            'code_to_debug': 'def add(a,b): return a-b', # Dummy buggy code
-            'issue_description': 'adds incorrectly',
-            'code_to_test': 'def add(a,b): return a+b', # Dummy corrected code
-            'test_specifications': 'test with positive and negative numbers'
+            'code_requirements': 'a Python class for managing a simple TO-DO list',
+            'target_language_or_framework': 'Python',
+            'code_to_debug_snippet_or_path': 'todo_list_v1.py',
+            'issue_description': 'Removing an item from an empty list causes a crash.',
+            'steps_to_reproduce_bug': '1. Create an empty TodoList. 2. Call remove_item("any_item").',
+            'code_module_or_function_path': 'todo_list_v2.py',
+            'test_specifications_or_requirements': 'Test all public methods, including edge cases.',
+            'target_coverage_percentage': '90'
         }
 
         try:
             result = crew_instance.crew().kickoff(inputs=inputs)
             self.assertIsNotNone(result, "Kickoff returned None, expected some result.")
-            print(f"CodeWritingCrew kickoff result: {result}") # Optional
+            # print(f"CodeWritingCrew kickoff result: {result}") # Optional
         except Exception as e:
             self.fail(f"CodeWritingCrew kickoff failed: {e}")
 
