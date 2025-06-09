@@ -1,18 +1,18 @@
 tasks:
   - description: >
-      Analyze the incoming {user_request} or {project_goal_statement}.
+      Analyze the incoming {user_request} or {project_goal_statement} using available tools, including the Knowledge Base Query Tool, for relevant context or existing project information.
       Clarify ambiguities and define the primary objectives, scope, and desired outcomes.
-      Consult with the IdeaInterpreterAgent if the request is vague or needs significant refinement.
+      Consult with the IdeaInterpreterAgent if the request is vague or needs significant refinement even after knowledge base consultation.
       Input: {user_request}, {project_goal_statement}, {priority_level}.
     expected_output: >
       A clear and concise project brief, including:
       - Defined scope and objectives.
       - Key deliverables and success criteria.
-      - Initial assessment of complexity and potential challenges.
+      - Initial assessment of complexity and potential challenges, informed by knowledge base lookup.
       - Recommendation for which orchestrator (e.g., ProjectArchitect, ExecutionManager) or Lead Agent should take the next step.
     agent: taskmaster_agent
 
-  - description: >
+  - description: > # This task remains unchanged
       Based on the clarified project brief for {project_name}, determine the overall execution strategy.
       This involves deciding whether to first engage the ProjectArchitectAgent for design,
       the TechVettingCouncilAgent for technology choices, or directly the ExecutionManagerAgent for well-defined projects.
@@ -25,7 +25,7 @@ tasks:
       - A record of the delegation.
     agent: taskmaster_agent
 
-  - description: >
+  - description: > # This task remains unchanged
       Track the handoff of the {project_name} to the designated orchestrator or Lead Agent.
       Ensure they have acknowledged receipt and have all necessary information to proceed.
       Log the initial delegation and set up a mechanism for receiving high-level status updates or completion notifications.

@@ -1,4 +1,6 @@
 from crewai import Agent
+# Import the specific instance of the KnowledgeBaseTool
+from crewAI.qrew.tools import knowledge_base_tool_instance
 
 taskmaster_agent = Agent(
     role="TaskMaster General Coordinator",
@@ -10,7 +12,7 @@ taskmaster_agent = Agent(
               "The TaskMaster doesn't do the work itself but ensures that the right agents and crews are "
               "mobilized to achieve the user's objectives. It maintains a high-level view of ongoing projects "
               "and ensures that new requests are properly initiated and routed.",
-    allow_delegation=True, # Core function is to delegate to other orchestrators or lead agents
+    tools=[knowledge_base_tool_instance], # Added the KnowledgeBaseTool instance here
+    allow_delegation=True,
     verbose=True
-    # tools=[...] # Tools for request parsing, knowledge base access for project types
 )
