@@ -2,23 +2,44 @@ import json
 from uuid import uuid4
 from models.schema import MemoryEntry, model # Import model, not store or box directly
 from objectbox import Store # Import Store
+import os # Added os import
 from tools.embedder import embed
 
-# Define the store path consistently with schema.py
-STORE_PATH = "/data/data/com.termux/files/home/crewAI/db"
+# Define the default store path consistently with schema.py
+_DEFAULT_STORE_PATH = "/data/data/com.termux/files/home/crewAI/db"
 
 class ObjectBoxMemory:
     _store = None # Class variable to hold the store instance
+    _store_path = _DEFAULT_STORE_PATH # Class variable for store path, used by tests to override
 
-    def __init__(self):
-        # Initialize store and box only once
-        if ObjectBoxMemory._store is None:
-            # TODO: Ensure the directory STORE_PATH exists.
-            # This might need to be handled at application startup.
-            # For now, we assume it exists or ObjectBox handles it.
-            ObjectBoxMemory._store = Store(model=model, directory=STORE_PATH) # Use 'model' and 'directory'
+    def __init__(self, store_path_override: Optional[str] = None): # Allow override
+        current_path = store_path_override if store_path_override else self.__class__._store_path
+
+        # Initialize store only if it hasn't been initialized or if the path has changed
+        if ObjectBoxMemory._store is None or ObjectBoxMemory._store.directory() != os.path.abspath(current_path):
+            if ObjectBoxMemory._store: # Close existing store if path changes
+                ObjectBoxMemory._store.close()
+
+            # Ensure directory exists
+            # Ensure parent directory of current_path exists, as ObjectBox creates the final directory component.
+            parent_dir = os.path.dirname(current_path)
+            if parent_dir: # Ensure parent_dir is not an empty string (e.g. if current_path is just "mydb")
+                 os.makedirs(parent_dir, exist_ok=True)
+            # If current_path itself is meant to be the directory containing db files (e.g. "path/to/db/")
+            # then ObjectBox's `directory` parameter expects this path.
+            # If current_path is "path/to/objectbox.db" (a file), dirname should be "path/to".
+            # The Store() constructor expects the directory *containing* the database files.
+
+            ObjectBoxMemory._store = Store(model=model, directory=current_path)
 
         self.box = ObjectBoxMemory._store.box(MemoryEntry)
+
+    # Add a method to close the store, useful for testing
+    @classmethod
+    def close_store(cls):
+        if cls._store:
+            cls._store.close()
+            cls._store = None
 
     def save(self, value: str, metadata: Optional[dict] = None):
         if not value:

@@ -22,7 +22,6 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.30.0",
     # Data Handling
     "tokenizers>=0.20.3",
-    "onnxruntime==1.22.0",
     "openpyxl>=3.1.5",
     "pyvis>=0.3.2",
     # Authentication and Security
