@@ -1,8 +1,8 @@
 import os
 from typing import Any, Dict, Optional, cast
 
-from chromadb import Documents, EmbeddingFunction, Embeddings
-from chromadb.api.types import validate_embedding_function
+# from chromadb import Documents, EmbeddingFunction, Embeddings # TODO: Remove chromadb
+# from chromadb.api.types import validate_embedding_function # TODO: Remove chromadb
 
 
 class EmbeddingConfigurator:
@@ -24,7 +24,7 @@ class EmbeddingConfigurator:
     def configure_embedder(
         self,
         embedder_config: Optional[Dict[str, Any]] = None,
-    ) -> EmbeddingFunction:
+    ) -> Any: # TODO: Replace EmbeddingFunction with a suitable type
         """Configures and returns an embedding function based on the provided config."""
         if embedder_config is None:
             return self._create_default_embedding_function()
@@ -47,129 +47,139 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _create_default_embedding_function():
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        # from chromadb.utils.embedding_functions.openai_embedding_function import ( # TODO: Remove chromadb
+        #     OpenAIEmbeddingFunction,
+        # )
 
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+        # return OpenAIEmbeddingFunction( # TODO: Remove chromadb
+        #     api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+        # )
+        raise NotImplementedError("ChromaDB embedding functions are no longer supported.")
 
     @staticmethod
     def _configure_openai(config, model_name):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        # from chromadb.utils.embedding_functions.openai_embedding_function import ( # TODO: Remove chromadb
+        #     OpenAIEmbeddingFunction,
+        # )
 
-        return OpenAIEmbeddingFunction(
-            api_key=config.get("api_key") or os.getenv("OPENAI_API_KEY"),
-            model_name=model_name,
-            api_base=config.get("api_base", None),
-            api_type=config.get("api_type", None),
-            api_version=config.get("api_version", None),
-            default_headers=config.get("default_headers", None),
-            dimensions=config.get("dimensions", None),
-            deployment_id=config.get("deployment_id", None),
-            organization_id=config.get("organization_id", None),
-        )
+        # return OpenAIEmbeddingFunction( # TODO: Remove chromadb
+        #     api_key=config.get("api_key") or os.getenv("OPENAI_API_KEY"),
+        #     model_name=model_name,
+            # api_base=config.get("api_base", None), # TODO: Remove chromadb
+            # api_type=config.get("api_type", None), # TODO: Remove chromadb
+            # api_version=config.get("api_version", None), # TODO: Remove chromadb
+            # default_headers=config.get("default_headers", None), # TODO: Remove chromadb
+            # dimensions=config.get("dimensions", None), # TODO: Remove chromadb
+            # deployment_id=config.get("deployment_id", None), # TODO: Remove chromadb
+            # organization_id=config.get("organization_id", None), # TODO: Remove chromadb
+        # )
+        raise NotImplementedError("ChromaDB embedding functions are no longer supported.")
 
     @staticmethod
     def _configure_azure(config, model_name):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        # from chromadb.utils.embedding_functions.openai_embedding_function import ( # TODO: Remove chromadb
+        #     OpenAIEmbeddingFunction,
+        # )
 
-        return OpenAIEmbeddingFunction(
-            api_key=config.get("api_key"),
-            api_base=config.get("api_base"),
-            api_type=config.get("api_type", "azure"),
-            api_version=config.get("api_version"),
-            model_name=model_name,
-            default_headers=config.get("default_headers"),
-            dimensions=config.get("dimensions"),
-            deployment_id=config.get("deployment_id"),
-            organization_id=config.get("organization_id"),
-        )
+        # return OpenAIEmbeddingFunction( # TODO: Remove chromadb
+        #     api_key=config.get("api_key"),
+        #     api_base=config.get("api_base"),
+        #     api_type=config.get("api_type", "azure"),
+        #     api_version=config.get("api_version"),
+        #     model_name=model_name,
+        #     default_headers=config.get("default_headers"),
+        #     dimensions=config.get("dimensions"),
+        #     deployment_id=config.get("deployment_id"),
+        #     organization_id=config.get("organization_id"),
+        # )
+        raise NotImplementedError("ChromaDB embedding functions are no longer supported.")
 
     @staticmethod
     def _configure_ollama(config, model_name):
-        from chromadb.utils.embedding_functions.ollama_embedding_function import (
-            OllamaEmbeddingFunction,
-        )
+        # from chromadb.utils.embedding_functions.ollama_embedding_function import ( # TODO: Remove chromadb
+        #     OllamaEmbeddingFunction,
+        # )
 
-        return OllamaEmbeddingFunction(
-            url=config.get("url", "http://localhost:11434/api/embeddings"),
-            model_name=model_name,
-        )
+        # return OllamaEmbeddingFunction( # TODO: Remove chromadb
+        #     url=config.get("url", "http://localhost:11434/api/embeddings"),
+        #     model_name=model_name,
+        # )
+        raise NotImplementedError("ChromaDB embedding functions are no longer supported.")
 
     @staticmethod
     def _configure_vertexai(config, model_name):
-        from chromadb.utils.embedding_functions.google_embedding_function import (
-            GoogleVertexEmbeddingFunction,
-        )
+        # from chromadb.utils.embedding_functions.google_embedding_function import ( # TODO: Remove chromadb
+        #     GoogleVertexEmbeddingFunction,
+        # )
 
-        return GoogleVertexEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-            project_id=config.get("project_id"),
-            region=config.get("region"),
-        )
+        # return GoogleVertexEmbeddingFunction( # TODO: Remove chromadb
+        #     model_name=model_name,
+        #     api_key=config.get("api_key"),
+        #     project_id=config.get("project_id"),
+        #     region=config.get("region"),
+        # )
+        raise NotImplementedError("ChromaDB embedding functions are no longer supported.")
 
     @staticmethod
     def _configure_google(config, model_name):
-        from chromadb.utils.embedding_functions.google_embedding_function import (
-            GoogleGenerativeAiEmbeddingFunction,
-        )
+        # from chromadb.utils.embedding_functions.google_embedding_function import ( # TODO: Remove chromadb
+        #     GoogleGenerativeAiEmbeddingFunction,
+        # )
 
-        return GoogleGenerativeAiEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-            task_type=config.get("task_type"),
-        )
+        # return GoogleGenerativeAiEmbeddingFunction( # TODO: Remove chromadb
+        #     model_name=model_name,
+        #     api_key=config.get("api_key"),
+        #     task_type=config.get("task_type"),
+        # )
+        raise NotImplementedError("ChromaDB embedding functions are no longer supported.")
 
     @staticmethod
     def _configure_cohere(config, model_name):
-        from chromadb.utils.embedding_functions.cohere_embedding_function import (
-            CohereEmbeddingFunction,
-        )
+        # from chromadb.utils.embedding_functions.cohere_embedding_function import ( # TODO: Remove chromadb
+        #     CohereEmbeddingFunction,
+        # )
 
-        return CohereEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-        )
+        # return CohereEmbeddingFunction( # TODO: Remove chromadb
+        #     model_name=model_name,
+        #     api_key=config.get("api_key"),
+        # )
+        raise NotImplementedError("ChromaDB embedding functions are no longer supported.")
 
     @staticmethod
     def _configure_voyageai(config, model_name):
-        from chromadb.utils.embedding_functions.voyageai_embedding_function import (
-            VoyageAIEmbeddingFunction,
-        )
+        # from chromadb.utils.embedding_functions.voyageai_embedding_function import ( # TODO: Remove chromadb
+        #     VoyageAIEmbeddingFunction,
+        # )
 
-        return VoyageAIEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-        )
+        # return VoyageAIEmbeddingFunction( # TODO: Remove chromadb
+        #     model_name=model_name,
+        #     api_key=config.get("api_key"),
+        # )
+        raise NotImplementedError("ChromaDB embedding functions are no longer supported.")
 
     @staticmethod
     def _configure_bedrock(config, model_name):
-        from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
-            AmazonBedrockEmbeddingFunction,
-        )
+        # from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import ( # TODO: Remove chromadb
+        #     AmazonBedrockEmbeddingFunction,
+        # )
 
-        # Allow custom model_name override with backwards compatibility
-        kwargs = {"session": config.get("session")}
-        if model_name is not None:
-            kwargs["model_name"] = model_name
-        return AmazonBedrockEmbeddingFunction(**kwargs)
+        # # Allow custom model_name override with backwards compatibility # TODO: Remove chromadb
+        # kwargs = {"session": config.get("session")}
+        # if model_name is not None:
+        #     kwargs["model_name"] = model_name
+        # return AmazonBedrockEmbeddingFunction(**kwargs)
+        raise NotImplementedError("ChromaDB embedding functions are no longer supported.")
 
     @staticmethod
     def _configure_huggingface(config, model_name):
-        from chromadb.utils.embedding_functions.huggingface_embedding_function import (
-            HuggingFaceEmbeddingServer,
-        )
+        # from chromadb.utils.embedding_functions.huggingface_embedding_function import ( # TODO: Remove chromadb
+        #     HuggingFaceEmbeddingServer,
+        # )
 
-        return HuggingFaceEmbeddingServer(
-            url=config.get("api_url"),
-        )
+        # return HuggingFaceEmbeddingServer( # TODO: Remove chromadb
+        #     url=config.get("api_url"),
+        # )
+        raise NotImplementedError("ChromaDB embedding functions are no longer supported.")
 
     @staticmethod
     def _configure_watson(config, model_name):
@@ -182,8 +192,8 @@ class EmbeddingConfigurator:
                 "IBM Watson dependencies are not installed. Please install them to use Watson embedding."
             ) from e
 
-        class WatsonEmbeddingFunction(EmbeddingFunction):
-            def __call__(self, input: Documents) -> Embeddings:
+        class WatsonEmbeddingFunction: # TODO: Replace EmbeddingFunction with a suitable type, remove chromadb
+            def __call__(self, input: Any) -> Any: # TODO: Replace Documents and Embeddings with suitable types
                 if isinstance(input, str):
                     input = [input]
 
@@ -203,7 +213,7 @@ class EmbeddingConfigurator:
 
                 try:
                     embeddings = embedding.embed_documents(input)
-                    return cast(Embeddings, embeddings)
+                    return cast(Any, embeddings) # TODO: Replace Embeddings with a suitable type
                 except Exception as e:
                     print("Error during Watson embedding:", e)
                     raise e
@@ -213,24 +223,25 @@ class EmbeddingConfigurator:
     @staticmethod
     def _configure_custom(config):
         custom_embedder = config.get("embedder")
-        if isinstance(custom_embedder, EmbeddingFunction):
-            try:
-                validate_embedding_function(custom_embedder)
-                return custom_embedder
-            except Exception as e:
-                raise ValueError(f"Invalid custom embedding function: {str(e)}")
-        elif callable(custom_embedder):
-            try:
-                instance = custom_embedder()
-                if isinstance(instance, EmbeddingFunction):
-                    validate_embedding_function(instance)
-                    return instance
-                raise ValueError(
-                    "Custom embedder does not create an EmbeddingFunction instance"
-                )
-            except Exception as e:
-                raise ValueError(f"Error instantiating custom embedder: {str(e)}")
-        else:
-            raise ValueError(
-                "Custom embedder must be an instance of `EmbeddingFunction` or a callable that creates one"
-            )
+        # if isinstance(custom_embedder, EmbeddingFunction): # TODO: Remove chromadb
+        #     try:
+        #         validate_embedding_function(custom_embedder) # TODO: Remove chromadb
+        #         return custom_embedder
+        #     except Exception as e:
+        #         raise ValueError(f"Invalid custom embedding function: {str(e)}")
+        # elif callable(custom_embedder):
+        #     try:
+        #         instance = custom_embedder()
+        #         if isinstance(instance, EmbeddingFunction): # TODO: Remove chromadb
+        #             validate_embedding_function(instance) # TODO: Remove chromadb
+        #             return instance
+        #         raise ValueError(
+        #             "Custom embedder does not create an EmbeddingFunction instance" # TODO: Remove chromadb
+        #         )
+        #     except Exception as e:
+        #         raise ValueError(f"Error instantiating custom embedder: {str(e)}")
+        # else:
+        #     raise ValueError(
+        #         "Custom embedder must be an instance of `EmbeddingFunction` or a callable that creates one" # TODO: Remove chromadb
+        #     )
+        raise NotImplementedError("Custom ChromaDB embedding functions are no longer supported.")

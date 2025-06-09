@@ -6,15 +6,15 @@ import os
 import shutil
 from typing import Any, Dict, List, Optional, Union
 
-import chromadb
-import chromadb.errors
-from chromadb.api import ClientAPI
-from chromadb.api.types import OneOrMany
-from chromadb.config import Settings
+# import chromadb # TODO: Remove chromadb
+# import chromadb.errors # TODO: Remove chromadb
+# from chromadb.api import ClientAPI # TODO: Remove chromadb
+# from chromadb.api.types import OneOrMany # TODO: Remove chromadb
+# from chromadb.config import Settings # TODO: Remove chromadb
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
-from crewai.utilities.chromadb import sanitize_collection_name
+# from crewai.utilities.chromadb import sanitize_collection_name # TODO: Remove chromadb
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 from crewai.utilities.paths import db_storage_path
@@ -22,7 +22,7 @@ from crewai.utilities.paths import db_storage_path
 
 @contextlib.contextmanager
 def suppress_logging(
-    logger_name="chromadb.segment.impl.vector.local_persistent_hnsw",
+    logger_name="chromadb.segment.impl.vector.local_persistent_hnsw", # TODO: Update logger_name
     level=logging.ERROR,
 ):
     logger = logging.getLogger(logger_name)
@@ -43,9 +43,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     search efficiency.
     """
 
-    collection: Optional[chromadb.Collection] = None
+    collection: Optional[Any] = None # TODO: Replace chromadb.Collection with a suitable type
     collection_name: Optional[str] = "knowledge"
-    app: Optional[ClientAPI] = None
+    app: Optional[Any] = None # TODO: Replace ClientAPI with a suitable type
 
     def __init__(
         self,
@@ -54,6 +54,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     ):
         self.collection_name = collection_name
         self._set_embedder_config(embedder)
+        raise NotImplementedError("ChromaDB knowledge storage is no longer supported.")
 
     def search(
         self,
@@ -84,42 +85,44 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 raise Exception("Collection not initialized")
 
     def initialize_knowledge_storage(self):
-        base_path = os.path.join(db_storage_path(), "knowledge")
-        chroma_client = chromadb.PersistentClient(
-            path=base_path,
-            settings=Settings(allow_reset=True),
-        )
+        # base_path = os.path.join(db_storage_path(), "knowledge") # TODO: Remove chromadb
+        # chroma_client = chromadb.PersistentClient( # TODO: Remove chromadb
+        #     path=base_path,
+        #     settings=Settings(allow_reset=True),
+        # )
 
-        self.app = chroma_client
+        # self.app = chroma_client # TODO: Remove chromadb
 
-        try:
-            collection_name = (
-                f"knowledge_{self.collection_name}"
-                if self.collection_name
-                else "knowledge"
-            )
-            if self.app:
-                self.collection = self.app.get_or_create_collection(
-                    name=sanitize_collection_name(collection_name),
-                    embedding_function=self.embedder,
-                )
-            else:
-                raise Exception("Vector Database Client not initialized")
-        except Exception:
-            raise Exception("Failed to create or get collection")
+        # try: # TODO: Remove chromadb
+        #     collection_name = (
+        #         f"knowledge_{self.collection_name}"
+        #         if self.collection_name
+        #         else "knowledge"
+        #     )
+        #     if self.app: # TODO: Remove chromadb
+        #         self.collection = self.app.get_or_create_collection(
+        #             name=sanitize_collection_name(collection_name), # TODO: Remove chromadb
+        #             embedding_function=self.embedder,
+        #         )
+        #     else: # TODO: Remove chromadb
+        #         raise Exception("Vector Database Client not initialized")
+        # except Exception: # TODO: Remove chromadb
+        #     raise Exception("Failed to create or get collection")
+        raise NotImplementedError("ChromaDB knowledge storage is no longer supported.")
 
     def reset(self):
-        base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
-        if not self.app:
-            self.app = chromadb.PersistentClient(
-                path=base_path,
-                settings=Settings(allow_reset=True),
-            )
+        # base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY) # TODO: Remove chromadb
+        # if not self.app: # TODO: Remove chromadb
+        #     self.app = chromadb.PersistentClient(
+        #         path=base_path,
+        #         settings=Settings(allow_reset=True),
+        #     )
 
-        self.app.reset()
-        shutil.rmtree(base_path)
-        self.app = None
-        self.collection = None
+        # self.app.reset() # TODO: Remove chromadb
+        # shutil.rmtree(base_path) # TODO: Remove chromadb
+        # self.app = None # TODO: Remove chromadb
+        # self.collection = None # TODO: Remove chromadb
+        raise NotImplementedError("ChromaDB knowledge storage is no longer supported.")
 
     def save(
         self,
@@ -155,39 +158,41 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 filtered_metadata.append(meta)
                 filtered_ids.append(doc_id)
 
-            # If we have no metadata at all, set it to None
-            final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
-                None if all(m is None for m in filtered_metadata) else filtered_metadata
-            )
+            # If we have no metadata at all, set it to None # TODO: Remove chromadb
+            # final_metadata: Optional[OneOrMany[chromadb.Metadata]] = ( # TODO: Remove chromadb
+            #     None if all(m is None for m in filtered_metadata) else filtered_metadata
+            # )
 
-            self.collection.upsert(
-                documents=filtered_docs,
-                metadatas=final_metadata,
-                ids=filtered_ids,
-            )
-        except chromadb.errors.InvalidDimensionException as e:
-            Logger(verbose=True).log(
-                "error",
-                "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
-                "red",
-            )
-            raise ValueError(
-                "Embedding dimension mismatch. Make sure you're using the same embedding model "
-                "across all operations with this collection."
-                "Try resetting the collection using `crewai reset-memories -a`"
-            ) from e
-        except Exception as e:
+            # self.collection.upsert( # TODO: Remove chromadb
+            #     documents=filtered_docs,
+            #     metadatas=final_metadata,
+            #     ids=filtered_ids,
+            # )
+        # except chromadb.errors.InvalidDimensionException as e: # TODO: Remove chromadb
+            # Logger(verbose=True).log(
+                # "error",
+                # "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
+            #     "red",
+            # )
+            # raise ValueError(
+            #     "Embedding dimension mismatch. Make sure you're using the same embedding model "
+            #     "across all operations with this collection."
+            #     "Try resetting the collection using `crewai reset-memories -a`"
+            # ) from e
+        except Exception as e: # TODO: Remove this try-except block if chromadb.errors.InvalidDimensionException is removed
             Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
             raise
+        raise NotImplementedError("ChromaDB knowledge storage is no longer supported.")
 
     def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        # from chromadb.utils.embedding_functions.openai_embedding_function import ( # TODO: Remove chromadb
+        #     OpenAIEmbeddingFunction,
+        # )
 
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+        # return OpenAIEmbeddingFunction( # TODO: Remove chromadb
+        #     api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+        # )
+        raise NotImplementedError("ChromaDB knowledge storage is no longer supported.")
 
     def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
         """Set the embedding configuration for the knowledge storage.

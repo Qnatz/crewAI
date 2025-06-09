@@ -2,6 +2,7 @@ from importlib.metadata import version as get_version
 from typing import Optional
 
 import click
+import os
 
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
@@ -26,10 +27,24 @@ from .train_crew import train_crew
 from .update_crew import update_crew
 
 
+# Define the store path consistently with schema.py and objectbox_memory.py
+OBJECTBOX_STORE_PATH = "/data/data/com.termux/files/home/crewAI/db"
+
+def ensure_objectbox_store_directory():
+    try:
+        os.makedirs(OBJECTBOX_STORE_PATH, exist_ok=True)
+        # print(f"Ensured ObjectBox store directory exists: {OBJECTBOX_STORE_PATH}") # Optional: for debugging
+    except Exception as e:
+        # print(f"Could not create ObjectBox store directory {OBJECTBOX_STORE_PATH}: {e}") # Optional: for debugging
+        # Decide if this should be a critical error or just a warning.
+        # For Termux, permissions might be an issue if not run with appropriate context.
+        pass # Fail silently for now, ObjectBox itself will error if it can't write.
+
 @click.group()
 @click.version_option(get_version("crewai"))
 def crewai():
     """Top-level command group for crewai."""
+    ensure_objectbox_store_directory()
 
 
 @crewai.command()

@@ -405,7 +405,7 @@ Custom storage configuration for managing how the knowledge is stored and retrie
 ## Knowledge Storage Transparency
 
 <Info>
-**Understanding Knowledge Storage**: CrewAI automatically stores knowledge sources in platform-specific directories using ChromaDB for vector storage. Understanding these locations and defaults helps with production deployments, debugging, and storage management.
+**Understanding Knowledge Storage**: CrewAI automatically stores knowledge sources in platform-specific directories using a vector store for vector storage. Understanding these locations and defaults helps with production deployments, debugging, and storage management.
 </Info>
 
 ### Where CrewAI Stores Knowledge Files
@@ -418,7 +418,6 @@ By default, CrewAI uses the same storage system as memory, storing knowledge in 
 ```
 ~/Library/Application Support/CrewAI/{project_name}/
 └── knowledge/                    # Knowledge ChromaDB files
-    ├── chroma.sqlite3           # ChromaDB metadata
     ├── {collection_id}/         # Vector embeddings
     └── knowledge_{collection}/  # Named collections
 ```
@@ -427,7 +426,6 @@ By default, CrewAI uses the same storage system as memory, storing knowledge in 
 ```
 ~/.local/share/CrewAI/{project_name}/
 └── knowledge/
-    ├── chroma.sqlite3
     ├── {collection_id}/
     └── knowledge_{collection}/
 ```
@@ -436,7 +434,6 @@ By default, CrewAI uses the same storage system as memory, storing knowledge in 
 ```
 C:\Users\{username}\AppData\Local\CrewAI\{project_name}\
 └── knowledge\
-    ├── chroma.sqlite3
     ├── {collection_id}\
     └── knowledge_{collection}\
 ```
@@ -894,31 +891,6 @@ if hasattr(agent, 'knowledge') and agent.knowledge:
         print(f"Crew knowledge results: {len(crew_results)} documents found")
 ```
 
-#### Inspect Knowledge Collections
-```python
-import chromadb
-from crewai.utilities.paths import db_storage_path
-import os
-
-# Connect to CrewAI's knowledge ChromaDB
-knowledge_path = os.path.join(db_storage_path(), "knowledge")
-
-if os.path.exists(knowledge_path):
-    client = chromadb.PersistentClient(path=knowledge_path)
-    collections = client.list_collections()
-    
-    print("Knowledge Collections:")
-    for collection in collections:
-        print(f"  - {collection.name}: {collection.count()} documents")
-        
-        # Sample a few documents to verify content
-        if collection.count() > 0:
-            sample = collection.peek(limit=2)
-            print(f"    Sample content: {sample['documents'][0][:100]}...")
-else:
-    print("No knowledge storage found")
-```
-
 #### Check Knowledge Processing
 ```python
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
@@ -972,12 +944,6 @@ crew = Crew(
     knowledge_sources=[...],
     embedder={"provider": "openai", "config": {"model": "text-embedding-3-small"}}
 )
-```
-
-**"ChromaDB permission denied" errors:**
-```bash
-# Fix storage permissions
-chmod -R 755 ~/.local/share/CrewAI/
 ```
 
 **Knowledge not persisting between runs:**

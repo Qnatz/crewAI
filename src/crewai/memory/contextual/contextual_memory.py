@@ -144,6 +144,6 @@ class ContextualMemory:
             return ""
 
         formatted_memories = "\n".join(
-            f"- {result['memory']}" for result in external_memories
+            f"- {result['content']}" for result in external_memories # Changed 'memory' to 'content'
         )
         return f"External memories:\n{formatted_memories}"
