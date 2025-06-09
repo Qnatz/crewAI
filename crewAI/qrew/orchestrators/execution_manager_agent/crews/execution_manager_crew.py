@@ -1,5 +1,5 @@
 from crewai import Crew, Process, Agent, Task
-from crewai.project import CrewBase, agent, crew, task
+from crewai import CrewBase, agent, crew, task
 
 # Import the ExecutionManagerAgent
 from crewAI.qrew.orchestrators.execution_manager_agent.agent import execution_manager_agent
