@@ -1,0 +1,35 @@
+tasks:
+  - description: >
+      Analyze the high-level {user_idea} and any accompanying {stakeholder_feedback} or {market_research_data}.
+      Elicit further details if necessary and transform this information into a structured set of technical requirements.
+      Focus on clarity, testability, and completeness.
+    expected_output: >
+      A comprehensive technical requirements specification document. This document should include:
+      - Detailed user stories with acceptance criteria.
+      - Functional requirements (what the system should do).
+      - Non-functional requirements (e.g., performance, security, usability).
+      - Data requirements (input/output data, data formats).
+      - A glossary of terms if new concepts are introduced.
+      - Any identified ambiguities or areas needing further clarification.
+    agent: idea_interpreter_agent
+
+  - description: >
+      Create a detailed feature breakdown for the requested '{feature_name}' based on the initial {feature_concept}.
+      Identify individual components, user interactions, and potential dependencies.
+    expected_output: >
+      A feature specification document for '{feature_name}', including:
+      - A list of sub-features or user stories.
+      - Mockups or wireframes for UI elements (if applicable, or a description of UI needs).
+      - Integration points with other system features.
+      - Success metrics for the feature.
+    agent: idea_interpreter_agent
+
+  - description: >
+      Review the provided {technical_documentation} for clarity, consistency, and completeness from a user/stakeholder perspective.
+      Identify jargon or technical details that may be confusing to a non-technical audience and suggest improvements.
+      Ensure the documentation accurately reflects the project's goals and user needs.
+    expected_output: >
+      A review report on the {technical_documentation} with:
+      - A list of identified issues (e.g., unclear language, missing information, inconsistencies).
+      - Specific suggestions for improvement to enhance readability and understanding for non-technical stakeholders.
+    agent: idea_interpreter_agent
