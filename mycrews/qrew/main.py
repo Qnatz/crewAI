@@ -11,7 +11,7 @@ if project_src_path not in sys.path:
 
 # Ensure the llm_config is loaded first to set up the default LLM
 # This is crucial if agents are defined at the module level and instantiate their LLM upon import.
-from . import llm_config # llm_config.py is now in the same directory
+from .llm_config import default_llm # llm_config.py is now in the same directory
 
 from .taskmaster import taskmaster_agent # Import the specific agent instance # type: ignore
 # from crewAI.qrew.taskmaster.crews import TaskMasterCrew # If TaskMaster had its own crew for kickoff
@@ -85,6 +85,7 @@ def run_qrew():
     task_master_execution_crew = Crew(
         agents=[taskmaster_agent],
         tasks=[taskmaster_initial_task],
+        llm=default_llm, # Pass the configured LLM to the Crew
         verbose=True
     )
 
