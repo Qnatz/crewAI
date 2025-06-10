@@ -15,27 +15,31 @@ from .orchestrators.tech_stack_committee.documentation_writer_agent.agent import
 # Custom Tools
 from .tools.custom_agent_tools import CustomDelegateWorkTool, CustomAskQuestionTool
 
-# Instantiate custom tools (module level)
+# Instantiate custom tools at module level, they are stateless and will be configured by agents/crew context at runtime
 custom_delegate_tool = CustomDelegateWorkTool()
 custom_ask_tool = CustomAskQuestionTool()
 
 def run_idea_to_architecture_workflow(workflow_inputs: dict):
-    # --- Configure Agents ---
-    # This modifies the imported singleton agent instance for this workflow execution.
-    # If this agent (tech_vetting_council_agent) is used elsewhere with different tools simultaneously,
-    # this approach might lead to issues. Consider agent cloning or dynamic tool assignment if that's a concern.
-    if not hasattr(tech_vetting_council_agent, 'tools') or tech_vetting_council_agent.tools is None:
-        tech_vetting_council_agent.tools = []
+    print("## Initializing Idea to Architecture Workflow Agents & Tasks...")
 
-    current_tools = tech_vetting_council_agent.tools
-    if custom_delegate_tool not in current_tools:
-        current_tools.append(custom_delegate_tool)
-    if custom_ask_tool not in current_tools:
-        current_tools.append(custom_ask_tool)
-    tech_vetting_council_agent.tools = current_tools
+    # Configure TechVettingCouncilAgent tools for this workflow execution
+    # This ensures that if TVCA is used elsewhere, its tool config isn't persisted from here.
+    # However, agent instances are typically singletons when imported.
+    # A cleaner way might be to pass tools to the agent if its execution method allowed,
+    # or clone the agent for this crew if a truly isolated toolset is needed per crew run.
+    # For now, direct modification is simplest given crewAI structure.
+
+    current_tvca_tools = []
+    if hasattr(tech_vetting_council_agent, 'tools') and tech_vetting_council_agent.tools is not None:
+        current_tvca_tools = [tool for tool in tech_vetting_council_agent.tools if not isinstance(tool, (CustomDelegateWorkTool, CustomAskQuestionTool))]
+
+    current_tvca_tools.extend([custom_delegate_tool, custom_ask_tool])
+    tech_vetting_council_agent.tools = current_tvca_tools
 
 
-    # Define the list of agents for this crew instance
+    # project_architect_agent should have its tools configured in its own agent.py
+    # If not, it would need similar configuration here.
+
     all_agents_for_crew = [
         idea_interpreter_agent,
         tech_vetting_council_agent,
@@ -45,16 +49,14 @@ def run_idea_to_architecture_workflow(workflow_inputs: dict):
         documentation_writer_agent
     ]
 
-    default_i18n = I18N() # Each workflow run can use a fresh default if needed, or reuse a module-level one
+    default_i18n_instance = I18N()
     for agent_instance in all_agents_for_crew:
         if not hasattr(agent_instance, 'i18n') or agent_instance.i18n is None:
-            agent_instance.i18n = default_i18n
+            agent_instance.i18n = default_i18n_instance
         if not hasattr(agent_instance, 'llm') or agent_instance.llm is None:
-            # This print will occur at runtime if an agent is misconfigured
-            print(f"Warning: Agent {agent_instance.role} appears to be missing an LLM configuration before kickoff.")
+            print(f"Warning: Agent {agent_instance.role} in run_idea_to_architecture_workflow appears to be missing an LLM configuration.")
 
-
-    # --- Define Tasks ---
+    # Task Definitions
     task_interpret_idea = Task(
         description='''Analyze the provided user idea: "{user_idea}", stakeholder feedback: "{stakeholder_feedback}", and market research data: "{market_research_data}".
 Your primary goal is to deeply understand these inputs.
@@ -110,7 +112,7 @@ The Final Technical Guidelines should list any approved technologies, patterns, 
 You must break down the architecture design into logical components and delegate detailed design for these components using your 'Delegate Work to Co-worker (Custom)' tool.
 For example, when delegating "Detailed database schema design":
 - The `task` parameter for the tool could be: "Design the detailed database schema for {db_type} based on data models in section {data_model_section_ref} of the Technical Requirements. Adhere to guidelines from the Vetting Report."
-- The `inputs` parameter for the tool would then be a dictionary you construct, e.g., `{{ "db_type": "PostgreSQL", "data_model_section_ref": "3.2" }}`. You would extract "3.2" and "PostgreSQL" from your context or the technical vision.
+- The `inputs` parameter for the tool would then be a dictionary you construct, e.g., `{"db_type": "PostgreSQL", "data_model_section_ref": "3.2"}`. You would extract "3.2" and "PostgreSQL" from your context or the technical vision.
 - Use the `prerequisite_task_ids` parameter if a sub-delegatee needs the direct output of another sub-delegated task you previously assigned.
 - Use `context_str` for brief, guiding context.
 
@@ -126,7 +128,6 @@ Synthesize all delegated design outputs and your own architectural insights into
         context=[task_interpret_idea, task_vet_requirements]
     )
 
-    # --- Create and Run Crew ---
     idea_to_architecture_crew = Crew(
         agents=all_agents_for_crew,
         tasks=[task_interpret_idea, task_vet_requirements, task_design_architecture],
@@ -134,41 +135,44 @@ Synthesize all delegated design outputs and your own architectural insights into
         verbose=True
     )
 
+    print(f"Kicking off Idea-to-Architecture workflow with inputs: {workflow_inputs}")
     result = idea_to_architecture_crew.kickoff(inputs=workflow_inputs)
     return result
 
 if __name__ == "__main__":
-    print("## Starting Idea to Architecture Workflow")
+    print("## Starting QREW Main Entry Point (which will call Idea to Architecture Workflow)")
 
-    initial_user_idea = "Develop a market-leading application for interactive pet training that is fun and engaging. It should include video streaming, progress tracking, and social sharing features. We want it to be scalable and secure."
+    # These are the initial inputs that TaskMaster (in main.py) would have originally gathered or started with
+    initial_user_idea_for_taskmaster = "Develop a market-leading application for interactive pet training that is fun and engaging. It should include video streaming, progress tracking, and social sharing features. We want it to be scalable and secure."
+    # In a real scenario, main.py would run TaskMaster, get its output,
+    # and then that output would be passed as 'user_idea' to run_idea_to_architecture_workflow.
+    # For standalone testing of main_workflow.py, we simulate this:
+
+    simulated_taskmaster_output_as_user_idea = f"Project Brief from TaskMaster: The user wants an interactive pet training app. Key features: video, progress tracking, social sharing. Goal: fun, engaging, scalable, secure. Details: {initial_user_idea_for_taskmaster}"
+
+    # These would be other global context items potentially refined or passed along
     stakeholder_feedback_notes = "User retention is key. Gamification might be important. Mobile-first approach preferred."
     market_research_summary = "Competitors X and Y lack real-time interaction. Users want personalized training plans."
-    project_constraints = "Team has strong Python and React skills. Initial deployment on AWS. Budget for external services is moderate."
-    project_technical_vision = "A modular microservices architecture is preferred for scalability. Prioritize user data privacy."
+    project_constraints_for_workflow = "Team has strong Python and React skills. Initial deployment on AWS. Budget for external services is moderate."
+    project_technical_vision_for_workflow = "A modular microservices architecture is preferred for scalability. Prioritize user data privacy."
 
-    inputs = {
-        "user_idea": initial_user_idea,
+    inputs_for_workflow = {
+        "user_idea": simulated_taskmaster_output_as_user_idea, # This is what IdeaInterpreterAgent gets
         "stakeholder_feedback": stakeholder_feedback_notes,
         "market_research_data": market_research_summary,
-        "constraints": project_constraints,
-        "technical_vision": project_technical_vision
+        "constraints": project_constraints_for_workflow, # Used by TVCA and PAA
+        "technical_vision": project_technical_vision_for_workflow # Used by PAA
     }
 
-    print(f"\nKicking off crew with inputs: {inputs}")
-
-    # Call the refactored workflow function
-    final_result = run_idea_to_architecture_workflow(inputs)
+    final_result = run_idea_to_architecture_workflow(inputs_for_workflow)
 
     print("\n\n########################")
-    print("## Workflow Execution Result:")
+    print("## Workflow Execution Result (from main_workflow.py direct run):")
     print("########################\n")
     if final_result:
-        print("Final output from the crew (Project Architect's Software Architecture Document):")
-        if hasattr(final_result, 'raw') and final_result.raw is not None:
-            print(final_result.raw)
-        else:
-            print(str(final_result))
+        print("Final output from the Idea-to-Architecture crew:")
+        print(final_result.raw if hasattr(final_result, 'raw') else str(final_result))
     else:
-        print("No result returned or an error occurred during crew execution.")
+        print("Idea-to-Architecture Crew produced no output or an error occurred.")
 
 ```
