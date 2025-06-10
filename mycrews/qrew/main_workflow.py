@@ -75,7 +75,7 @@ You MUST use your 'Delegate Work to Co-worker (Custom)' tool for the following s
     - When calling the tool, for its `inputs` parameter, you MUST construct a dictionary. This dictionary should have two keys:
         - "project_constraints_document": Assign the value of the main project constraints (i.e., the content of "{constraints}") to this key.
         - "proposed_solution": Assign the output of the `task_interpret_idea` (which is available in your agent's context) to this key. You should use a placeholder like "{task_interpret_idea.output}" to instruct your agent how to access this.
-      The `task` string you provide to the tool for the ConstraintCheckerAgent should then use placeholders that match these keys (e.g., "...against {{project_constraints_document}} and {{proposed_solution}}.").
+      The `task` string you compose for the ConstraintCheckerAgent delegation MUST use placeholders in the format `{key}` (e.g., "...against {project_constraints_document} and {proposed_solution}."). Crucially, the placeholder names within this task string MUST EXACTLY MATCH the keys you define in the `inputs` dictionary for this tool call.
     - The `context_str` for this delegation should be "Focus on identifying clear violations or risks based on the provided documents and the given constraints."
 2.  To 'StackAdvisorAgent':
     - The `task` description for this delegation should be to "Analyze the provided 'project_requirements' (Technical Requirements Specification and Feature Breakdown) to propose an optimal technology stack. Consider the 'team_skills', 'budget_constraints', and any 'existing_architecture_details' provided. Provide justifications for stack choices, considering scalability, maintainability, and alignment with the technical vision."
@@ -84,7 +84,7 @@ You MUST use your 'Delegate Work to Co-worker (Custom)' tool for the following s
         - "team_skills": Extract relevant team skills information from the main project constraints string ("{constraints}") and assign it here. For example, if constraints mention "Team has strong Python and React skills", this value should reflect that.
         - "budget_constraints": Extract relevant budget information from the main project constraints string ("{constraints}") and assign it here. For example, if constraints mention "Budget for external services is moderate", this value should reflect that.
         - "existing_architecture_details": Set this to an appropriate value like "None - new project", as this is the initial design phase.
-      The `task` string you provide to the tool for the StackAdvisorAgent should then use placeholders that match these keys (e.g., "...based on {{project_requirements}}, considering {{team_skills}} and {{budget_constraints}}...").
+      The `task` string you compose for the StackAdvisorAgent delegation MUST use placeholders in the format `{key}` (e.g., "...based on {project_requirements}, considering {team_skills}} and {budget_constraints}..."). Crucially, the placeholder names within this task string MUST EXACTLY MATCH the keys you define in the `inputs` dictionary for this tool call.
     - The `context_str` for this delegation should be "Provide justifications for stack choices, considering scalability, maintainability, and alignment with the technical vision if available."
 
 After receiving reports from both delegated tasks, synthesize their findings, incorporate the council\'s discussion (simulated by your reasoning), and compile a final \'Vetting Report\' and a set of \'Final Technical Guidelines\'.''',
