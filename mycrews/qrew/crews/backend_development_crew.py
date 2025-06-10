@@ -1,5 +1,5 @@
 from crewai import Crew, Process, Agent, Task
-from crewai import CrewBase, agent, crew, task
+from crewai.project import CrewBase, agent, crew, task
 
 # Import actual backend agents
 from crewAI.qrew.agents.backend import (

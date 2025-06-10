@@ -1,5 +1,5 @@
 from crewai import Crew, Process, Agent, Task
-from crewai import CrewBase, agent, crew, task
+from crewai.project import CrewBase, agent, crew, task
 
 # Import actual agents that could form a full-stack team
 from crewAI.qrew.agents.backend import api_creator_agent, data_model_agent

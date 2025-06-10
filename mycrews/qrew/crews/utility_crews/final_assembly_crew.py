@@ -1,5 +1,5 @@
 from crewai import Crew, Process, Agent, Task
-from crewai import CrewBase, agent, crew, task
+from crewai.project import CrewBase, agent, crew, task
 
 # Import best-fit actual agents
 from crewAI.qrew.orchestrators.final_assembler_agent import final_assembler_agent
