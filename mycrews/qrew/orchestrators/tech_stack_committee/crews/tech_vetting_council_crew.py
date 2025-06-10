@@ -2,9 +2,9 @@ from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
 # Import the actual tech stack committee agents
-from crewAI.qrew.orchestrators.tech_stack_committee.stack_advisor_agent import stack_advisor_agent
-from crewAI.qrew.orchestrators.tech_stack_committee.constraint_checker_agent import constraint_checker_agent
-from crewAI.qrew.orchestrators.tech_stack_committee.documentation_writer_agent import documentation_writer_agent
+from mycrews.qrew.orchestrators.tech_stack_committee.stack_advisor_agent import stack_advisor_agent
+from mycrews.qrew.orchestrators.tech_stack_committee.constraint_checker_agent import constraint_checker_agent
+from mycrews.qrew.orchestrators.tech_stack_committee.documentation_writer_agent import documentation_writer_agent
 
 @CrewBase
 class TechVettingCouncilCrew:
