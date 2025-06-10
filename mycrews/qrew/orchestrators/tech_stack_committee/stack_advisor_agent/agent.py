@@ -1,5 +1,5 @@
 from crewai import Agent
-from .....llm_config import get_llm_for_agent
+from ....llm_config import get_llm_for_agent # Further corrected relative import path
 # from crewAI.qrew.tools.network_request_tool import NetworkRequestTool # Example for research
 
 # Use the agent's role or a unique key for the lookup

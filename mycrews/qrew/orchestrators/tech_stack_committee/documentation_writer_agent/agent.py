@@ -1,5 +1,5 @@
 from crewai import Agent
-from .....llm_config import get_llm_for_agent
+from ....llm_config import get_llm_for_agent # Corrected relative import path
 # from crewAI.qrew.tools.file_io_tool import FileIOTool # Example
 
 # Use the agent's role or a unique key for the lookup

@@ -1,5 +1,7 @@
 from crewai.tools import BaseTool # Use BaseTool for CrewAI tool compatibility
 from typing import Union, Any # Added for type hinting
+from tools.objectbox_memory import ObjectBoxMemory # Import ObjectBoxMemory
+from typing import Optional
 
 class KnowledgeBaseTool(BaseTool):
     name: str = "Knowledge Base Query Tool"
@@ -8,6 +10,12 @@ class KnowledgeBaseTool(BaseTool):
         "context, or answers to specific questions. Useful for understanding "
         "project history, technical decisions, or existing functionalities."
     )
+    memory_instance: Optional[ObjectBoxMemory] = None
+
+    def __init__(self, memory_instance: Optional[ObjectBoxMemory] = None, **kwargs):
+        super().__init__(**kwargs)
+        if memory_instance:
+            self.memory_instance = memory_instance
 
     def _run(self, question: Union[str, dict, Any]) -> str: # Changed type hint
         actual_question_text = ""
@@ -27,11 +35,20 @@ class KnowledgeBaseTool(BaseTool):
         # In the future, this will interact with the .tflite embedding model
         # and a vector store or similar mechanism to retrieve relevant information.
         print(f"KnowledgeBaseTool received query: '{actual_question_text}'")
-        dummy_response = (
-            f"Response for '{actual_question_text}': Information retrieved from knowledge base. "
-            "(Note: .tflite model not yet integrated. This is a placeholder response.)"
-        )
-        return dummy_response
+
+        try:
+            # Use provided memory instance or create a new one
+            memory_to_use = self.memory_instance if self.memory_instance else ObjectBoxMemory()
+            results = memory_to_use.query(query_text=actual_question_text, limit=5) # Query ObjectBoxMemory
+
+            if results:
+                formatted_results = "\n".join([result['content'] for result in results])
+                return formatted_results
+            else:
+                return "No relevant information found in the knowledge base."
+        except Exception as e:
+            print(f"Error interacting with ObjectBoxMemory: {e}")
+            return "Error querying the knowledge base. Please try again later."
 
     # If you need an async version, you can implement _arun
     # async def _arun(self, question: Union[str, dict, Any]) -> str: # Type hint could also be updated here

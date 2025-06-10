@@ -1,6 +1,7 @@
 tasks:
   - description: >
       Analyze the high-level {user_idea} and any accompanying {stakeholder_feedback} or {market_research_data}.
+      To ensure consistency and leverage existing knowledge, consult the Knowledge Base for any relevant past projects, architectural decisions, or definitions related to the core concepts in the {user_idea}.
       Elicit further details if necessary and transform this information into a structured set of technical requirements.
       Focus on clarity, testability, and completeness.
     expected_output: >

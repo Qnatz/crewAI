@@ -3,6 +3,7 @@ from uuid import uuid4
 from models.schema import MemoryEntry, model # Import model, not store or box directly
 from objectbox import Store # Import Store
 import os # Added os import
+from typing import Optional # Import Optional
 from tools.embedder import embed
 
 # Define the default store path consistently with schema.py
@@ -11,14 +12,17 @@ _DEFAULT_STORE_PATH = "/data/data/com.termux/files/home/crewAI/db"
 class ObjectBoxMemory:
     _store = None # Class variable to hold the store instance
     _store_path = _DEFAULT_STORE_PATH # Class variable for store path, used by tests to override
+    _current_store_actual_path = None # To store the actual path of the initialized store
 
     def __init__(self, store_path_override: Optional[str] = None): # Allow override
         current_path = store_path_override if store_path_override else self.__class__._store_path
+        abs_current_path = os.path.abspath(current_path)
 
         # Initialize store only if it hasn't been initialized or if the path has changed
-        if ObjectBoxMemory._store is None or ObjectBoxMemory._store.directory() != os.path.abspath(current_path):
+        if ObjectBoxMemory._store is None or ObjectBoxMemory._current_store_actual_path != abs_current_path:
             if ObjectBoxMemory._store: # Close existing store if path changes
                 ObjectBoxMemory._store.close()
+                ObjectBoxMemory._store = None # Ensure it's reset
 
             # Ensure directory exists
             # Ensure parent directory of current_path exists, as ObjectBox creates the final directory component.
@@ -30,7 +34,8 @@ class ObjectBoxMemory:
             # If current_path is "path/to/objectbox.db" (a file), dirname should be "path/to".
             # The Store() constructor expects the directory *containing* the database files.
 
-            ObjectBoxMemory._store = Store(model=model, directory=current_path)
+            ObjectBoxMemory._store = Store(model=model, directory=abs_current_path) # Use abs_current_path
+            ObjectBoxMemory._current_store_actual_path = abs_current_path # Store the path used
 
         self.box = ObjectBoxMemory._store.box(MemoryEntry)
 
@@ -40,6 +45,7 @@ class ObjectBoxMemory:
         if cls._store:
             cls._store.close()
             cls._store = None
+            cls._current_store_actual_path = None # Reset path on close
 
     def save(self, value: str, metadata: Optional[dict] = None):
         if not value:
@@ -84,31 +90,32 @@ class ObjectBoxMemory:
 
             # The issue's example `hits = self.box.query(MemoryEntry.vector).build().find_nearest(...)`
             # is problematic because `self.box.query(MemoryEntry.vector)` is not a valid condition start.
-            # It should be `self.box.query(Condition)`.
-            # `MemoryEntry.vector.nearest(qvec.tolist(), count=top_k)` is the condition.
+            # Trying a query builder chain style based on common patterns and C API hints
+            # qb = self.box.query() # Get QueryBuilder
+            # condition = qb.param(MemoryEntry.vector).nearest_neighbors(qvec.tolist(), count=limit)
+            # _query = qb.build() # Build after condition is applied
 
-            _query = self.box.query(MemoryEntry.vector.nearest(qvec.tolist(), count=top_k)).build()
+            # Attempting nearest_neighbors directly on the QueryBuilder
+            _query = self.box.query().nearest_neighbors(MemoryEntry.vector, qvec.tolist(), count=limit).build()
             nearest_entities = _query.find() # This returns a list of MemoryEntry objects
 
             # If the goal is to get Hit(object, distance) as implied by `hit.distance` later,
             # this query form doesn't directly provide distances.
             # ObjectBox's Python API for HNSW distances might require specific handling or might have evolved.
             # For now, we'll populate with a placeholder for distance if not available.
+            # The score_threshold parameter is currently unused as distances are not directly retrieved.
+            # If distances were available, this threshold could be used to filter results.
 
             for entity in nearest_entities:
-                # Placeholder for distance, as `find()` doesn't return it.
-                # If `find_nearest` was available on Query and returned Hit objects, that would be used.
-                # This part needs to be confirmed against the exact ObjectBox version's capabilities for HNSW distance retrieval.
-                distance_placeholder = -1.0 # Default if distance isn't available from this query.
-
-                # To get actual distances, one might need to use a different query method or
-                # the distances are implicitly handled by the ordering (nearest first).
-                # For now, let's assume the order implies distance and use a placeholder.
+                # Placeholder for distance, as `find()` on a standard query doesn't typically return it.
+                # ObjectBox orders by distance with `nearest`, so the order is significant.
+                # Actual distance/score retrieval might require a different API usage or version.
+                distance_placeholder = -1.0 # Using -1.0 to indicate unavailable distance.
 
                 results.append({
                     "content": entity.content,
                     "metadata": json.loads(entity.metadata),
-                    "distance": distance_placeholder # This is a placeholder
+                    "distance": distance_placeholder # Placeholder, actual distance not retrieved.
                 })
 
             # If the issue's syntax `self.box.query(MemoryEntry.vector).build().find_nearest(...)`

@@ -1,5 +1,5 @@
 from crewai import Agent
-from .....llm_config import get_llm_for_agent
+from ....llm_config import get_llm_for_agent # Corrected relative import path
 
 # Use the agent's role or a unique key for the lookup
 agent_identifier = "constraint_checker_agent_tech_committee" # Matching the key in MODEL_BY_AGENT

@@ -1,19 +1,20 @@
-from objectbox.model import ModelBuilder, Entity, Id, Property, FloatVector, IndexType
+from objectbox.model import Entity, Id, Property, Float32Vector, HnswIndex, Model # Added Model
+from objectbox import Store
 
-# 1) Build schema
-builder = ModelBuilder()
-
-class MemoryEntry(Entity):
+# 1) Define schema by defining the entity class
+@Entity() # Calling the decorator
+class MemoryEntry:
     id = Id()
     content = Property(str)
-    vector = FloatVector(dimension=384, index=IndexType.HNSW)
+    vector = Float32Vector(index=HnswIndex(dimensions=384)) # dimensions moved to HnswIndex
     metadata = Property(str)  # JSON-encoded dict
 
-builder.entity(MemoryEntry)
-model = builder.finish()
+# Create a Model object and add entities to it
+_model_instance = Model()
+_model_instance.entity(MemoryEntry)
+model = _model_instance
 
 # 2) Open or create a store in Termux
-from objectbox import Store
 
 # Define the store path, ensuring the directory exists.
 # The actual store creation will be handled by the memory adapter or main application logic.

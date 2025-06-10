@@ -1,6 +1,6 @@
 from crewai import Agent
 from ...llm_config import get_llm_for_agent
-# from crewAI.qrew.tools.network_request_tool import NetworkRequestTool # Example if tools are ready
+from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance # Import KnowledgeBaseTool instance
 
 # Use the agent's role or a unique key for the lookup
 agent_identifier = "idea_interpreter_agent" # Matching the key in MODEL_BY_AGENT
@@ -15,7 +15,7 @@ idea_interpreter_agent = Agent(
               "Experienced in requirements elicitation, user story mapping, and clarifying ambiguities. "
               "Ensures that the development team has a clear understanding of what needs to be built.",
     llm=specific_llm, # Assign the fetched LLM
-    # tools=[NetworkRequestTool.get], # Example: for fetching external information or competitor analysis
+    tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
     allow_delegation=False, # Interpretation should be a core responsibility
     verbose=True
 )

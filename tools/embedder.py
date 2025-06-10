@@ -2,19 +2,20 @@ import numpy as np
 import tflite_runtime.interpreter as tflite
 from transformers import AutoTokenizer
 
-MODEL_PATH = "models/embedding_model.tflite" # Adjusted path
+MODEL_PATH = "models/embedding_model.tflite" # Reverted to original (0-byte) model
 
 # Placeholder for TFLite model initialization
 # In a real scenario, ensure the model exists and is loaded correctly.
 try:
     interp = tflite.Interpreter(model_path=MODEL_PATH)
     interp.allocate_tensors()
+    # These will be used by the embed function if model loading succeeds
     inp_idx = interp.get_input_details()[0]["index"]
     out_idx = interp.get_output_details()[0]["index"]
 except ValueError as e:
-    # This will likely happen if the model file doesn't exist or is invalid
-    print(f"Error initializing TFLite interpreter: {e}")
-    print(f"Please ensure '{MODEL_PATH}' is a valid TFLite model.")
+    # This will likely happen if the model file doesn't exist or is invalid (e.g., 0-byte)
+    print(f"Error initializing TFLite interpreter for {MODEL_PATH}: {e}")
+    print(f"Please ensure '{MODEL_PATH}' is a valid TFLite model. Falling back to DummyInterpreter.")
     # Fallback to dummy values if model loading fails, to allow basic script execution
     # This is for development purposes only; a real model is needed for functionality.
     class DummyInterpreter:
@@ -23,8 +24,8 @@ except ValueError as e:
         def get_tensor(self, out_idx): return np.random.rand(1, 384).astype(np.float32) # Match dimension
 
     interp = DummyInterpreter()
-    inp_idx = 0
-    out_idx = 0
+    inp_idx = 0 # Dummy value, not used by DummyInterpreter's methods
+    out_idx = 0 # Dummy value, not used by DummyInterpreter's methods
 
 tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
 
