@@ -14,6 +14,7 @@ if project_src_path not in sys.path:
 from .llm_config import default_llm # llm_config.py is now in the same directory
 
 from .taskmaster import taskmaster_agent # Import the specific agent instance # type: ignore
+# from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance # Removed after direct testing
 
 # Enable LiteLLM debugging
 os.environ["LITELLM_DEBUG"] = "1"
