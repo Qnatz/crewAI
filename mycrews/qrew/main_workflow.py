@@ -22,23 +22,12 @@ custom_ask_tool = CustomAskQuestionTool()
 def run_idea_to_architecture_workflow(workflow_inputs: dict):
     print("## Initializing Idea to Architecture Workflow Agents & Tasks...")
 
-    # Configure TechVettingCouncilAgent tools for this workflow execution
-    # This ensures that if TVCA is used elsewhere, its tool config isn't persisted from here.
-    # However, agent instances are typically singletons when imported.
-    # A cleaner way might be to pass tools to the agent if its execution method allowed,
-    # or clone the agent for this crew if a truly isolated toolset is needed per crew run.
-    # For now, direct modification is simplest given crewAI structure.
-
     current_tvca_tools = []
     if hasattr(tech_vetting_council_agent, 'tools') and tech_vetting_council_agent.tools is not None:
         current_tvca_tools = [tool for tool in tech_vetting_council_agent.tools if not isinstance(tool, (CustomDelegateWorkTool, CustomAskQuestionTool))]
 
     current_tvca_tools.extend([custom_delegate_tool, custom_ask_tool])
     tech_vetting_council_agent.tools = current_tvca_tools
-
-
-    # project_architect_agent should have its tools configured in its own agent.py
-    # If not, it would need similar configuration here.
 
     all_agents_for_crew = [
         idea_interpreter_agent,
@@ -56,15 +45,16 @@ def run_idea_to_architecture_workflow(workflow_inputs: dict):
         if not hasattr(agent_instance, 'llm') or agent_instance.llm is None:
             print(f"Warning: Agent {agent_instance.role} in run_idea_to_architecture_workflow appears to be missing an LLM configuration.")
 
-    # Task Definitions
     task_interpret_idea = Task(
-        description='''Analyze the provided user idea: "{user_idea}", stakeholder feedback: "{stakeholder_feedback}", and market research data: "{market_research_data}".
+        description='''\
+Analyze the provided user idea: "{user_idea}", stakeholder feedback: "{stakeholder_feedback}", and market research data: "{market_research_data}".
 Your primary goal is to deeply understand these inputs.
-Consult the Knowledge Base for any relevant past projects, architectural decisions, or definitions that could clarify or enrich the user's concept.
+Consult the Knowledge Base for any relevant past projects, architectural decisions, or definitions that could clarify or enrich the user\'s concept.
 Produce a structured set of technical requirements and a detailed feature breakdown.
 Ensure the technical requirements are clear, testable, and complete.
 The feature breakdown should detail individual components and user interactions for key features described in the user idea.''',
-        expected_output='''A comprehensive technical requirements specification document AND a detailed feature breakdown document.
+        expected_output='''\
+A comprehensive technical requirements specification document AND a detailed feature breakdown document.
 The technical requirements should include:
 - Detailed user stories with acceptance criteria.
 - Functional requirements.
@@ -77,47 +67,51 @@ The feature breakdown should detail individual components and user interactions 
     )
 
     task_vet_requirements = Task(
-        description='''You have received a Technical Requirements Specification and a Feature Breakdown from the Idea Interpreter Agent (available in your task context).
+        description='''\
+You have received a Technical Requirements Specification and a Feature Breakdown from the Idea Interpreter Agent (available in your task context).
 Your task is to lead the Tech Vetting Council to review these documents thoroughly.
 Use the overall project constraints, "{constraints}", to guide your vetting.
 
-You MUST use your 'Delegate Work to Co-worker (Custom)' tool for the following specific delegations:
-1.  To 'ConstraintCheckerAgent':
+You MUST use your \'Delegate Work to Co-worker (Custom)\' tool for the following specific delegations:
+1.  To \'ConstraintCheckerAgent\':
     - The `task` for this delegation should be to "Review the provided Technical Requirements Specification and Feature Breakdown against specific project constraints. Identify any violations or potential conflicts regarding budget, team skills, security policies, licensing, or infrastructure."
-    - When calling the tool, for its `inputs` parameter, you should construct a dictionary where you pass the main project constraints. For example: `{"subtask_constraints_input": "{constraints}"}`. The `task` string you provide to the tool for the ConstraintCheckerAgent should then use a placeholder like `{subtask_constraints_input}` which will be filled by this `inputs` dictionary.
+    - When calling the tool, for its `inputs` parameter, you should construct a dictionary where you pass the main project constraints. For example: `{{"subtask_constraints_input": "{constraints}"}}`. The `task` string you provide to the tool for the ConstraintCheckerAgent should then use a placeholder like `{subtask_constraints_input}` which will be filled by this `inputs` dictionary.
     - The `context_str` for this delegation should be "Focus on identifying clear violations or risks based on the provided documents and constraints."
-2.  To 'StackAdvisorAgent':
-    - The `task` for this delegation should be to "Analyze the Technical Requirements Specification and Feature Breakdown to propose an optimal technology stack. Consider team skills (assume 'general full-stack proficiency' if not specified otherwise in requirements) and budget constraints (use the overall project constraints for this, available to you as "{constraints}")."
-    - When calling the tool, if you need to pass specific parts of the main "{constraints}" to the StackAdvisor, construct an `inputs` dictionary for the tool call accordingly. For example, `{"budget_info_for_advisor": "[relevant budget part of {constraints}]"}` and use `{budget_info_for_advisor}` in the `task` string for the StackAdvisor.
+2.  To \'StackAdvisorAgent\':
+    - The `task` for this delegation should be to "Analyze the Technical Requirements Specification and Feature Breakdown to propose an optimal technology stack. Consider team skills (assume \'general full-stack proficiency\' if not specified otherwise in requirements) and budget constraints (use the overall project constraints for this, available to you as \"{constraints}\")."
+    - When calling the tool, if you need to pass specific parts of the main "{constraints}" to the StackAdvisor, construct an `inputs` dictionary for the tool call accordingly. For example: `{{"budget_info_for_advisor": "[relevant budget part of {constraints}]"}}` and use `{budget_info_for_advisor}` in the `task` string for the StackAdvisor.
     - The `context_str` for this delegation should be "Provide justifications for stack choices, considering scalability, maintainability, and alignment with the technical vision if available."
 
-After receiving reports from both delegated tasks, synthesize their findings, incorporate the council's discussion (simulated by your reasoning), and compile a final 'Vetting Report' and a set of 'Final Technical Guidelines'.''',
-        expected_output='''A Vetting Report and a set of Final Technical Guidelines.
+After receiving reports from both delegated tasks, synthesize their findings, incorporate the council\'s discussion (simulated by your reasoning), and compile a final \'Vetting Report\' and a set of \'Final Technical Guidelines\'.''',
+        expected_output='''\
+A Vetting Report and a set of Final Technical Guidelines.
 The Vetting Report should summarize:
-- Stack Advisor's evaluation.
-- Constraint Checker's compliance report.
-- The Tech Vetting Council's final decision/recommendations on the proposal.
+- Stack Advisor\'s evaluation.
+- Constraint Checker\'s compliance report.
+- The Tech Vetting Council\'s final decision/recommendations on the proposal.
 The Final Technical Guidelines should list any approved technologies, patterns, or constraints affirmed by the council.''',
         agent=tech_vetting_council_agent,
         context=[task_interpret_idea]
     )
 
     task_design_architecture = Task(
-        description='''Your primary goal is to develop a comprehensive software architecture plan. Base your design on:
-1. The original Technical Requirements & Feature Breakdown (from 'task_interpret_idea', available in your context).
-2. The Vetting Report & Final Technical Guidelines (from 'task_vet_requirements', available in your context).
+        description='''\
+Your primary goal is to develop a comprehensive software architecture plan. Base your design on:
+1. The original Technical Requirements & Feature Breakdown (from \'task_interpret_idea\', available in your context).
+2. The Vetting Report & Final Technical Guidelines (from \'task_vet_requirements\', available in your context).
 3. The overall project constraints: "{constraints}".
-4. The project's technical vision: "{technical_vision}".
+4. The project\'s technical vision: "{technical_vision}".
 
-You must break down the architecture design into logical components and delegate detailed design for these components using your 'Delegate Work to Co-worker (Custom)' tool.
+You must break down the architecture design into logical components and delegate detailed design for these components using your \'Delegate Work to Co-worker (Custom)\' tool.
 For example, when delegating "Detailed database schema design":
 - The `task` parameter for the tool could be: "Design the detailed database schema for {db_type} based on data models in section {data_model_section_ref} of the Technical Requirements. Adhere to guidelines from the Vetting Report."
-- The `inputs` parameter for the tool would then be a dictionary you construct, e.g., `{"db_type": "PostgreSQL", "data_model_section_ref": "3.2"}`. You would extract "3.2" and "PostgreSQL" from your context or the technical vision.
+- The `inputs` parameter for the tool would then be a dictionary you construct, e.g., `{{"db_type": "PostgreSQL", "data_model_section_ref": "3.2"}}`. You would extract "3.2" and "PostgreSQL" from your context or the technical vision.
 - Use the `prerequisite_task_ids` parameter if a sub-delegatee needs the direct output of another sub-delegated task you previously assigned.
 - Use `context_str` for brief, guiding context.
 
 Synthesize all delegated design outputs and your own architectural insights into a final, detailed software architecture document.''',
-        expected_output='''A detailed software architecture document, including:
+        expected_output='''\
+A detailed software architecture document, including:
 - High-level system diagrams.
 - Technology stack recommendations for each component.
 - Data model design overview.
@@ -142,26 +136,20 @@ Synthesize all delegated design outputs and your own architectural insights into
 if __name__ == "__main__":
     print("## Starting QREW Main Entry Point (which will call Idea to Architecture Workflow)")
 
-    # These are the initial inputs that TaskMaster (in main.py) would have originally gathered or started with
     initial_user_idea_for_taskmaster = "Develop a market-leading application for interactive pet training that is fun and engaging. It should include video streaming, progress tracking, and social sharing features. We want it to be scalable and secure."
-    # In a real scenario, main.py would run TaskMaster, get its output,
-    # and then that output would be passed as 'user_idea' to run_idea_to_architecture_workflow.
-    # For standalone testing of main_workflow.py, we simulate this:
-
     simulated_taskmaster_output_as_user_idea = f"Project Brief from TaskMaster: The user wants an interactive pet training app. Key features: video, progress tracking, social sharing. Goal: fun, engaging, scalable, secure. Details: {initial_user_idea_for_taskmaster}"
 
-    # These would be other global context items potentially refined or passed along
     stakeholder_feedback_notes = "User retention is key. Gamification might be important. Mobile-first approach preferred."
     market_research_summary = "Competitors X and Y lack real-time interaction. Users want personalized training plans."
     project_constraints_for_workflow = "Team has strong Python and React skills. Initial deployment on AWS. Budget for external services is moderate."
     project_technical_vision_for_workflow = "A modular microservices architecture is preferred for scalability. Prioritize user data privacy."
 
     inputs_for_workflow = {
-        "user_idea": simulated_taskmaster_output_as_user_idea, # This is what IdeaInterpreterAgent gets
+        "user_idea": simulated_taskmaster_output_as_user_idea,
         "stakeholder_feedback": stakeholder_feedback_notes,
         "market_research_data": market_research_summary,
-        "constraints": project_constraints_for_workflow, # Used by TVCA and PAA
-        "technical_vision": project_technical_vision_for_workflow # Used by PAA
+        "constraints": project_constraints_for_workflow,
+        "technical_vision": project_technical_vision_for_workflow
     }
 
     final_result = run_idea_to_architecture_workflow(inputs_for_workflow)
@@ -174,5 +162,3 @@ if __name__ == "__main__":
         print(final_result.raw if hasattr(final_result, 'raw') else str(final_result))
     else:
         print("Idea-to-Architecture Crew produced no output or an error occurred.")
-
-```
