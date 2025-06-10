@@ -50,9 +50,12 @@ def run_qrew():
                     "Clarify ambiguities, define primary objectives, scope, and desired outcomes. "
                     "Consult with the IdeaInterpreterAgent if the request is vague or needs significant refinement. "
                     "Determine the next steps for delegation.",
-        expected_output="A clear and concise project brief, including defined scope and objectives, "
-                        "key deliverables, success criteria, initial assessment of complexity, "
-                        "and a recommendation for the next orchestrator or Lead Agent.",
+        expected_output=(
+            "The output MUST BE ONLY the project brief text itself. The brief should be clear and concise, "
+            "including defined scope and objectives, key deliverables, success criteria, initial assessment of complexity, "
+            "and a recommendation for the next orchestrator or Lead Agent integrated within the brief. "
+            "Do not include any introductory or concluding conversational phrases or text outside of the brief's actual content."
+        ),
         agent=taskmaster_agent, # Assign the imported agent instance
         inputs={ # Provide the inputs expected by the task description placeholders
             'user_request': sample_user_request,
@@ -88,9 +91,16 @@ def run_qrew():
             print("TaskMasterAgent produced no output.")
         print("--------------------------------------")
 
-        # Check if TaskMasterAgent was successful and produced output
-        if taskmaster_result and (taskmaster_result.raw if hasattr(taskmaster_result, 'raw') else str(taskmaster_result)):
-            print("\nProceeding to Idea-to-Architecture Workflow...")
+        taskmaster_brief = None
+        if taskmaster_result:
+            if hasattr(taskmaster_result, 'raw') and taskmaster_result.raw and taskmaster_result.raw.strip():
+                taskmaster_brief = taskmaster_result.raw.strip()
+                print(f"DEBUG: Extracted taskmaster_brief: {taskmaster_brief}") # Added for debugging
+            # If .raw is not there, or is empty, we consider it invalid.
+            # No more fallback to str(taskmaster_result) for user_idea.
+
+        if taskmaster_brief:
+            print("\nProceeding to Idea-to-Architecture Workflow with TaskMaster's brief...") # Updated message
 
             # Define sample variables needed for the main_workflow inputs
             sample_stakeholder_feedback = "User retention is key. Gamification might be important. Mobile-first approach preferred."
@@ -99,7 +109,7 @@ def run_qrew():
             sample_technical_vision = "A modular microservices architecture is preferred for scalability. Prioritize user data privacy."
 
             actual_workflow_inputs = {
-                "user_idea": taskmaster_result.raw if hasattr(taskmaster_result, 'raw') else str(taskmaster_result),
+                "user_idea": taskmaster_brief, # Use the validated and stripped brief
                 "stakeholder_feedback": sample_stakeholder_feedback,
                 "market_research_data": sample_market_research,
                 "constraints": sample_project_constraints,
@@ -118,7 +128,9 @@ def run_qrew():
             else:
                 print("Architecture Crew produced no output or an error occurred.")
         else:
-            print("\nTaskMasterAgent did not produce a valid output. Skipping Idea-to-Architecture Workflow.")
+            print("\nTaskMasterAgent did not produce a valid and usable project brief. Skipping Idea-to-Architecture Workflow.")
+            # Initialize architecture_crew_result to None or handle as appropriate if it's used later
+            architecture_crew_result = None
 
     except Exception as e:
         print(f"\nAn error occurred during Qrew execution: {e}")
