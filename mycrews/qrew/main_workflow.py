@@ -102,19 +102,20 @@ The Final Technical Guidelines should list any approved technologies, patterns, 
 
     task_design_architecture = Task(
         description='''Your primary goal is to develop a comprehensive software architecture plan. Base your design on:
-1. The original Technical Requirements & Feature Breakdown (from \'task_interpret_idea\', available in your context).
-2. The Vetting Report & Final Technical Guidelines (from \'task_vet_requirements\', available in your context).
-3. The overall project constraints, available to you as "{constraints}".
-4. The project\'s technical vision, available to you as "{technical_vision}".
+1. The original Technical Requirements & Feature Breakdown (from 'task_interpret_idea').
+2. The Vetting Report & Final Technical Guidelines (from 'task_vet_requirements').
+3. The overall project constraints: "{constraints}".
+4. The project's technical vision: "{technical_vision}".
 
-You must break down the architecture design into logical components and delegate detailed design for these components using your \'Delegate Work to Co-worker (Custom)\' tool.
+Extract the approved technology stack from the Vetting Report ({task_vet_requirements.output}) before delegating work.
+
+You must break down the architecture design into logical components and delegate detailed design for these components using your 'Delegate Work to Co-worker (Custom)' tool.
 For example, when delegating "Detailed database schema design":
-- The `task` parameter for the tool could be: "Design the detailed database schema for [DB_TYPE_VAL] based on data models in section [SECTION_REF_VAL] of the Technical Requirements. Adhere to guidelines from the Vetting Report." (Use specific placeholders like [DB_TYPE_VAL] that you define for the sub-task).
-- The `inputs` parameter for the tool would then be a dictionary you construct by extracting values from your context. For example: `{"DB_TYPE_VAL": "PostgreSQL", "SECTION_REF_VAL": "3.2"}`.
-- Use the `prerequisite_task_ids` parameter if a sub-delegatee needs the direct output of another sub-delegated task you previously assigned.
-- Use `context_str` for brief, guiding context.
+- The `task` parameter: "Design the database schema using [DB_TYPE] based on data models in [SECTION_REF]"
+- The `inputs` parameter: {"DB_TYPE": "PostgreSQL", "SECTION_REF": "3.2"}
+- Use `context_str` for brief guidance
 
-Synthesize all delegated design outputs and your own architectural insights into a final, detailed software architecture document.''',
+Synthesize all delegated design outputs into a final architecture document.''',
         expected_output='''A detailed software architecture document, including:
 - High-level system diagrams.
 - Technology stack recommendations for each component.
