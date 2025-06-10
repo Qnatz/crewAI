@@ -70,7 +70,7 @@ idea_to_architecture_crew = Crew(
     agents=all_agents,
     tasks=[task_interpret_idea, task_vet_requirements, task_design_architecture],
     process=Process.sequential,
-    verbose=2
+    verbose=True
 )
 
 if __name__ == "__main__":
