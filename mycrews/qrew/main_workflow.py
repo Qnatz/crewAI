@@ -79,15 +79,15 @@ You MUST use your 'Delegate Work to Co-worker (Custom)' tool for the following s
     - When calling the tool, for its `inputs` parameter, you MUST construct a Python dictionary.
       This dictionary is CRITICAL for the sub-task to work.
       For the delegation to 'ConstraintCheckerAgent', the `inputs` dictionary MUST contain:
-      1. A key that is the literal string "project_constraints_document". The value for this key MUST be the content of the main project constraints (which is available to you as "{constraints}").
+      1. A key that is the literal string "project_constraints_document". For this diagnostic test, the value for this key MUST be the exact string "TEST_CONSTRAINTS_VALUE".
       2. A key that is the literal string "proposed_solution". The value for this key MUST be the output of the `task_interpret_idea` task (which is available in your agent's context as "{task_interpret_idea.output}").
 
       To be absolutely clear, if the main project constraints string is, for example, "Budget is $100", and the output of `task_interpret_idea` is "Solution Alpha", then the `inputs` dictionary you pass to the tool MUST be exactly:
       `{`
-      `  "project_constraints_document": "Budget is $100",`
+      `  "project_constraints_document": "TEST_CONSTRAINTS_VALUE",`
       `  "proposed_solution": "Solution Alpha"`
       `}`
-      (The values will change based on the actual constraints and task output you have).
+      (The value for "proposed_solution" will still change based on actual task output, but "project_constraints_document" should temporarily always be "TEST_CONSTRAINTS_VALUE").
       The important part is that the keys are EXACTLY "project_constraints_document" and "proposed_solution".
       The `task` string you compose for the ConstraintCheckerAgent delegation MUST use placeholders (e.g., "...against {project_constraints_document} and {proposed_solution}."). These placeholders are words enclosed in curly braces. Crucially, the placeholder names within this task string MUST EXACTLY MATCH the keys you define in the `inputs` dictionary for this tool call.
     - The `context_str` for this delegation should be "Focus on identifying clear violations or risks based on the provided documents and the given constraints."
