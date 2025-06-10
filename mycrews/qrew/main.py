@@ -14,6 +14,20 @@ if project_src_path not in sys.path:
 from .llm_config import default_llm # llm_config.py is now in the same directory
 
 from .taskmaster import taskmaster_agent # Import the specific agent instance # type: ignore
+
+# Enable LiteLLM debugging
+os.environ["LITELLM_DEBUG"] = "1"
+
+# Assign default_llm to the imported taskmaster_agent instance
+if default_llm:
+    if hasattr(taskmaster_agent, 'llm'):
+        taskmaster_agent.llm = default_llm
+        print(f"Attempted to assign default_llm ({type(default_llm)}) to taskmaster_agent.llm")
+    else:
+        print("Warning: taskmaster_agent does not have a direct 'llm' attribute to assign to.")
+else:
+    print("default_llm is None, not assigning to taskmaster_agent.llm.")
+
 # from crewAI.qrew.taskmaster.crews import TaskMasterCrew # If TaskMaster had its own crew for kickoff
 # import os # Import os to check environment variables # os is already imported
 
