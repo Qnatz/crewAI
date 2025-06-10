@@ -25,7 +25,6 @@ def run_idea_to_architecture_workflow(workflow_inputs: dict):
     current_tvca_tools = []
     if hasattr(tech_vetting_council_agent, 'tools') and tech_vetting_council_agent.tools is not None:
         current_tvca_tools = [tool for tool in tech_vetting_council_agent.tools if not isinstance(tool, (CustomDelegateWorkTool, CustomAskQuestionTool))]
-
     current_tvca_tools.extend([custom_delegate_tool, custom_ask_tool])
     tech_vetting_council_agent.tools = current_tvca_tools
 
@@ -68,16 +67,16 @@ The feature breakdown should detail individual components and user interactions 
     task_vet_requirements = Task(
         description='''You have received a Technical Requirements Specification and a Feature Breakdown from the Idea Interpreter Agent (available in your task context).
 Your task is to lead the Tech Vetting Council to review these documents thoroughly.
-Use the overall project constraints, "{constraints}", to guide your vetting.
+Use the overall project constraints, available to you as the string "{constraints}", to guide your vetting.
 
 You MUST use your 'Delegate Work to Co-worker (Custom)' tool for the following specific delegations:
 1.  To 'ConstraintCheckerAgent':
-    - The `task` for this delegation should be to "Review the provided Technical Requirements Specification and Feature Breakdown against specific project constraints. Identify any violations or potential conflicts regarding budget, team skills, security policies, licensing, or infrastructure."
-    - When calling the tool, for its `inputs` parameter, you should construct a dictionary where you pass the main project constraints. For example: {{"subtask_constraints_input": "{constraints}"}}. The `task` string you provide to the tool for the ConstraintCheckerAgent should then use a placeholder like `{{subtask_constraints_input}}` which will be filled by this `inputs` dictionary.
-    - The `context_str` for this delegation should be "Focus on identifying clear violations or risks based on the provided documents and constraints."
+    - The `task` description for this delegation should be to "Review the provided Technical Requirements Specification and Feature Breakdown against specific project constraints. Identify any violations or potential conflicts regarding budget, team skills, security policies, licensing, or infrastructure. The specific constraints to use are: [CONSTRAINTS_FOR_CHECKER]".
+    - When calling the tool, for its `inputs` parameter, you MUST construct a dictionary. For this dictionary, create a key named "CONSTRAINTS_FOR_CHECKER" and assign the value of the main project constraints (i.e., the content of "{constraints}") to this key. The `task` string you provide to the tool for the ConstraintCheckerAgent should then use a placeholder that matches your chosen key (e.g., "...against project constraints: {{CONSTRAINTS_FOR_CHECKER}}.").
+    - The `context_str` for this delegation should be "Focus on identifying clear violations or risks based on the provided documents and the given constraints."
 2.  To 'StackAdvisorAgent':
-    - The `task` for this delegation should be to "Analyze the Technical Requirements Specification and Feature Breakdown to propose an optimal technology stack. Consider team skills (assume 'general full-stack proficiency' if not specified otherwise in requirements) and budget constraints (use the overall project constraints for this, available to you as "{constraints}")."
-    - When calling the tool, if you need to pass specific parts of the main "{constraints}" to the StackAdvisor, construct an `inputs` dictionary for the tool call accordingly. For example: `{{"budget_info_for_advisor": "[relevant budget part of {constraints}]"}}` and use `{{budget_info_for_advisor}}` in the `task` string for the StackAdvisor.
+    - The `task` description for this delegation should be to "Analyze the Technical Requirements Specification and Feature Breakdown to propose an optimal technology stack. Consider team skills (assume 'general full-stack proficiency' if not specified otherwise in requirements) and budget constraints. The project constraints to consider are: [CONSTRAINTS_FOR_ADVISOR]".
+    - When calling the tool, for its `inputs` parameter, construct a dictionary. Create a key named "CONSTRAINTS_FOR_ADVISOR" and assign the value of the main project constraints ("{constraints}") to it. The `task` string for the StackAdvisorAgent should then use a placeholder that matches your key (e.g., "...budget constraints: {{CONSTRAINTS_FOR_ADVISOR}}.").
     - The `context_str` for this delegation should be "Provide justifications for stack choices, considering scalability, maintainability, and alignment with the technical vision if available."
 
 After receiving reports from both delegated tasks, synthesize their findings, incorporate the council\'s discussion (simulated by your reasoning), and compile a final \'Vetting Report\' and a set of \'Final Technical Guidelines\'.''',
@@ -95,13 +94,13 @@ The Final Technical Guidelines should list any approved technologies, patterns, 
         description='''Your primary goal is to develop a comprehensive software architecture plan. Base your design on:
 1. The original Technical Requirements & Feature Breakdown (from \'task_interpret_idea\', available in your context).
 2. The Vetting Report & Final Technical Guidelines (from \'task_vet_requirements\', available in your context).
-3. The overall project constraints: "{constraints}".
-4. The project\'s technical vision: "{technical_vision}".
+3. The overall project constraints, available to you as "{constraints}".
+4. The project\'s technical vision, available to you as "{technical_vision}".
 
 You must break down the architecture design into logical components and delegate detailed design for these components using your \'Delegate Work to Co-worker (Custom)\' tool.
 For example, when delegating "Detailed database schema design":
-- The `task` parameter for the tool could be: "Design the detailed database schema for [DB_TYPE_PLACEHOLDER] based on data models in section [SECTION_REF_PLACEHOLDER] of the Technical Requirements. Adhere to guidelines from the Vetting Report." (Use specific placeholders like [DB_TYPE_PLACEHOLDER] that you define).
-- The `inputs` parameter for the tool would then be a dictionary you construct by extracting values from your context. For example: `{"DB_TYPE_PLACEHOLDER": "PostgreSQL", "SECTION_REF_PLACEHOLDER": "3.2"}`.
+- The `task` parameter for the tool could be: "Design the detailed database schema for [DB_TYPE_VAL] based on data models in section [SECTION_REF_VAL] of the Technical Requirements. Adhere to guidelines from the Vetting Report." (Use specific placeholders like [DB_TYPE_VAL] that you define for the sub-task).
+- The `inputs` parameter for the tool would then be a dictionary you construct by extracting values from your context. For example: `{"DB_TYPE_VAL": "PostgreSQL", "SECTION_REF_VAL": "3.2"}`.
 - Use the `prerequisite_task_ids` parameter if a sub-delegatee needs the direct output of another sub-delegated task you previously assigned.
 - Use `context_str` for brief, guiding context.
 
