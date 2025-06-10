@@ -9,8 +9,8 @@ specific_llm = get_llm_for_agent(agent_identifier)
 stack_advisor_agent = Agent(
     role="Tech Stack Advisor",
     goal="Recommend the optimal technology stack (frameworks, languages, databases, tools) "
-         "for a given project based on its requirements, constraints, and long-term goals. "
-         "Input: {project_requirements}, {existing_architecture_details}, {team_skills}, {budget_constraints}.",
+         "for a given project based on its requirements, constraints, and long-term goals, "
+         "all of which are detailed in the task description.",
     backstory="An experienced technology consultant with a broad understanding of the current tech landscape, "
               "including emerging technologies and industry best practices. Adept at evaluating trade-offs "
               "between different technologies and aligning recommendations with business objectives. "
