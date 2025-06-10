@@ -2,10 +2,10 @@ from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
 # Import best-fit actual agents
-from crewai.qrew.orchestrators.final_assembler_agent import final_assembler_agent
+from mycrews.qrew.orchestrators.final_assembler_agent import final_assembler_agent
 # Using the tech_stack_committee's documentation writer, acknowledging it might be broader here.
-from crewai.qrew.orchestrators.tech_stack_committee.documentation_writer_agent import documentation_writer_agent as project_documentation_writer_agent
-from crewai.qrew.agents.dev_utilities import tester_agent # For final QA review
+from mycrews.qrew.orchestrators.tech_stack_committee.documentation_writer_agent import documentation_writer_agent as project_documentation_writer_agent
+from mycrews.qrew.agents.dev_utilities import tester_agent # For final QA review
 
 @CrewBase
 class FinalAssemblyCrew:

@@ -2,7 +2,7 @@ from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
 # Import actual backend agents
-from crewai.qrew.agents.backend import (
+from mycrews.qrew.agents.backend import (
     api_creator_agent,
     auth_agent as backend_auth_agent, # Renaming to avoid conflict if a general 'auth_agent' is used elsewhere
     config_agent,
