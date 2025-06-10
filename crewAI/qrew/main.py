@@ -5,10 +5,11 @@ try:
 except ImportError:
     # Handle cases where main.py might be run as a top-level script for testing
     # and relative imports don't work as expected.
-    import llm_config
+    import llm_config # type: ignore
 
-from crewAI.qrew.taskmaster import taskmaster_agent # Import the specific agent instance
+from crewAI.qrew.taskmaster import taskmaster_agent # Import the specific agent instance # type: ignore
 # from crewAI.qrew.taskmaster.crews import TaskMasterCrew # If TaskMaster had its own crew for kickoff
+import os # Import os to check environment variables
 
 # For this initial version, we'll directly use the TaskMasterAgent and its tasks.
 # We need a way to get the tasks associated with the TaskMasterAgent.
@@ -30,11 +31,15 @@ from crewAI.qrew.taskmaster import taskmaster_agent # Import the specific agent 
 #     A clear and concise project brief...
 #   agent: taskmaster_agent
 
-from crewai import Task
+from crewai import Task, Crew # type: ignore
 
 def run_qrew():
     print("Initializing Qrew System...")
-    print(f"Using LLM: {llm_config.llm_config.get()}") # Verify which LLM was configured
+    # Assuming llm_config.configured_llm is the one set by llm_config.py
+    # Accessing it directly might not be standard if llm_config is just a script.
+    # Better to rely on crewAI's global config if that's how it's meant to be used.
+    # For now, we'll infer from environment variables for the error message.
+    # print(f"Using LLM: {llm_config.llm_config.get()}") # This was the original line
 
     # Sample user request
     sample_user_request = "I need a new mobile app for tracking personal fitness goals. It should be fun and engaging."
@@ -88,9 +93,47 @@ def run_qrew():
         print("--------------------------------------")
 
     except Exception as e:
-        print(f"An error occurred during TaskMasterAgent execution: {e}")
-        print("Please ensure your LLM is configured correctly (e.g., API keys are set).")
-        print("If using a local LLM like Ollama, ensure it is running and the model is available.")
+        print(f"\nAn error occurred during Qrew execution: {e}")
+        print("\nTroubleshooting Tips:")
+        print("---------------------")
+
+        error_str = str(e).lower()
+
+        # Check LITELLM_MODEL to infer intended model type for better guidance
+        litellm_model_env = os.environ.get("LITELLM_MODEL", "").lower()
+
+        if "api_key" in error_str or "authentication" in error_str or "permission" in error_str:
+            print("- The error suggests an API key issue or authentication failure.")
+            if "openai" in error_str or "gpt" in litellm_model_env or "text-davinci" in litellm_model_env:
+                print("  It seems you might be trying to use an OpenAI model.")
+                print("  Please ensure your OPENAI_API_KEY environment variable is correctly set.")
+            elif "gemini" in error_str or "gemini" in litellm_model_env:
+                print("  It seems you might be trying to use a Gemini model.")
+                print("  Please ensure your GEMINI_API_KEY environment variable is correctly set.")
+            elif "anthropic" in error_str or "claude" in litellm_model_env:
+                print("  It seems you might be trying to use an Anthropic (Claude) model.")
+                print("  Please ensure your ANTHROPIC_API_KEY environment variable is correctly set.")
+            # Add more specific model/provider checks here if needed
+            else:
+                print("  Please ensure the relevant API key (e.g., OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY) for your chosen LLM is set in your environment.")
+            print("  Verify the key is valid and has the necessary permissions/credits.")
+
+        elif "model_not_found" in error_str:
+            print(f"- The error suggests the specified model ('{litellm_model_env}') could not be found.")
+            print("  Please verify the LITELLM_MODEL environment variable is set to a valid model name for your chosen provider.")
+            print("  If using a local LLM (e.g., Ollama), ensure the model is downloaded and available.")
+
+        elif "context_length" in error_str or "context_window" in error_str:
+            print("- The error suggests the input prompt is too long for the model's context window.")
+            print("  Try reducing the length of your input or using a model with a larger context window.")
+
+        else:
+            print("- Please ensure your LLM is configured correctly.")
+            print("  - If using a hosted LLM (OpenAI, Gemini, Anthropic, etc.), verify your API key and model name.")
+            print("  - If using a local LLM (e.g., Ollama with LITELLM_MODEL=ollama/your_model or directly), ensure it's running and the model is accessible.")
+
+        print("\nRefer to `crewAI/qrew/llm_config.py` to see how the LLM is being configured based on environment variables like LITELLM_MODEL, OPENAI_API_KEY, GEMINI_API_KEY, etc.")
+        print("Ensure `litellm` is installed (`pip install litellm`).")
 
 if __name__ == "__main__":
     run_qrew()

@@ -1,59 +1,82 @@
 import os
-from crewai.config import Config, llm_config
+from crewai.config import Config, llm_config # type: ignore
 from langchain_community.llms import Ollama # Default if not LiteLLM
-from langchain_community.chat_models.litellm import ChatLiteLLM
+from langchain_community.chat_models.litellm import ChatLiteLLM # type: ignore
 
-# Check for a specific environment variable to enable LiteLLM, otherwise default or error
-# For this setup, we'll prioritize LiteLLM with Gemini if the API key is available.
+# Default LLM configuration (e.g., Ollama)
+# This will be used if no specific API keys or models are configured via environment variables.
+default_llm = Ollama(model=os.environ.get("OLLAMA_MODEL", "openhermes"))
+configured_llm = None
 
-# Attempt to load Gemini API key from environment
-gemini_api_key = os.environ.get("GEMINI_API_KEY")
-
-# Default LLM configuration (can be any LangChain LLM)
-# For example, using Ollama if LiteLLM/Gemini is not configured
-default_llm = Ollama(model="openhermes") # A common default if no API keys
-
-# Configure LiteLLM for Gemini
-# User wants to use 'gemini-1.5-flash'
-# LiteLLM will automatically pick up GEMINI_API_KEY from the environment if set.
-# See LiteLLM docs for more specific provider configurations if needed.
 try:
     # Ensure litellm is installed. If not, this will raise an ImportError.
     # The user is responsible for installing litellm: pip install litellm
-    import litellm
+    import litellm # type: ignore
 
-    # We will set the model and API key directly if the environment variable is present.
-    # LiteLLM can also be configured globally using `litellm.set_verbose=True` or other settings.
-    # For CrewAI, we typically wrap LiteLLM with `ChatLiteLLM` or use a custom wrapper.
+    # Determine which LLM to configure based on environment variables
+    LITELLM_MODEL = os.environ.get("LITELLM_MODEL")
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+    ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+    # Add other API key checks as needed (e.g., COHERE_API_KEY)
 
-    # Option 1: Basic ChatLiteLLM from LangChain Community (recommended for CrewAI)
-    # This uses litellm.completion under the hood.
-    # GEMINI_API_KEY should be automatically picked up by litellm if set in the environment.
-    # For specific providers like Gemini, sometimes you might need to prefix the model name,
-    # e.g., "gemini/gemini-1.5-flash" - check LiteLLM documentation for Gemini specifics.
-    # For this example, we assume "gemini-1.5-flash" is directly supported or GEMINI_API_KEY handles routing.
+    if LITELLM_MODEL:
+        print(f"LITELLM_MODEL environment variable found: {LITELLM_MODEL}")
+        # Check for OpenAI models (e.g., "gpt-4", "openai/gpt-3.5-turbo")
+        if "gpt-" in LITELLM_MODEL.lower() or "openai/" in LITELLM_MODEL.lower() or LITELLM_MODEL.lower().startswith("text-davinci"):
+            if OPENAI_API_KEY:
+                print(f"Found OPENAI_API_KEY, configuring LiteLLM with OpenAI model: {LITELLM_MODEL}")
+                # LiteLLM will automatically pick up OPENAI_API_KEY from the environment.
+                configured_llm = ChatLiteLLM(model=LITELLM_MODEL)
+            else:
+                print(f"LITELLM_MODEL is set to '{LITELLM_MODEL}' which appears to be an OpenAI model, but OPENAI_API_KEY is not found in the environment.")
+                print("Please set the OPENAI_API_KEY environment variable.")
+        # Check for Gemini models (e.g., "gemini/gemini-1.5-flash", "gemini-pro")
+        elif "gemini" in LITELLM_MODEL.lower():
+            if GEMINI_API_KEY:
+                print(f"Found GEMINI_API_KEY, configuring LiteLLM with Gemini model: {LITELLM_MODEL}")
+                # LiteLLM will automatically pick up GEMINI_API_KEY.
+                # Ensure LITELLM_MODEL is prefixed with "gemini/" if required by LiteLLM, e.g., "gemini/gemini-1.5-flash"
+                model_name = LITELLM_MODEL if "gemini/" in LITELLM_MODEL.lower() else f"gemini/{LITELLM_MODEL}"
+                configured_llm = ChatLiteLLM(model=model_name)
+                print(f"Using Gemini model: {model_name}")
+            else:
+                print(f"LITELLM_MODEL is set to '{LITELLM_MODEL}' which appears to be a Gemini model, but GEMINI_API_KEY is not found in the environment.")
+                print("Please set the GEMINI_API_KEY environment variable.")
+        # Check for Anthropic models (e.g., "claude-3-opus-20240229", "anthropic/claude-2")
+        elif "claude" in LITELLM_MODEL.lower() or "anthropic/" in LITELLM_MODEL.lower():
+            if ANTHROPIC_API_KEY:
+                print(f"Found ANTHROPIC_API_KEY, configuring LiteLLM with Anthropic model: {LITELLM_MODEL}")
+                # LiteLLM will automatically pick up ANTHROPIC_API_KEY.
+                configured_llm = ChatLiteLLM(model=LITELLM_MODEL)
+            else:
+                print(f"LITELLM_MODEL is set to '{LITELLM_MODEL}' which appears to be an Anthropic model, but ANTHROPIC_API_KEY is not found in the environment.")
+                print("Please set the ANTHROPIC_API_KEY environment variable.")
+        else:
+            # For other models specified by LITELLM_MODEL, assume the necessary API key (if any) is globally available
+            # or the model runs locally (like some Ollama models via LiteLLM).
+            # Check if a known API key is present that might correspond to the model type.
+            api_key_present = OPENAI_API_KEY or GEMINI_API_KEY or ANTHROPIC_API_KEY # Add other keys if needed
+            if not api_key_present and not ("ollama" in LITELLM_MODEL.lower() or "local" in LITELLM_MODEL.lower()): # Basic check for local model
+                 print(f"LITELLM_MODEL is '{LITELLM_MODEL}'. Ensure any required API keys (e.g., OPENAI_API_KEY, GEMINI_API_KEY, ANTHROPIC_API_KEY) are set if this is a hosted model.")
+            else:
+                print(f"Configuring LiteLLM with model: {LITELLM_MODEL}. Trusting API key is set if required and not explicitly checked above.")
+            configured_llm = ChatLiteLLM(model=LITELLM_MODEL)
 
-    # Let's define a default model name, can be overridden by env var too
-    LITELLM_MODEL = os.environ.get("LITELLM_MODEL", "gemini/gemini-1.5-flash")
-                                    # Using "gemini/" prefix as is common for some providers in LiteLLM
+    elif GEMINI_API_KEY: # If LITELLM_MODEL is not set, but GEMINI_API_KEY is, default to a Gemini model
+        print("GEMINI_API_KEY found, LITELLM_MODEL not set. Defaulting to 'gemini/gemini-1.5-flash'.")
+        # Ensure you have a default gemini model name or make it configurable
+        default_gemini_model = "gemini/gemini-1.5-flash"
+        configured_llm = ChatLiteLLM(model=default_gemini_model)
+    elif OPENAI_API_KEY: # If LITELLM_MODEL is not set, but OPENAI_API_KEY is, default to an OpenAI model
+        print("OPENAI_API_KEY found, LITELLM_MODEL not set. Defaulting to 'gpt-3.5-turbo'.")
+        default_openai_model = "gpt-3.5-turbo"
+        configured_llm = ChatLiteLLM(model=default_openai_model)
+    # Add other provider defaults here if LITELLM_MODEL is not set but their key is present
+    # E.g., elif ANTHROPIC_API_KEY: ...
 
-    # Initialize ChatLiteLLM
-    # Note: Actual API key handling for Gemini with LiteLLM might require
-    # setting os.environ["GEMINI_API_KEY"] = "your_key" before this call,
-    # or specific provider params in ChatLiteLLM if supported.
-    # We assume GEMINI_API_KEY is set in the environment where this code runs.
-
-    # If gemini_api_key is explicitly found, we can be more confident.
-    if gemini_api_key:
-        print(f"Found GEMINI_API_KEY, configuring LiteLLM with model: {LITELLM_MODEL}")
-        # Some LiteLLM configurations might require passing the api_key directly if not globally set
-        # For ChatLiteLLM, it often relies on litellm's global config or direct env var usage by litellm.completion
-        # If issues occur, one might need to do: litellm.api_key = gemini_api_key (but this is global)
-        # Or specific provider setup if ChatLiteLLM allows, e.g. model_kwargs={"api_key": gemini_api_key} if that were an option.
-        # For now, relying on litellm's auto-detection of GEMINI_API_KEY.
-        configured_llm = ChatLiteLLM(model=LITELLM_MODEL)
-    else:
-        print("GEMINI_API_KEY not found in environment. LiteLLM for Gemini might not work.")
+    if not configured_llm:
+        print("No specific API keys (GEMINI_API_KEY, OPENAI_API_KEY, etc.) or LITELLM_MODEL directing to a hosted model were found.")
         print(f"Falling back to default LLM: {default_llm.model if hasattr(default_llm, 'model') else 'Ollama'}")
         configured_llm = default_llm
 
@@ -62,7 +85,7 @@ except ImportError:
     print(f"Falling back to default LLM: {default_llm.model if hasattr(default_llm, 'model') else 'Ollama'}")
     configured_llm = default_llm
 except Exception as e:
-    print(f"Error configuring LiteLLM: {e}")
+    print(f"An error occurred during LiteLLM configuration: {e}")
     print(f"Falling back to default LLM: {default_llm.model if hasattr(default_llm, 'model') else 'Ollama'}")
     configured_llm = default_llm
 
@@ -73,11 +96,14 @@ llm_config.set(configured_llm)
 
 # You can also store other configurations here
 # For example, a default embedding model if needed by multiple agents
-# from langchain_community.embeddings import OllamaEmbeddings
+# from langchain_community.embeddings import OllamaEmbeddings # type: ignore
 # embedding_model = OllamaEmbeddings(model="nomic-embed-text")
 # Config.set_embedding_model(embedding_model) # Example
 
-print(f"CrewAI global LLM set to: {llm_config.get().model_name if hasattr(llm_config.get(), 'model_name') else str(llm_config.get())}")
+print(f"CrewAI global LLM set to: {configured_llm.model if hasattr(configured_llm, 'model') else str(configured_llm)}")
+if hasattr(configured_llm, 'model_name') and configured_llm.model_name: # For Langchain objects that have model_name
+    print(f"Model name from llm_config: {configured_llm.model_name}")
+
 
 # To verify, you can try:
 # from crewai import Agent
