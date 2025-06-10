@@ -42,7 +42,11 @@ def run_idea_to_architecture_workflow(workflow_inputs: dict):
         if not hasattr(agent_instance, 'i18n') or agent_instance.i18n is None:
             agent_instance.i18n = default_i18n_instance
         if not hasattr(agent_instance, 'llm') or agent_instance.llm is None:
-            print(f"Warning: Agent {agent_instance.role} in run_idea_to_architecture_workflow appears to be missing an LLM configuration.")
+            raise RuntimeError(
+                f"Critical Error: Agent '{agent_instance.role}' is missing its LLM configuration. "
+                "This is likely due to a missing GEMINI_API_KEY or an issue during LLM initialization. "
+                "The workflow cannot continue."
+            )
 
     # Task Definitions
     task_interpret_idea = Task(
