@@ -1,5 +1,5 @@
 import unittest
-from crewAI.qrew.crews.devops_crew import DevOpsCrew
+from mycrews.qrew.crews.devops_crew import DevOpsCrew
 
 class TestDevOpsCrew(unittest.TestCase):
 

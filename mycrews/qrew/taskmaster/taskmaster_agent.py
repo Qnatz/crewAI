@@ -1,6 +1,6 @@
 from crewai import Agent
 # Import the specific instance of the KnowledgeBaseTool
-from crewAI.qrew.tools import knowledge_base_tool_instance
+from ..tools import knowledge_base_tool_instance
 
 taskmaster_agent = Agent(
     role="TaskMaster General Coordinator",

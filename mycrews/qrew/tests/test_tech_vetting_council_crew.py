@@ -1,5 +1,5 @@
 import unittest
-from crewAI.qrew.orchestrators.tech_stack_committee.crews.tech_vetting_council_crew import TechVettingCouncilCrew
+from mycrews.qrew.orchestrators.tech_stack_committee.crews.tech_vetting_council_crew import TechVettingCouncilCrew
 
 class TestTechVettingCouncilCrew(unittest.TestCase):
 

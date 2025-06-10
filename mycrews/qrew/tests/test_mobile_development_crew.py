@@ -1,5 +1,5 @@
 import unittest
-from crewAI.qrew.crews.mobile_development_crew import MobileDevelopmentCrew
+from mycrews.qrew.crews.mobile_development_crew import MobileDevelopmentCrew
 
 class TestMobileDevelopmentCrew(unittest.TestCase):
 

@@ -1,5 +1,5 @@
 import unittest
-from crewAI.qrew.crews.utility_crews.final_assembly_crew import FinalAssemblyCrew
+from mycrews.qrew.crews.utility_crews.final_assembly_crew import FinalAssemblyCrew
 
 class TestFinalAssemblyCrew(unittest.TestCase):
 

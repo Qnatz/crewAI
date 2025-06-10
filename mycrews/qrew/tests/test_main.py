@@ -12,8 +12,8 @@ class TestMainExecution(unittest.TestCase):
         """
         main_script_path = ""
         try:
-            import crewAI.qrew
-            package_path = os.path.dirname(crewAI.qrew.__file__)
+            import mycrews.qrew
+            package_path = os.path.dirname(mycrews.qrew.__file__)
             main_script_path = os.path.join(package_path, "main.py")
         except ImportError:
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

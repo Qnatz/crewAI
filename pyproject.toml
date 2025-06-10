@@ -46,7 +46,7 @@ dependencies = [
     # may need to compile from source, find a third-party wheel,
     # or use a Python environment (e.g., 3.11) for which official wheels
     # are more readily available if this version cannot be installed.
-    "tflite-runtime==2.16.0",
+    "tflite-runtime==2.14.0",
     "transformers>=4.0.0",
 ]
 

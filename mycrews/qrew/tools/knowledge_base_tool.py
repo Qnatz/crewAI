@@ -1,4 +1,4 @@
-from crewai_tools import BaseTool # Use BaseTool for CrewAI tool compatibility
+from crewai.tools import BaseTool # Use BaseTool for CrewAI tool compatibility
 
 class KnowledgeBaseTool(BaseTool):
     name: str = "Knowledge Base Query Tool"

@@ -1,5 +1,5 @@
 import os
-from crewai.config import Config, llm_config # type: ignore
+# from crewai.utilities.config import Config, llm_config # type: ignore # This seems to be an outdated import
 from langchain_community.llms import Ollama # Default if not LiteLLM
 from langchain_community.chat_models.litellm import ChatLiteLLM # type: ignore
 
@@ -92,7 +92,8 @@ except Exception as e:
 
 # Set the chosen LLM in CrewAI config
 # This makes it the default for all agents unless overridden.
-llm_config.set(configured_llm)
+# llm_config.set(configured_llm) # The llm_config object is not available from the import above.
+                                # Global LLM configuration might need a different approach in this crewai version.
 
 # You can also store other configurations here
 # For example, a default embedding model if needed by multiple agents

@@ -1,5 +1,5 @@
 import unittest
-from crewAI.qrew.orchestrators.execution_manager_agent.crews.execution_manager_crew import ExecutionManagerCrew
+from mycrews.qrew.orchestrators.execution_manager_agent.crews.execution_manager_crew import ExecutionManagerCrew
 
 class TestExecutionManagerCrew(unittest.TestCase):
 

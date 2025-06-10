@@ -1,5 +1,5 @@
 import unittest
-from crewAI.qrew.crews.full_stack_crew import FullStackCrew
+from mycrews.qrew.crews.full_stack_crew import FullStackCrew
 
 class TestFullStackCrew(unittest.TestCase):
 

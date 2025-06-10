@@ -1,5 +1,5 @@
 import unittest
-from crewAI.qrew.crews.utility_crews.code_writing_crew import CodeWritingCrew
+from mycrews.qrew.crews.utility_crews.code_writing_crew import CodeWritingCrew
 
 class TestCodeWritingCrew(unittest.TestCase):
 

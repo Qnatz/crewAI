@@ -1,5 +1,5 @@
 import unittest
-from crewAI.qrew.crews.offline_support_crew import OfflineSupportCrew
+from mycrews.qrew.crews.offline_support_crew import OfflineSupportCrew
 
 class TestOfflineSupportCrew(unittest.TestCase):
 

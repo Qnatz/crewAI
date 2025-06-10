@@ -1,4 +1,4 @@
-from crewAI import Agent
+from crewai import Agent
 # from crewAI.qrew.tools.file_io_tool import FileIOTool # Example
 
 final_assembler_agent = Agent(

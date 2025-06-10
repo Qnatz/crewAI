@@ -1,5 +1,5 @@
 import unittest
-from crewAI.qrew.crews.web_development_crew import WebDevelopmentCrew
+from mycrews.qrew.crews.web_development_crew import WebDevelopmentCrew
 
 class TestWebDevelopmentCrew(unittest.TestCase):
 
