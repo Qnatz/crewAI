@@ -75,43 +75,19 @@ Use the overall project constraints, available to you as the string "{constraint
 
 You MUST use your 'Delegate Work to Co-worker (Custom)' tool for the following specific delegations:
 1.  To 'ConstraintCheckerAgent':
-    - The `task` description for this delegation should be to "Review the provided 'proposed_solution' (Technical Requirements Specification and Feature Breakdown) against the 'project_constraints_document'. Identify any violations or potential conflicts regarding budget, team skills, security policies, licensing, or infrastructure."
-    - When calling the tool, for its `inputs` parameter, you MUST construct a Python dictionary.
-      This dictionary is CRITICAL for the sub-task to work.
-      For the delegation to 'ConstraintCheckerAgent', the `inputs` dictionary MUST contain:
-      1. A key that is the literal string "project_constraints_document". For this diagnostic test, the value for this key MUST be the exact string "TEST_CONSTRAINTS_VALUE".
-      2. A key that is the literal string "proposed_solution". The value for this key MUST be the output of the `task_interpret_idea` task (which is available in your agent's context as "{task_interpret_idea.output}").
-
-      To be absolutely clear, if the main project constraints string is, for example, "Budget is $100", and the output of `task_interpret_idea` is "Solution Alpha", then the `inputs` dictionary you pass to the tool MUST be exactly:
-      `{`
-      `  "project_constraints_document": "TEST_CONSTRAINTS_VALUE",`
-      `  "proposed_solution": "Solution Alpha"`
-      `}`
-      (The value for "proposed_solution" will still change based on actual task output, but "project_constraints_document" should temporarily always be "TEST_CONSTRAINTS_VALUE").
-      The important part is that the keys are EXACTLY "project_constraints_document" and "proposed_solution".
-      The `task` string you compose for the ConstraintCheckerAgent delegation MUST use placeholders (e.g., "...against {project_constraints_document} and {proposed_solution}."). These placeholders are words enclosed in curly braces. Crucially, the placeholder names within this task string MUST EXACTLY MATCH the keys you define in the `inputs` dictionary for this tool call.
-    - The `context_str` for this delegation should be "Focus on identifying clear violations or risks based on the provided documents and the given constraints."
+    - The `task` description: "Review the provided 'proposed_solution' against the project constraints. Identify any violations regarding budget, team skills, security policies, licensing, or infrastructure."
+    - For `inputs`, construct a dictionary with:
+        - "project_constraints_document": "{constraints}"
+        - "proposed_solution": "{task_interpret_idea.output}"
+    - Use: `context_str="Focus on identifying constraint violations"`
 2.  To 'StackAdvisorAgent':
-    - The `task` description for this delegation should be to "Analyze the provided 'project_requirements' (Technical Requirements Specification and Feature Breakdown) to propose an optimal technology stack. Consider the 'team_skills', 'budget_constraints', and any 'existing_architecture_details' provided. Provide justifications for stack choices, considering scalability, maintainability, and alignment with the technical vision."
-    - When calling the tool, for its `inputs` parameter, you MUST construct a Python dictionary.
-      This dictionary is CRITICAL for the sub-task to work.
-      For the delegation to 'StackAdvisorAgent', the `inputs` dictionary MUST contain:
-      1. A key that is the literal string "project_requirements". The value for this key MUST be the output of the `task_interpret_idea` task (available as "{task_interpret_idea.output}").
-      2. A key that is the literal string "team_skills". The value for this key MUST be the relevant team skills information extracted from the main project constraints string ("{constraints}"). For example, if constraints mention "Team has strong Python and React skills", this value should be "Team has strong Python and React skills".
-      3. A key that is the literal string "budget_constraints". The value for this key MUST be the relevant budget information extracted from the main project constraints string ("{constraints}"). For example, if constraints mention "Budget for external services is moderate", this value should be "Budget for external services is moderate".
-      4. A key that is the literal string "existing_architecture_details". For this initial design phase, its value MUST typically be the string "None - new project".
-
-      To be absolutely clear, using hypothetical values, the `inputs` dictionary you pass to the tool might look like this:
-      `{`
-      `  "project_requirements": "Output from Idea Interpreter...",`
-      `  "team_skills": "Strong Python, some React",`
-      `  "budget_constraints": "Moderate budget for services",`
-      `  "existing_architecture_details": "None - new project"`
-      `}`
-      (The actual values for "project_requirements", "team_skills", and "budget_constraints" will depend on the specifics you have).
-      The important part is that the keys are EXACTLY "project_requirements", "team_skills", "budget_constraints", and "existing_architecture_details".
-      The `task` string you compose for the StackAdvisorAgent delegation MUST use placeholders (e.g., "...based on {project_requirements}, considering {team_skills} and {budget_constraints}..."). These placeholders are words enclosed in curly braces. Crucially, the placeholder names within this task string MUST EXACTLY MATCH the keys you define in the `inputs` dictionary for this tool call.
-    - The `context_str` for this delegation should be "Provide justifications for stack choices, considering scalability, maintainability, and alignment with the technical vision if available."
+    - The `task` description: "Analyze the 'project_requirements' to propose an optimal technology stack. Consider team skills, budget constraints, and existing architecture details."
+    - For `inputs`, construct a dictionary with:
+        - "project_requirements": "{task_interpret_idea.output}"
+        - "team_skills": "Extracted from: {constraints}"
+        - "budget_constraints": "Extracted from: {constraints}"
+        - "existing_architecture_details": "None - new project"
+    - Use: `context_str="Provide justifications for stack choices"`
 
 After receiving reports from both delegated tasks, synthesize their findings, incorporate the council\'s discussion (simulated by your reasoning), and compile a final \'Vetting Report\' and a set of \'Final Technical Guidelines\'.''',
         expected_output='''A Vetting Report and a set of Final Technical Guidelines.
