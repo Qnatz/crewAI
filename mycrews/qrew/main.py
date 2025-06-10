@@ -22,30 +22,8 @@ os.environ["LITELLM_DEBUG"] = "1"
 # taskmaster_agent now gets its LLM from its own definition file.
 # The default_llm imported here is passed to the Crew instance.
 
-# from crewAI.qrew.taskmaster.crews import TaskMasterCrew # If TaskMaster had its own crew for kickoff
-# import os # Import os to check environment variables # os is already imported
-
-# For this initial version, we'll directly use the TaskMasterAgent and its tasks.
-# We need a way to get the tasks associated with the TaskMasterAgent.
-# If tasks are defined in YAML, the agent or a helper would load them.
-# If tasks are defined in a crew, we'd instantiate the crew.
-
-# Let's assume the TaskMasterAgent's tasks are defined in its tasks.yaml
-# and we need a way to load and run one of them.
-# For simplicity in this step, we'll manually define the input for the first task
-# of TaskMasterAgent which is "Analyze and Delegate User Request".
-
-# The TaskMasterAgent's first task (from its tasks.yaml) is:
-# - description: >
-#     Analyze the incoming {user_request} or {project_goal_statement}.
-#     Clarify ambiguities and define the primary objectives, scope, and desired outcomes.
-#     Consult with the IdeaInterpreterAgent if the request is vague or needs significant refinement.
-#     Input: {user_request}, {project_goal_statement}, {priority_level}.
-#   expected_output: >
-#     A clear and concise project brief...
-#   agent: taskmaster_agent
-
 from crewai import Task, Crew # type: ignore
+from .main_workflow import run_idea_to_architecture_workflow # Added import
 
 def run_qrew():
     print("Initializing Qrew System...")
@@ -99,13 +77,48 @@ def run_qrew():
 
     print("\nKicking off TaskMasterAgent for initial request processing...")
     try:
-        result = task_master_execution_crew.kickoff()
+        taskmaster_result = task_master_execution_crew.kickoff() # Renamed for clarity
 
         print("\nTaskMasterAgent Processing Complete.")
         print("--------------------------------------")
-        print("Result/Project Brief:")
-        print(result)
+        print("Result/Project Brief from TaskMasterAgent:")
+        if taskmaster_result:
+            print(taskmaster_result.raw if hasattr(taskmaster_result, 'raw') else str(taskmaster_result))
+        else:
+            print("TaskMasterAgent produced no output.")
         print("--------------------------------------")
+
+        # Check if TaskMasterAgent was successful and produced output
+        if taskmaster_result and (taskmaster_result.raw if hasattr(taskmaster_result, 'raw') else str(taskmaster_result)):
+            print("\nProceeding to Idea-to-Architecture Workflow...")
+
+            # Define sample variables needed for the main_workflow inputs
+            sample_stakeholder_feedback = "User retention is key. Gamification might be important. Mobile-first approach preferred."
+            sample_market_research = "Competitors X and Y lack real-time interaction. Users want personalized training plans."
+            sample_project_constraints = "Team has strong Python and React skills. Initial deployment on AWS. Budget for external services is moderate."
+            sample_technical_vision = "A modular microservices architecture is preferred for scalability. Prioritize user data privacy."
+
+            actual_workflow_inputs = {
+                "user_idea": taskmaster_result.raw if hasattr(taskmaster_result, 'raw') else str(taskmaster_result),
+                "stakeholder_feedback": sample_stakeholder_feedback,
+                "market_research_data": sample_market_research,
+                "constraints": sample_project_constraints,
+                "technical_vision": sample_technical_vision
+            }
+
+            print(f"\nInputs for Idea-to-Architecture Workflow: {actual_workflow_inputs}")
+            architecture_crew_result = run_idea_to_architecture_workflow(actual_workflow_inputs)
+
+            print("\n\n####################################################")
+            print("## Main Workflow (Idea-to-Architecture) Execution Result:")
+            print("####################################################\n")
+            if architecture_crew_result:
+                print("Final output from the Architecture Crew:")
+                print(architecture_crew_result.raw if hasattr(architecture_crew_result, 'raw') else str(architecture_crew_result))
+            else:
+                print("Architecture Crew produced no output or an error occurred.")
+        else:
+            print("\nTaskMasterAgent did not produce a valid output. Skipping Idea-to-Architecture Workflow.")
 
     except Exception as e:
         print(f"\nAn error occurred during Qrew execution: {e}")
