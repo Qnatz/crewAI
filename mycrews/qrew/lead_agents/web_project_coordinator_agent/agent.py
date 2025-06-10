@@ -1,5 +1,10 @@
 from crewai import Agent
+from ...llm_config import get_llm_for_agent
 # from crewAI.qrew.crews.web_development_crew import WebDevelopmentCrew # For delegation if needed
+
+# Use the agent's role or a unique key for the lookup
+agent_identifier = "web_project_coordinator_agent" # Matching the key in MODEL_BY_AGENT
+specific_llm = get_llm_for_agent(agent_identifier)
 
 web_project_coordinator_agent = Agent(
     role="Web Project Coordinator",
@@ -10,6 +15,7 @@ web_project_coordinator_agent = Agent(
               "Excels at leading web development teams, breaking down complex projects into manageable tasks, "
               "and ensuring effective communication between stakeholders and the development crew. "
               "Understands the nuances of web technologies and agile methodologies.",
+    llm=specific_llm, # Assign the fetched LLM
     allow_delegation=True, # Can delegate tasks to the WebDevelopmentCrew or specific agents within it
     verbose=True
     # tools=[...] # Potentially tools for project management, task tracking

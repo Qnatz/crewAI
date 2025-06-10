@@ -1,4 +1,9 @@
 from crewai import Agent
+from ...llm_config import get_llm_for_agent
+
+# Use the agent's role or a unique key for the lookup
+agent_identifier = "tech_vetting_council_agent" # Matching the key in MODEL_BY_AGENT
+specific_llm = get_llm_for_agent(agent_identifier)
 
 tech_vetting_council_agent = Agent(
     role="Tech Vetting Council Lead",
@@ -10,6 +15,7 @@ tech_vetting_council_agent = Agent(
               "Ensures a structured and fair evaluation process. Synthesizes recommendations from council members "
               "into a final decision or set of actionable feedback. "
               "Committed to maintaining high technical standards and strategic alignment.",
+    llm=specific_llm, # Assign the fetched LLM
     allow_delegation=True, # Delegates specific analysis tasks to the TechStackCommitteeCrew members
     verbose=True
     # tools=[...] # Tools for meeting scheduling, decision logging
