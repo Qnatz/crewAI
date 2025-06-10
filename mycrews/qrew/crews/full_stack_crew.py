@@ -2,13 +2,13 @@ from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
 # Import actual agents that could form a full-stack team
-from crewAI.qrew.agents.backend import api_creator_agent, data_model_agent
-from crewAI.qrew.agents.web import dynamic_page_builder_agent # Assuming frontend might be web for this crew
-from crewAI.qrew.agents.dev_utilities import tester_agent, code_writer_agent # For general coding and testing
+from crewai.qrew.agents.backend import api_creator_agent, data_model_agent
+from crewai.qrew.agents.web import dynamic_page_builder_agent # Assuming frontend might be web for this crew
+from crewai.qrew.agents.dev_utilities import tester_agent, code_writer_agent # For general coding and testing
 
 # Potentially also:
-# from crewAI.qrew.agents.auth import auth_coordinator_agent # If handling auth directly
-# from crewAI.qrew.agents.devops import devops_agent # If this crew also handles its deployment
+# from crewai.qrew.agents.auth import auth_coordinator_agent # If handling auth directly
+# from crewai.qrew.agents.devops import devops_agent # If this crew also handles its deployment
 
 @CrewBase
 class FullStackCrew:

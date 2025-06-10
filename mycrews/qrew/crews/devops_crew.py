@@ -2,7 +2,7 @@ from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
 # Import the actual devops agent
-from crewAI.qrew.agents.devops import devops_agent
+from crewai.qrew.agents.devops import devops_agent
 
 @CrewBase
 class DevOpsCrew:

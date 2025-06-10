@@ -2,7 +2,7 @@ from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
 # Import the actual web agents
-from crewAI.qrew.agents.web import (
+from crewai.qrew.agents.web import (
     asset_manager_agent,
     dynamic_page_builder_agent,
     static_page_builder_agent

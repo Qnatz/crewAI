@@ -2,7 +2,7 @@ from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
 # Import actual offline agents
-from crewAI.qrew.agents.offline import (
+from crewai.qrew.agents.offline import (
     local_storage_agent,
     offline_sync_agent
 )

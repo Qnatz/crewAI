@@ -2,7 +2,7 @@ from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
 # Import actual dev utility agents
-from crewAI.qrew.agents.dev_utilities import (
+from crewai.qrew.agents.dev_utilities import (
     code_writer_agent,
     debugger_agent,
     tester_agent
