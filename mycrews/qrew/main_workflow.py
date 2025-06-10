@@ -15,7 +15,7 @@ from .orchestrators.tech_stack_committee.documentation_writer_agent.agent import
 # Custom Tools
 from .tools.custom_agent_tools import CustomDelegateWorkTool, CustomAskQuestionTool
 
-# Instantiate custom tools at module level, they are stateless and will be configured by agents/crew context at runtime
+# Instantiate custom tools at module level
 custom_delegate_tool = CustomDelegateWorkTool()
 custom_ask_tool = CustomAskQuestionTool()
 
@@ -45,16 +45,15 @@ def run_idea_to_architecture_workflow(workflow_inputs: dict):
         if not hasattr(agent_instance, 'llm') or agent_instance.llm is None:
             print(f"Warning: Agent {agent_instance.role} in run_idea_to_architecture_workflow appears to be missing an LLM configuration.")
 
+    # Task Definitions
     task_interpret_idea = Task(
-        description='''\
-Analyze the provided user idea: "{user_idea}", stakeholder feedback: "{stakeholder_feedback}", and market research data: "{market_research_data}".
+        description='''Analyze the provided user idea: "{user_idea}", stakeholder feedback: "{stakeholder_feedback}", and market research data: "{market_research_data}".
 Your primary goal is to deeply understand these inputs.
 Consult the Knowledge Base for any relevant past projects, architectural decisions, or definitions that could clarify or enrich the user\'s concept.
 Produce a structured set of technical requirements and a detailed feature breakdown.
 Ensure the technical requirements are clear, testable, and complete.
 The feature breakdown should detail individual components and user interactions for key features described in the user idea.''',
-        expected_output='''\
-A comprehensive technical requirements specification document AND a detailed feature breakdown document.
+        expected_output='''A comprehensive technical requirements specification document AND a detailed feature breakdown document.
 The technical requirements should include:
 - Detailed user stories with acceptance criteria.
 - Functional requirements.
@@ -67,24 +66,22 @@ The feature breakdown should detail individual components and user interactions 
     )
 
     task_vet_requirements = Task(
-        description='''\
-You have received a Technical Requirements Specification and a Feature Breakdown from the Idea Interpreter Agent (available in your task context).
+        description='''You have received a Technical Requirements Specification and a Feature Breakdown from the Idea Interpreter Agent (available in your task context).
 Your task is to lead the Tech Vetting Council to review these documents thoroughly.
 Use the overall project constraints, "{constraints}", to guide your vetting.
 
-You MUST use your \'Delegate Work to Co-worker (Custom)\' tool for the following specific delegations:
-1.  To \'ConstraintCheckerAgent\':
+You MUST use your 'Delegate Work to Co-worker (Custom)' tool for the following specific delegations:
+1.  To 'ConstraintCheckerAgent':
     - The `task` for this delegation should be to "Review the provided Technical Requirements Specification and Feature Breakdown against specific project constraints. Identify any violations or potential conflicts regarding budget, team skills, security policies, licensing, or infrastructure."
-    - When calling the tool, for its `inputs` parameter, you should construct a dictionary where you pass the main project constraints. For example: `{{"subtask_constraints_input": "{constraints}"}}`. The `task` string you provide to the tool for the ConstraintCheckerAgent should then use a placeholder like `{subtask_constraints_input}` which will be filled by this `inputs` dictionary.
+    - When calling the tool, for its `inputs` parameter, you should construct a dictionary where you pass the main project constraints. For example: {{"subtask_constraints_input": "{constraints}"}}. The `task` string you provide to the tool for the ConstraintCheckerAgent should then use a placeholder like `{{subtask_constraints_input}}` which will be filled by this `inputs` dictionary.
     - The `context_str` for this delegation should be "Focus on identifying clear violations or risks based on the provided documents and constraints."
-2.  To \'StackAdvisorAgent\':
-    - The `task` for this delegation should be to "Analyze the Technical Requirements Specification and Feature Breakdown to propose an optimal technology stack. Consider team skills (assume \'general full-stack proficiency\' if not specified otherwise in requirements) and budget constraints (use the overall project constraints for this, available to you as \"{constraints}\")."
-    - When calling the tool, if you need to pass specific parts of the main "{constraints}" to the StackAdvisor, construct an `inputs` dictionary for the tool call accordingly. For example: `{{"budget_info_for_advisor": "[relevant budget part of {constraints}]"}}` and use `{budget_info_for_advisor}` in the `task` string for the StackAdvisor.
+2.  To 'StackAdvisorAgent':
+    - The `task` for this delegation should be to "Analyze the Technical Requirements Specification and Feature Breakdown to propose an optimal technology stack. Consider team skills (assume 'general full-stack proficiency' if not specified otherwise in requirements) and budget constraints (use the overall project constraints for this, available to you as "{constraints}")."
+    - When calling the tool, if you need to pass specific parts of the main "{constraints}" to the StackAdvisor, construct an `inputs` dictionary for the tool call accordingly. For example: `{{"budget_info_for_advisor": "[relevant budget part of {constraints}]"}}` and use `{{budget_info_for_advisor}}` in the `task` string for the StackAdvisor.
     - The `context_str` for this delegation should be "Provide justifications for stack choices, considering scalability, maintainability, and alignment with the technical vision if available."
 
 After receiving reports from both delegated tasks, synthesize their findings, incorporate the council\'s discussion (simulated by your reasoning), and compile a final \'Vetting Report\' and a set of \'Final Technical Guidelines\'.''',
-        expected_output='''\
-A Vetting Report and a set of Final Technical Guidelines.
+        expected_output='''A Vetting Report and a set of Final Technical Guidelines.
 The Vetting Report should summarize:
 - Stack Advisor\'s evaluation.
 - Constraint Checker\'s compliance report.
@@ -95,8 +92,7 @@ The Final Technical Guidelines should list any approved technologies, patterns, 
     )
 
     task_design_architecture = Task(
-        description='''\
-Your primary goal is to develop a comprehensive software architecture plan. Base your design on:
+        description='''Your primary goal is to develop a comprehensive software architecture plan. Base your design on:
 1. The original Technical Requirements & Feature Breakdown (from \'task_interpret_idea\', available in your context).
 2. The Vetting Report & Final Technical Guidelines (from \'task_vet_requirements\', available in your context).
 3. The overall project constraints: "{constraints}".
@@ -104,14 +100,13 @@ Your primary goal is to develop a comprehensive software architecture plan. Base
 
 You must break down the architecture design into logical components and delegate detailed design for these components using your \'Delegate Work to Co-worker (Custom)\' tool.
 For example, when delegating "Detailed database schema design":
-- The `task` parameter for the tool could be: "Design the detailed database schema for {db_type} based on data models in section {data_model_section_ref} of the Technical Requirements. Adhere to guidelines from the Vetting Report."
-- The `inputs` parameter for the tool would then be a dictionary you construct, e.g., `{{"db_type": "PostgreSQL", "data_model_section_ref": "3.2"}}`. You would extract "3.2" and "PostgreSQL" from your context or the technical vision.
+- The `task` parameter for the tool could be: "Design the detailed database schema for [DB_TYPE_PLACEHOLDER] based on data models in section [SECTION_REF_PLACEHOLDER] of the Technical Requirements. Adhere to guidelines from the Vetting Report." (Use specific placeholders like [DB_TYPE_PLACEHOLDER] that you define).
+- The `inputs` parameter for the tool would then be a dictionary you construct by extracting values from your context. For example: `{"DB_TYPE_PLACEHOLDER": "PostgreSQL", "SECTION_REF_PLACEHOLDER": "3.2"}`.
 - Use the `prerequisite_task_ids` parameter if a sub-delegatee needs the direct output of another sub-delegated task you previously assigned.
 - Use `context_str` for brief, guiding context.
 
 Synthesize all delegated design outputs and your own architectural insights into a final, detailed software architecture document.''',
-        expected_output='''\
-A detailed software architecture document, including:
+        expected_output='''A detailed software architecture document, including:
 - High-level system diagrams.
 - Technology stack recommendations for each component.
 - Data model design overview.
