@@ -1,27 +1,52 @@
 # mycrews/qrew/llm_config.py
+import os
 from crewai import LLM
-# from crewai.llms.ollama import OllamaLLM # Alternative if specific class is preferred
 
-# Attempt to initialize the Ollama LLM
-# Users should have Ollama running and a model like 'openhermes' pulled.
-try:
-    # Using the generic LLM class as per current main CrewAI LLM docs
-    # Replace 'openhermes' with the desired default Ollama model for the project
-    # Ensure Ollama server is running at http://localhost:11434
-    default_llm = LLM(
-        model="ollama/openhermes",
-        base_url="http://localhost:11434"
-    )
+# Initialize LLM variables to None
+llm_gemini_1_5_flash = None
+llm_gemini_2_0_flash = None
+default_llm = None
 
-    # Alternatively, if using the specific OllamaLLM class:
-    # from crewai.llms.ollama import OllamaLLM
-    # default_llm = OllamaLLM(model="openhermes")
-    # Note: OllamaLLM might have different default for base_url or expect it from env.
-    # The generic 'LLM' class with 'ollama/' prefix and base_url is safer per docs.
+# Get GEMINI_API_KEY from environment
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-    print("Successfully initialized Ollama LLM in llm_config.py.")
-except Exception as e:
-    print(f"Failed to initialize Ollama LLM in llm_config.py: {e}")
-    print("Please ensure Ollama is running and the model (e.g., 'openhermes') is available.")
-    print("Falling back to no default LLM. Agents will need LLM explicitly assigned or rely on global env vars.")
-    default_llm = None
+if GEMINI_API_KEY:
+    print("GEMINI_API_KEY found. Attempting to initialize Gemini LLMs...")
+
+    # Instantiate gemini-1.5-flash
+    try:
+        llm_gemini_1_5_flash = LLM(model="gemini/gemini-1.5-flash")
+        # Note: For Gemini, crewai's LLM class typically expects the API key
+        # to be picked up automatically from the environment by the underlying provider (e.g., LiteLLM or LangChain).
+        # If crewai's generic LLM class doesn't directly support Gemini without further config,
+        # this might require crewai.llms.gemini.GeminiLLM or similar, or ensuring LiteLLM is configured for Gemini.
+        # For this task, we assume crewai.LLM can handle "gemini/model-name" if the key is in env.
+        print("Successfully attempted to initialize llm_gemini_1_5_flash.")
+    except Exception as e:
+        print(f"Failed to initialize llm_gemini_1_5_flash: {e}")
+        llm_gemini_1_5_flash = None
+
+    # Instantiate gemini-2.0-flash-001 (assuming this is a valid model identifier for the provider)
+    # Note: Model names for upcoming versions like "2.0" might be speculative or internal.
+    # Using a placeholder name as per request.
+    try:
+        llm_gemini_2_0_flash = LLM(model="gemini/gemini-2.0-flash-001")
+        print("Successfully attempted to initialize llm_gemini_2_0_flash.")
+    except Exception as e:
+        print(f"Failed to initialize llm_gemini_2_0_flash: {e}")
+        llm_gemini_2_0_flash = None
+
+    # Set default_llm
+    default_llm = llm_gemini_1_5_flash
+    if default_llm:
+        print(f"Default LLM set to gemini-1.5-flash.")
+    else:
+        print("Default LLM (gemini-1.5-flash) could not be initialized.")
+
+else:
+    print("GEMINI_API_KEY not found in environment variables.")
+    print("Gemini LLMs (gemini-1.5-flash, gemini-2.0-flash-001) will not be initialized.")
+    print("default_llm will be None. Agents will need LLM explicitly assigned or rely on other fallbacks.")
+
+if default_llm is None:
+    print("llm_config.py: default_llm is None. The application might not have a default LLM configured.")
