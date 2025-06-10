@@ -1,15 +1,22 @@
+import sys
+import os
+
+# Construct the absolute path to the mycrews/qrew/src directory
+# and prepend it to sys.path to make qrew.llm_config importable.
+# __file__ is the path to the current script (main.py)
+# os.path.dirname(__file__) is mycrews/qrew
+# os.path.join(os.path.dirname(__file__), 'src') is mycrews/qrew/src
+src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'src'))
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
+
 # Ensure the llm_config is loaded first to set up the default LLM
 # This is crucial if agents are defined at the module level and instantiate their LLM upon import.
-try:
-    from . import llm_config # This will execute llm_config.py
-except ImportError:
-    # Handle cases where main.py might be run as a top-level script for testing
-    # and relative imports don't work as expected.
-    import llm_config # type: ignore
+from qrew import llm_config # This will execute llm_config.py
 
 from crewAI.qrew.taskmaster import taskmaster_agent # Import the specific agent instance # type: ignore
 # from crewAI.qrew.taskmaster.crews import TaskMasterCrew # If TaskMaster had its own crew for kickoff
-import os # Import os to check environment variables
+# import os # Import os to check environment variables # os is already imported
 
 # For this initial version, we'll directly use the TaskMasterAgent and its tasks.
 # We need a way to get the tasks associated with the TaskMasterAgent.
