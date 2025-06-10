@@ -1,5 +1,5 @@
 from crewai import Crew, Process, Agent, Task
-from crewai import CrewBase, agent, crew, task
+from crewai.project import CrewBase, agent, crew, task
 
 # Import the actual tech stack committee agents
 from crewAI.qrew.orchestrators.tech_stack_committee.stack_advisor_agent import stack_advisor_agent
