@@ -2,9 +2,9 @@ from typing import Optional, Any, List
 import logging
 
 from crewai import Crew, Agent, Task
-from crewai.enums import TaskProcess # Added
-from crewai.shared import SharedContext # Added, though not fully utilized in simplified kickoff
-from crewai.utilities.task_output_adapter import TaskOutputAdapter # Added, though not fully utilized
+# from crewai.enums import TaskProcess # Removed
+# from crewai.shared import SharedContext # Removed
+# from crewai.utilities.task_output_adapter import TaskOutputAdapter # Removed
 
 # from crewai.utilities.logger import logger as crewai_logger # Using standard logging for this example
 
@@ -155,7 +155,7 @@ class ValidatedCrew(Crew):
         """
         log.info(f"ValidatedCrew kickoff initiated. Inputs: {inputs if inputs else 'None'}")
 
-        if self.process == TaskProcess.sequential:
+        if str(self.process).lower() == "sequential": # Changed condition
             if not self.tasks:
                 log.warning("ValidatedCrew kickoff: No tasks to execute.")
                 return "No tasks to execute."
@@ -200,7 +200,7 @@ class ValidatedCrew(Crew):
             # Return the output of the last task, similar to standard sequential kickoff
             return task_outputs[-1] if task_outputs else "No task outputs from kickoff."
 
-        elif self.process == TaskProcess.hierarchical:
+        elif str(self.process).lower() == "hierarchical": # Changed condition
             if not self.manager_agent:
                 raise ValueError("Manager agent not set for hierarchical process.")
             log.info(f"ValidatedCrew kickoff: Hierarchical process with manager agent '{self.manager_agent.role}'.")
