@@ -1,8 +1,9 @@
-from crewai import Crew, Process, Agent, Task
+from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
 from ..llm_config import default_llm
 from ..config import example_summary_validator
+from ..validated_crew import ValidatedCrew # Added ValidatedCrew
 
 # Import actual agents that could form a full-stack team
 from mycrews.qrew.agents.backend import api_creator_agent, data_model_agent
@@ -112,9 +113,9 @@ class FullStackCrew:
         )
 
     @crew
-    def crew(self) -> Crew:
+    def crew(self) -> ValidatedCrew: # Return type changed
         """Creates the Full Stack Development crew"""
-        return Crew(
+        created_crew = ValidatedCrew( # Changed to ValidatedCrew
             agents=[
                 self.backend_api_dev,
                 self.backend_data_modeler,
@@ -127,6 +128,7 @@ class FullStackCrew:
             verbose=True,
             llm=default_llm
         )
+        # The configure_quality_gate call is already correctly placed from previous step
         created_crew.configure_quality_gate(
             keyword_check=True,
             custom_validators=[example_summary_validator]

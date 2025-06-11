@@ -1,9 +1,10 @@
 import json # Added for parsing sub-task definitions
-from crewai import Crew, Process, Task
+from crewai import Process, Task # Crew removed from here
 from crewai.utilities.i18n import I18N
 import os
 from .llm_config import default_llm # Added for qrew_main_crew
 from .config import example_summary_validator # Imported validator
+from .validated_crew import ValidatedCrew # Added ValidatedCrew import
 # from crewai import Task # Added for the validator's type hint - already imported
 
 # Orchestrator Agents
@@ -38,7 +39,7 @@ all_qrew_agents = [
     taskmaster_agent  # Add taskmaster_agent here
 ]
 
-qrew_main_crew = Crew(
+qrew_main_crew = ValidatedCrew( # Changed from Crew to ValidatedCrew
     agents=all_qrew_agents, # Use the comprehensive list
     tasks=[],              # Tasks can remain empty at initialization
     llm=default_llm,
@@ -170,7 +171,7 @@ Example: { "task_description": "Design the detailed database schema for PostgreS
     # The old task_design_architecture Task object is now replaced by task_design_architecture_planning.
     # The actual synthesis of the architecture will be a new task: task_design_architecture_synthesis.
 
-    idea_to_architecture_crew = Crew(
+    idea_to_architecture_crew = ValidatedCrew( # Changed from Crew to ValidatedCrew
         agents=all_agents_for_crew,
         tasks=[task_interpret_idea, task_vet_requirements_planning], # task_design_architecture_planning is NOT part of this initial crew
         process=Process.sequential,

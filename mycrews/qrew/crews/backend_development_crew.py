@@ -1,8 +1,9 @@
-from crewai import Crew, Process, Agent, Task
+from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
 from ...llm_config import default_llm
 from ...config import example_summary_validator
+from ..validated_crew import ValidatedCrew # Added ValidatedCrew
 
 # Import actual backend agents
 from ..agents.backend import (
@@ -97,9 +98,9 @@ class BackendDevelopmentCrew:
         )
 
     @crew
-    def crew(self) -> Crew:
+    def crew(self) -> ValidatedCrew: # Return type changed
         """Creates the Backend Development crew"""
-        created_crew = Crew(
+        created_crew = ValidatedCrew( # Changed to ValidatedCrew
             agents=[self.api_creator, self.auth_specialist, self.config_manager, self.data_modeler, self.queue_manager, self.storage_manager, self.data_synchronizer],
             tasks=self.tasks,
             process=Process.sequential,

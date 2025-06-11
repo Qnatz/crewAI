@@ -1,8 +1,9 @@
-from crewai import Crew, Process, Agent, Task
+from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
-from ....llm_config import default_llm
-from ....config import example_summary_validator
+from ..llm_config import default_llm # Corrected path
+from ..config import example_summary_validator # Corrected path
+from ..validated_crew import ValidatedCrew
 
 # Import the actual web agents
 from mycrews.qrew.agents.web import (
@@ -79,9 +80,9 @@ class WebDevelopmentCrew:
         )
 
     @crew
-    def crew(self) -> Crew:
+    def crew(self) -> ValidatedCrew: # Return type changed
         """Creates the Web Development crew"""
-        created_crew = Crew(
+        created_crew = ValidatedCrew( # Changed to ValidatedCrew
             agents=[self.asset_manager, self.dynamic_page_builder, self.static_page_builder],
             tasks=self.tasks, # Automatically populated by @task decorator
             process=Process.sequential, # Can be adjusted as needed

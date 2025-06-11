@@ -1,8 +1,9 @@
-from crewai import Crew, Process, Agent, Task
+from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
 from ..llm_config import default_llm
 from ..config import example_summary_validator
+from ..validated_crew import ValidatedCrew # Added ValidatedCrew
 
 # Import the actual devops agent
 from mycrews.qrew.agents.devops import devops_agent
@@ -56,9 +57,9 @@ class DevOpsCrew:
         )
 
     @crew
-    def crew(self) -> Crew:
+    def crew(self) -> ValidatedCrew: # Return type changed
         """Creates the DevOps crew"""
-        created_crew = Crew(
+        created_crew = ValidatedCrew( # Changed to ValidatedCrew
             agents=[self.cicd_specialist], # Using the property name
             tasks=self.tasks, # From @task decorator
             process=Process.sequential,

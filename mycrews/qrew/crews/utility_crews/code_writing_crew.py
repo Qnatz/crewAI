@@ -1,8 +1,9 @@
-from crewai import Crew, Process, Agent, Task
+from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
 from ...llm_config import default_llm # Corrected path to ..
 from ...config import example_summary_validator # Corrected path to ..
+from ...validated_crew import ValidatedCrew # Added ValidatedCrew
 
 # Import actual dev utility agents
 from mycrews.qrew.agents.dev_utilities import (
@@ -72,9 +73,9 @@ class CodeWritingCrew:
         )
 
     @crew
-    def crew(self) -> Crew:
+    def crew(self) -> ValidatedCrew: # Return type changed
         """Creates the Code Writing Utility crew"""
-        created_crew = Crew(
+        created_crew = ValidatedCrew( # Changed to ValidatedCrew
             agents=[self.writer, self.debugger, self.tester],
             tasks=self.tasks,
             process=Process.sequential, # These tasks often follow a sequence

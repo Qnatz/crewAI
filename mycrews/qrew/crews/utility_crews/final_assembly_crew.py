@@ -1,8 +1,9 @@
-from crewai import Crew, Process, Agent, Task
+from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
 from ...llm_config import default_llm # Corrected path to ..
 from ...config import example_summary_validator # Corrected path to ..
+from ...validated_crew import ValidatedCrew # Added ValidatedCrew
 
 # Import best-fit actual agents
 from mycrews.qrew.orchestrators.final_assembler_agent import final_assembler_agent
@@ -72,9 +73,9 @@ class FinalAssemblyCrew:
         )
 
     @crew
-    def crew(self) -> Crew:
+    def crew(self) -> ValidatedCrew: # Return type changed
         """Creates the Final Assembly Utility crew"""
-        created_crew = Crew(
+        created_crew = ValidatedCrew( # Changed to ValidatedCrew
             agents=[self.assembler, self.documenter, self.reviewer],
             tasks=self.tasks,
             process=Process.sequential, # Assembly, Ddcing, then Review is a logical sequence

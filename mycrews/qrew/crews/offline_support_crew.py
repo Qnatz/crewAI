@@ -1,8 +1,9 @@
-from crewai import Crew, Process, Agent, Task
+from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
 from ..llm_config import default_llm
 from ..config import example_summary_validator
+from ..validated_crew import ValidatedCrew # Added ValidatedCrew
 
 # Import actual offline agents
 from mycrews.qrew.agents.offline import (
@@ -63,9 +64,9 @@ class OfflineSupportCrew:
         )
 
     @crew
-    def crew(self) -> Crew:
+    def crew(self) -> ValidatedCrew: # Return type changed
         """Creates the Offline Support crew"""
-        created_crew = Crew(
+        created_crew = ValidatedCrew( # Changed to ValidatedCrew
             agents=[self.local_store_manager, self.data_synchronizer],
             tasks=self.tasks, # From @task decorator
             process=Process.sequential,

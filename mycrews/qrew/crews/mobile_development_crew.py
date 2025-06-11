@@ -1,8 +1,9 @@
-from crewai import Crew, Process, Agent, Task
+from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
 from ..llm_config import default_llm
 from ..config import example_summary_validator
+from ..validated_crew import ValidatedCrew # Added ValidatedCrew
 
 # Import actual mobile agents
 from mycrews.qrew.agents.mobile import (
@@ -81,10 +82,10 @@ class MobileDevelopmentCrew:
         )
 
     @crew
-    def crew(self) -> Crew:
+    def crew(self) -> ValidatedCrew: # Return type changed
         """Creates the Mobile Development crew"""
         # Including all agents for now. Task routing would determine actual agent usage.
-        return Crew(
+        created_crew = ValidatedCrew( # Changed to ValidatedCrew
             agents=[
                 self.android_api_dev, self.android_storage_dev, self.android_ui_dev,
                 self.ios_api_dev, self.ios_storage_dev, self.ios_ui_dev
