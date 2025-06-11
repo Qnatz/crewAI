@@ -16,7 +16,7 @@ custom_ask_question_tool = CustomAskQuestionTool()
 # file_io_tool = FileIOTool()
 # agent_tools = [custom_delegate_tool, custom_ask_question_tool, file_io_tool]
 
-agent_tools = [custom_delegate_tool, custom_ask_question_tool]
+agent_tools = [] # Removed custom_delegate_tool and custom_ask_question_tool
 
 project_architect_agent = Agent(
     role="Project Architect",
@@ -26,7 +26,7 @@ project_architect_agent = Agent(
               "Known for creating elegant, maintainable, and future-proof architectures. "
               "Possesses deep knowledge of design patterns, system integration, and technology stacks.",
     llm=specific_llm, # Assign the fetched LLM
-    tools=agent_tools,
-    allow_delegation=True, # May delegate detailed design of specific components
+    # tools=agent_tools, # Removed as agent_tools is now empty
+    allow_delegation=True, # This will be used by defining sub-tasks, not by the agent itself using a tool.
     verbose=True
 )

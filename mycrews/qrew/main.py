@@ -12,6 +12,7 @@ if project_src_path not in sys.path:
 # Ensure the llm_config is loaded first to set up the default LLM
 # This is crucial if agents are defined at the module level and instantiate their LLM upon import.
 from .llm_config import default_llm # llm_config.py is now in the same directory
+from . import config as crew_config # This will execute config.py and set Task.DEFAULT_SCHEMA
 
 from .taskmaster import taskmaster_agent # Import the specific agent instance # type: ignore
 # from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance # Removed after direct testing
@@ -23,7 +24,7 @@ os.environ["LITELLM_DEBUG"] = "1"
 # The default_llm imported here is passed to the Crew instance.
 
 from crewai import Task, Crew # type: ignore
-from .main_workflow import run_idea_to_architecture_workflow # Added import
+from .main_workflow import qrew_main_crew, run_idea_to_architecture_workflow # Modified import
 
 def run_qrew():
     print("Initializing Qrew System...")
@@ -58,26 +59,25 @@ def run_qrew():
             'user_request': sample_user_request,
             'project_goal_statement': sample_project_goal,
             'priority_level': sample_priority
-        }
+        },
+        successCriteria=[
+            "project brief created",
+            "scope defined",
+            "objectives defined",
+            "key deliverables listed",
+            "complexity assessed",
+            "recommendation for next step provided"
+        ]
     )
 
-    # To execute this task, we'd typically add it to a Crew and kick it off.
-    # Since TaskMasterAgent is a high-level coordinator, it might be part of a simple
-    # "TaskMasterCrew" or we can create a temporary crew here for execution.
-    from crewai import Crew
+    # To execute this task, we use the qrew_main_crew
+    if taskmaster_agent not in qrew_main_crew.agents:
+        qrew_main_crew.agents.append(taskmaster_agent)
+        print(f"Registered {taskmaster_agent.role} with qrew_main_crew.")
 
-    # Create a temporary crew for the TaskMasterAgent to execute its initial task
-    # In a more complex setup, TaskMaster might have its own defined crew in taskmaster/crews/
-    task_master_execution_crew = Crew(
-        agents=[taskmaster_agent],
-        tasks=[taskmaster_initial_task],
-        llm=default_llm, # Pass the configured LLM to the Crew
-        verbose=True
-    )
-
-    print("\nKicking off TaskMasterAgent for initial request processing...")
+    print("\nKicking off TaskMasterAgent for initial request processing using qrew_main_crew...")
     try:
-        taskmaster_result = task_master_execution_crew.kickoff() # Renamed for clarity
+        taskmaster_result = qrew_main_crew.delegate_task(task=taskmaster_initial_task)
 
         print("\nTaskMasterAgent Processing Complete.")
         print("--------------------------------------")

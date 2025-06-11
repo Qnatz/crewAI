@@ -1,6 +1,9 @@
+import json # Added for parsing sub-task definitions
 from crewai import Crew, Process, Task
 from crewai.utilities.i18n import I18N
 import os
+from .llm_config import default_llm # Added for qrew_main_crew
+# from crewai import Task # Added for the validator's type hint - already imported
 
 # Orchestrator Agents
 from .orchestrators.idea_interpreter_agent.agent import idea_interpreter_agent
@@ -19,14 +22,41 @@ from .tools.custom_agent_tools import CustomDelegateWorkTool, CustomAskQuestionT
 custom_delegate_tool = CustomDelegateWorkTool()
 custom_ask_tool = CustomAskQuestionTool()
 
+# --- Main Qrew Crew Setup ---
+def example_summary_validator(task: Task, result: dict) -> bool:
+    description_lower = task.description.lower()
+    if "summary" in description_lower or "summarize" in description_lower:
+        if not isinstance(result, dict) or "summary" not in result or not result.get("summary"):
+            print(f"QualityGate Fail (Custom Validator): Task '{task.description}' expected a summary, but it was missing or empty in the result.")
+            return False
+    return True
+
+qrew_main_crew = Crew(
+    agents=[],
+    tasks=[],
+    llm=default_llm,
+    verbose=True,
+)
+
+print("Configuring Quality Gate for qrew_main_crew...")
+qrew_main_crew.configure_quality_gate(
+    keyword_check=True,
+    custom_validators=[example_summary_validator]
+)
+print("qrew_main_crew initialized and Quality Gate configured in main_workflow.py.")
+# --- End of Main Qrew Crew Setup ---
+
 def run_idea_to_architecture_workflow(workflow_inputs: dict):
     print("## Initializing Idea to Architecture Workflow Agents & Tasks...")
 
-    current_tvca_tools = []
+    # Remove CustomDelegateWorkTool and CustomAskQuestionTool from tech_vetting_council_agent
     if hasattr(tech_vetting_council_agent, 'tools') and tech_vetting_council_agent.tools is not None:
-        current_tvca_tools = [tool for tool in tech_vetting_council_agent.tools if not isinstance(tool, (CustomDelegateWorkTool, CustomAskQuestionTool))]
-    current_tvca_tools.extend([custom_delegate_tool, custom_ask_tool])
-    tech_vetting_council_agent.tools = current_tvca_tools
+        tech_vetting_council_agent.tools = [
+            tool for tool in tech_vetting_council_agent.tools
+            if not isinstance(tool, (CustomDelegateWorkTool, CustomAskQuestionTool))
+        ]
+    else:
+        tech_vetting_council_agent.tools = []
 
     all_agents_for_crew = [
         idea_interpreter_agent,
@@ -61,81 +91,353 @@ The technical requirements should include:
 - A glossary of terms.
 - Identified ambiguities.
 The feature breakdown should detail individual components and user interactions for key features.''',
-        agent=idea_interpreter_agent
+        agent=idea_interpreter_agent,
+        successCriteria=[
+            "technical requirements specification created",
+            "feature breakdown document created",
+            "user stories with acceptance criteria included",
+            "functional requirements listed",
+            "non-functional requirements listed",
+            "data requirements identified",
+            "glossary of terms provided"
+        ]
     )
 
-    task_vet_requirements = Task(
-        description='''You have received a Technical Requirements Specification and a Feature Breakdown from the Idea Interpreter Agent (available in your task context).
-Your task is to lead the Tech Vetting Council to review these documents thoroughly.
-Use the overall project constraints, available to you as the string "{constraints}", to guide your vetting.
+    task_vet_requirements_planning = Task(
+        description='''Your primary goal is to plan the vetting process for the Technical Requirements Specification and Feature Breakdown (available from 'task_interpret_idea' in your context).
+You MUST define the sub-tasks to be delegated to 'ConstraintCheckerAgent' and 'StackAdvisorAgent'.
+For 'ConstraintCheckerAgent', the sub-task should be to "Review the provided 'proposed_solution' (Technical Requirements Specification and Feature Breakdown) against the 'project_constraints_document' (value: "{constraints}"). Identify any violations or potential conflicts regarding budget, team skills, security policies, licensing, or infrastructure."
+For 'StackAdvisorAgent', the sub-task should be to "Analyze the provided 'project_requirements' (Technical Requirements Specification and Feature Breakdown) to propose an optimal technology stack. Consider 'team_skills' and 'budget_constraints' (both from "{constraints}") and 'existing_architecture_details' (value: "None - new project"). Provide justifications for stack choices, considering scalability, maintainability, and alignment with the technical vision."
 
-You MUST use your 'Delegate Work to Co-worker (Custom)' tool for the following specific delegations:
-1.  To 'ConstraintCheckerAgent':
-    - The `task` description for this delegation should be to "Review the provided 'proposed_solution' (Technical Requirements Specification and Feature Breakdown) against the 'project_constraints_document'. Identify any violations or potential conflicts regarding budget, team skills, security policies, licensing, or infrastructure."
-    - When calling the tool, for its `inputs` parameter, you MUST construct a dictionary. This dictionary should have two keys:
-        - "project_constraints_document": Assign the value of the main project constraints (i.e., the content of "{constraints}") to this key.
-        - "proposed_solution": Assign the output of the `task_interpret_idea` (which is available in your agent's context) to this key. You should use a placeholder like "{task_interpret_idea.output}" to instruct your agent how to access this.
-      The `task` string you compose for the ConstraintCheckerAgent delegation MUST use placeholders in the format `{key}` (e.g., "...against {project_constraints_document} and {proposed_solution}."). Crucially, the placeholder names within this task string MUST EXACTLY MATCH the keys you define in the `inputs` dictionary for this tool call.
-    - The `context_str` for this delegation should be "Focus on identifying clear violations or risks based on the provided documents and the given constraints."
-2.  To 'StackAdvisorAgent':
-    - The `task` description for this delegation should be to "Analyze the provided 'project_requirements' (Technical Requirements Specification and Feature Breakdown) to propose an optimal technology stack. Consider the 'team_skills', 'budget_constraints', and any 'existing_architecture_details' provided. Provide justifications for stack choices, considering scalability, maintainability, and alignment with the technical vision."
-    - When calling the tool, for its `inputs` parameter, you MUST construct a dictionary with the following keys:
-        - "project_requirements": Assign the output of `task_interpret_idea` (available in your agent's context) to this key. Use a placeholder like "{task_interpret_idea.output}".
-        - "team_skills": Extract relevant team skills information from the main project constraints string ("{constraints}") and assign it here. For example, if constraints mention "Team has strong Python and React skills", this value should reflect that.
-        - "budget_constraints": Extract relevant budget information from the main project constraints string ("{constraints}") and assign it here. For example, if constraints mention "Budget for external services is moderate", this value should reflect that.
-        - "existing_architecture_details": Set this to an appropriate value like "None - new project", as this is the initial design phase.
-      The `task` string you compose for the StackAdvisorAgent delegation MUST use placeholders in the format `{key}` (e.g., "...based on {project_requirements}, considering {team_skills}} and {budget_constraints}..."). Crucially, the placeholder names within this task string MUST EXACTLY MATCH the keys you define in the `inputs` dictionary for this tool call.
-    - The `context_str` for this delegation should be "Provide justifications for stack choices, considering scalability, maintainability, and alignment with the technical vision if available."
-
-After receiving reports from both delegated tasks, synthesize their findings, incorporate the council\'s discussion (simulated by your reasoning), and compile a final \'Vetting Report\' and a set of \'Final Technical Guidelines\'.''',
-        expected_output='''A Vetting Report and a set of Final Technical Guidelines.
-The Vetting Report should summarize:
-- Stack Advisor\'s evaluation.
-- Constraint Checker\'s compliance report.
-- The Tech Vetting Council\'s final decision/recommendations on the proposal.
-The Final Technical Guidelines should list any approved technologies, patterns, or constraints affirmed by the council.''',
+You must return a JSON object with a key "sub_tasks_to_delegate". The value should be a list of dictionaries, where each dictionary represents a sub-task and includes:
+- "task_description": The detailed description for the sub-agent.
+- "assigned_agent_role": The role of the agent to delegate to (e.g., "ConstraintCheckerAgent", "StackAdvisorAgent").
+- "payload": A dictionary containing all necessary data for the sub-task (e.g., {"project_constraints_document": "...", "proposed_solution": "..."}).
+- "successCriteria": A list of strings defining success for the sub-task (e.g., ["violations identified", "compliance report generated"]).
+Ensure placeholder values like "{constraints}" and the output from 'task_interpret_idea' are correctly incorporated into the descriptions and payloads you define for the sub-tasks.
+The output of 'task_interpret_idea' will be available in your context. Access its content as needed to formulate the 'payload' for the sub-tasks.
+Example for 'ConstraintCheckerAgent' payload: {"project_constraints_document": "{constraints}", "proposed_solution": "{task_interpret_idea.output}"}
+Example for 'StackAdvisorAgent' payload: {"project_requirements": "{task_interpret_idea.output}", "team_skills": "Extract from {constraints}", "budget_constraints": "Extract from {constraints}", "existing_architecture_details": "None - new project"}
+''',
+        expected_output='''A JSON object containing a list under the key "sub_tasks_to_delegate". Each item in the list must be a dictionary with "task_description", "assigned_agent_role", "payload", and "successCriteria" for the sub-tasks intended for ConstraintCheckerAgent and StackAdvisorAgent.''',
         agent=tech_vetting_council_agent,
-        context=[task_interpret_idea]
+        context=[task_interpret_idea],
+        successCriteria=[
+            "sub_tasks_to_delegate list provided",
+            "ConstraintCheckerAgent sub-task defined",
+            "StackAdvisorAgent sub-task defined",
+            "payloads for sub-tasks correctly structured",
+            "successCriteria for sub-tasks defined"
+        ]
     )
 
-    task_design_architecture = Task(
-        description='''Your primary goal is to develop a comprehensive software architecture plan. Base your design on:
-1. The original Technical Requirements & Feature Breakdown (from \'task_interpret_idea\', available in your context).
-2. The Vetting Report & Final Technical Guidelines (from \'task_vet_requirements\', available in your context).
-3. The overall project constraints, available to you as "{constraints}".
-4. The project\'s technical vision, available to you as "{technical_vision}".
+    # This is the new task_design_architecture_planning, replacing the old task_design_architecture
+    task_design_architecture_planning = Task(
+        description='''Your primary goal is to PLAN the detailed design of a software architecture.
+Based on:
+1. Original Technical Requirements & Feature Breakdown (available as {user_idea_details_str}).
+2. The Vetting Report & Final Technical Guidelines (available as {vetting_report_and_guidelines_str}).
+3. Overall project constraints (available as {original_constraints_str}).
+4. Project's technical vision (available as {technical_vision_str}).
 
-You must break down the architecture design into logical components and delegate detailed design for these components using your \'Delegate Work to Co-worker (Custom)\' tool.
-For example, when delegating "Detailed database schema design":
-- The `task` parameter for the tool could be: "Design the detailed database schema for [DB_TYPE_VAL] based on data models in section [SECTION_REF_VAL] of the Technical Requirements. Adhere to guidelines from the Vetting Report." (Use specific placeholders like [DB_TYPE_VAL] that you define for the sub-task).
-- The `inputs` parameter for the tool would then be a dictionary you construct by extracting values from your context. For example: `{"DB_TYPE_VAL": "PostgreSQL", "SECTION_REF_VAL": "3.2"}`.
-- Use the `prerequisite_task_ids` parameter if a sub-delegatee needs the direct output of another sub-delegated task you previously assigned.
-- Use `context_str` for brief, guiding context.
-
-Synthesize all delegated design outputs and your own architectural insights into a final, detailed software architecture document.''',
-        expected_output='''A detailed software architecture document, including:
-- High-level system diagrams.
-- Technology stack recommendations for each component.
-- Data model design overview.
-- API design guidelines.
-- Integration points.
-- Non-functional requirements considerations.''',
-        agent=project_architect_agent,
-        context=[task_interpret_idea, task_vet_requirements]
+You must define the sub-tasks to be delegated for designing various architectural components (e.g., database schema, API design for specific modules, UI component structure).
+Return a JSON object with a key "sub_tasks_to_delegate". The value should be a list of dictionaries, where each dictionary represents a sub-task for a component design and includes:
+- "task_description": Detailed description for the component design sub-task.
+- "assigned_agent_role": The role of the agent to delegate to (e.g., "BackendDeveloperAgent", "FrontendDeveloperAgent", "DatabaseAdminAgent" - you'll need to decide appropriate roles or use a generic "SoftwareEngineerAgent" if specific roles aren't defined yet).
+- "payload": A dictionary containing all necessary data for the sub-task.
+- "successCriteria": A list of strings defining success for that component design.
+Example: { "task_description": "Design the detailed database schema for PostgreSQL based on data models...", "assigned_agent_role": "DatabaseAdminAgent", "payload": {...}, "successCriteria": ["schema diagram created", "SQL scripts provided"] }
+''',
+        expected_output='''A JSON object containing a list under the key "sub_tasks_to_delegate". Each item must be a dictionary with "task_description", "assigned_agent_role", "payload", and "successCriteria" for component design sub-tasks.''',
+        agent=project_architect_agent, # Assigned to Project Architect
+        # Context will be implicitly handled by the payload constructed during execution
+        successCriteria=[
+            "component design sub-tasks defined",
+            "delegation plan for architecture created",
+            "payloads for component tasks structured",
+            "successCriteria for component tasks specified"
+        ],
+        # Payload will be added dynamically during execution, so not defined here.
     )
+
+    # The old task_design_architecture Task object is now replaced by task_design_architecture_planning.
+    # The actual synthesis of the architecture will be a new task: task_design_architecture_synthesis.
 
     idea_to_architecture_crew = Crew(
         agents=all_agents_for_crew,
-        tasks=[task_interpret_idea, task_vet_requirements, task_design_architecture],
+        tasks=[task_interpret_idea, task_vet_requirements_planning], # task_design_architecture_planning is NOT part of this initial crew
         process=Process.sequential,
         verbose=True
     )
 
-    print(f"Kicking off Idea-to-Architecture workflow with inputs: {workflow_inputs}")
-    result = idea_to_architecture_crew.kickoff(inputs=workflow_inputs)
-    return result
+    print(f"Kicking off Idea-to-Architecture workflow (Phase 1: Planning) with inputs: {workflow_inputs}")
+
+    agent_role_map = {
+        "ConstraintCheckerAgent": constraint_checker_agent,
+        "StackAdvisorAgent": stack_advisor_agent,
+        "ProjectArchitectAgent": project_architect_agent, # Added for potential self-delegation or generic assignment
+        # Add other specific roles if new specialist agents are created and imported
+        # "BackendDeveloperAgent": backend_dev_agent,
+        # "FrontendDeveloperAgent": frontend_dev_agent,
+    }
+
+    # Initial crew for idea interpretation and vetting planning
+    planning_crew_result_obj = idea_to_architecture_crew.kickoff(inputs=workflow_inputs)
+
+    # Extracting the raw output string from the planning task.
+    # This assumes the last task in the sequential crew is task_vet_requirements_planning.
+    # Adjust if CrewAI's kickoff result structure is different or if a specific task output is needed.
+    sub_task_definitions_json_str = None
+    if hasattr(planning_crew_result_obj, 'raw'): # Common for single task output or final raw output
+        sub_task_definitions_json_str = planning_crew_result_obj.raw
+    elif hasattr(planning_crew_result_obj, 'tasks') and planning_crew_result_obj.tasks:
+        # If kickoff returns a result object with a list of task outputs
+        # Find the output of task_vet_requirements_planning
+        planning_task_output = next((t.output for t in planning_crew_result_obj.tasks if t.description == task_vet_requirements_planning.description), None)
+        if planning_task_output and hasattr(planning_task_output, 'raw_output'):
+            sub_task_definitions_json_str = planning_task_output.raw_output
+        elif planning_task_output: # Fallback if raw_output is not present but output itself might be the string
+             sub_task_definitions_json_str = str(planning_task_output) # Convert to string if it's an object
+    else: # Fallback if the structure is unexpected
+        print("Warning: Could not determine the standard way to extract raw output from planning_crew_result_obj. Falling back to string conversion.")
+        sub_task_definitions_json_str = str(planning_crew_result_obj)
+
+
+    if not sub_task_definitions_json_str:
+        print("Error: Vetting Requirements Planning task did not produce an output string.")
+        return None
+
+
+    print("\nProcessing output of Vetting Requirements Planning...")
+    delegated_task_results = {}
+    try:
+        json_start_index = sub_task_definitions_json_str.find('{')
+        json_end_index = sub_task_definitions_json_str.rfind('}') + 1
+        actual_json_str = ""
+        if json_start_index != -1 and json_end_index != -1:
+            actual_json_str = sub_task_definitions_json_str[json_start_index:json_end_index]
+            sub_task_data = json.loads(actual_json_str)
+        else:
+            raise json.JSONDecodeError("No JSON object found in output", sub_task_definitions_json_str, 0)
+
+        if "sub_tasks_to_delegate" not in sub_task_data:
+            print("Error: 'sub_tasks_to_delegate' key missing in planning output JSON.")
+            print(f"Received JSON: {actual_json_str}")
+            return None
+
+        for sub_task_def in sub_task_data["sub_tasks_to_delegate"]:
+            print(f"  Preparing sub-task: {sub_task_def.get('task_description', 'No description')[:70]}...")
+            assigned_role = sub_task_def.get("assigned_agent_role")
+            actual_agent = agent_role_map.get(assigned_role)
+
+            if not actual_agent:
+                print(f"    Error: Agent for role '{assigned_role}' not found in agent_role_map. Skipping this sub-task.")
+                continue
+
+            # Ensure payload is a dictionary, even if not provided or malformed
+            payload = sub_task_def.get("payload")
+            if not isinstance(payload, dict):
+                print(f"    Warning: Payload for sub-task '{sub_task_def.get('task_description')}' is not a dictionary or missing. Using empty dict. Payload was: {payload}")
+                payload = {}
+
+            new_sub_task = Task(
+                description=sub_task_def["task_description"],
+                expected_output=sub_task_def.get("expected_output", "Actionable result for the delegated sub-task."),
+                agent=actual_agent,
+                payload=payload,
+                successCriteria=sub_task_def.get("successCriteria", ["output generated"]),
+            )
+
+            print(f"    Delegating to {actual_agent.role} ({actual_agent.id}) using qrew_main_crew...")
+            sub_task_result = qrew_main_crew.delegate_task(task=new_sub_task)
+            delegated_task_results[assigned_role] = str(sub_task_result.raw if hasattr(sub_task_result, 'raw') else sub_task_result) # Store raw string output
+            print(f"    Sub-task for {assigned_role} completed. Result: {str(sub_task_result)[:100]}...")
+
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON from Vetting Requirements Planning output: {e}")
+        print(f"Received output for parsing: '{actual_json_str}'")
+        print(f"Original output from LLM: '{sub_task_definitions_json_str}'")
+        return None
+    except Exception as e:
+        print(f"An error occurred during sub-task delegation: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+    print("\nPreparing Vetting Requirements Synthesis task...")
+    synthesis_payload = {
+        "constraint_checker_report": delegated_task_results.get("ConstraintCheckerAgent", "Not available"),
+        "stack_advisor_report": delegated_task_results.get("StackAdvisorAgent", "Not available"),
+        "original_user_idea": workflow_inputs.get("user_idea", "User idea not explicitly passed to synthesis payload."), # Or retrieve from task_interpret_idea.output
+        "original_constraints": workflow_inputs.get("constraints", "Constraints not explicitly passed to synthesis payload.") # Or retrieve from workflow_inputs
+    }
+
+    # Retrieving output from task_interpret_idea for context, if available and kickoff result is structured
+    # This is a more robust way if planning_crew_result_obj is a rich object
+    idea_task_output_str = "Not available from planning_crew_result_obj"
+    if hasattr(planning_crew_result_obj, 'tasks') and planning_crew_result_obj.tasks:
+        # Ensure there's at least one task and its output is accessible
+        if planning_crew_result_obj.tasks[0].output:
+            idea_task_output = next((t.output for t in planning_crew_result_obj.tasks if t.description == task_interpret_idea.description), None)
+            if idea_task_output and hasattr(idea_task_output, 'raw_output'):
+                idea_task_output_str = idea_task_output.raw_output
+            elif idea_task_output: # Fallback if raw_output is not present
+                idea_task_output_str = str(idea_task_output)
+        else:
+            idea_task_output_str = "Output of task_interpret_idea not found or not in expected format."
+
+    synthesis_payload["idea_interpretation_output"] = idea_task_output_str
+
+
+    task_vet_requirements_synthesis = Task(
+        description=f'''Synthesize the findings from the Constraint Checker and Stack Advisor.
+Constraint Checker Report: {{constraint_checker_report}}
+Stack Advisor Report: {{stack_advisor_report}}
+The original technical requirements and feature breakdown were based on: {{idea_interpretation_output}}
+Original project constraints were: {{original_constraints}}
+Original user idea was: {{original_user_idea}}
+Compile a final 'Vetting Report' and a set of 'Final Technical Guidelines'.''',
+        expected_output='''A Vetting Report and a set of Final Technical Guidelines.
+The Vetting Report should summarize: Stack Advisor's evaluation, Constraint Checker's compliance report, and the Tech Vetting Council's final decision/recommendations.
+The Final Technical Guidelines should list approved technologies, patterns, or constraints.''',
+        agent=tech_vetting_council_agent,
+        payload=synthesis_payload,
+        successCriteria=[
+            "Vetting Report compiled",
+            "Final Technical Guidelines created",
+            "Stack Advisor evaluation summarized",
+            "Constraint Checker compliance report summarized",
+            "Council recommendations included"
+        ]
+    )
+
+    print("Executing Vetting Requirements Synthesis task using qrew_main_crew...")
+    synthesis_result = qrew_main_crew.delegate_task(task=task_vet_requirements_synthesis)
+    print(f"Synthesis task completed. Result: {str(synthesis_result)[:100]}...")
+
+    # --- Architecture Design Phase ---
+    print("\nPreparing Project Architecture Design Planning task...")
+
+    # Determine the source for idea_interpretation_output for the payload
+    # Prefer the more robust extraction if available, otherwise use workflow_inputs as fallback
+    idea_output_for_arch_planning = idea_task_output_str # From previous extraction attempt
+    if idea_output_for_arch_planning == "Not available from planning_crew_result_obj" or \
+       idea_output_for_arch_planning == "Output of task_interpret_idea not found or not in expected format.":
+        idea_output_for_arch_planning = workflow_inputs.get('user_idea', "User idea not available.")
+
+
+    architecture_planning_payload = {
+        "user_idea_details_str": idea_output_for_arch_planning,
+        "vetting_report_and_guidelines_str": str(synthesis_result.raw if hasattr(synthesis_result, 'raw') else synthesis_result),
+        "original_constraints_str": workflow_inputs["constraints"],
+        "technical_vision_str": workflow_inputs["technical_vision"]
+    }
+    # The task_design_architecture_planning object is defined at the module level.
+    # We assign its payload here before execution.
+    task_design_architecture_planning.payload = architecture_planning_payload
+
+    print("Executing Project Architecture Design Planning task using qrew_main_crew...")
+    architecture_planning_result_obj = qrew_main_crew.delegate_task(
+        task=task_design_architecture_planning,
+    )
+    architecture_planning_json_str = str(architecture_planning_result_obj.raw if hasattr(architecture_planning_result_obj, 'raw') else architecture_planning_result_obj)
+
+    print("\nProcessing output of Architecture Design Planning...")
+    architecture_delegated_task_results = {}
+    try:
+        json_start_index_arch = architecture_planning_json_str.find('{')
+        json_end_index_arch = architecture_planning_json_str.rfind('}') + 1
+        actual_arch_json_str = ""
+        if json_start_index_arch != -1 and json_end_index_arch != -1:
+            actual_arch_json_str = architecture_planning_json_str[json_start_index_arch:json_end_index_arch]
+            architecture_sub_task_data = json.loads(actual_arch_json_str)
+        else:
+            raise json.JSONDecodeError("No JSON object found in Arch Design Planning output", architecture_planning_json_str, 0)
+
+        if "sub_tasks_to_delegate" not in architecture_sub_task_data:
+            print("Error: 'sub_tasks_to_delegate' key missing in architecture planning output JSON.")
+            print(f"Received JSON: {actual_arch_json_str}")
+            return None
+
+        for sub_task_def in architecture_sub_task_data["sub_tasks_to_delegate"]:
+            print(f"  Preparing architecture sub-task: {sub_task_def.get('task_description', 'No description')[:70]}...")
+            assigned_role = sub_task_def.get("assigned_agent_role")
+            # Use ProjectArchitectAgent as a fallback if a specific role is not in agent_role_map
+            actual_agent = agent_role_map.get(assigned_role, project_architect_agent)
+            if actual_agent == project_architect_agent and assigned_role not in agent_role_map:
+                 print(f"    Warning: Agent for role '{assigned_role}' not found. Assigning to ProjectArchitectAgent.")
+
+            payload_arch = sub_task_def.get("payload")
+            if not isinstance(payload_arch, dict):
+                print(f"    Warning: Payload for arch sub-task '{sub_task_def.get('task_description')}' is not a dictionary or missing. Using empty dict. Payload was: {payload_arch}")
+                payload_arch = {}
+
+            new_arch_sub_task = Task(
+                description=sub_task_def["task_description"],
+                expected_output=sub_task_def.get("expected_output", "Detailed design for the architectural component."),
+                agent=actual_agent,
+                payload=payload_arch,
+                successCriteria=sub_task_def.get("successCriteria", ["component design completed"]),
+            )
+
+            print(f"    Delegating architecture sub-task to {actual_agent.role} ({actual_agent.id}) using qrew_main_crew...")
+            arch_sub_task_result = qrew_main_crew.delegate_task(task=new_arch_sub_task)
+            # Using description as key for uniqueness if multiple sub-tasks assigned to same role
+            result_key = f"{assigned_role}_{sub_task_def.get('task_description', 'Unnamed_Arch_Sub_Task')[:30]}"
+            architecture_delegated_task_results[result_key] = str(arch_sub_task_result.raw if hasattr(arch_sub_task_result, 'raw') else arch_sub_task_result)
+            print(f"    Architecture sub-task for '{assigned_role}' completed.")
+
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON from Architecture Design Planning output: {e}")
+        print(f"Received output for parsing: '{actual_arch_json_str}'")
+        print(f"Original output from LLM: '{architecture_planning_json_str}'")
+        return None
+    except Exception as e:
+        print(f"An error occurred during architecture sub-task delegation: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+    print("\nPreparing Architecture Design Synthesis task...")
+    architecture_synthesis_payload = {
+        "component_design_results": json.dumps(architecture_delegated_task_results), # Pass results as JSON string
+        "original_user_idea": idea_output_for_arch_planning,
+        "vetting_report_and_guidelines": str(synthesis_result.raw if hasattr(synthesis_result, 'raw') else synthesis_result),
+        "original_constraints": workflow_inputs["constraints"],
+        "technical_vision": workflow_inputs["technical_vision"]
+    }
+
+    task_design_architecture_synthesis = Task(
+        description=f'''Synthesize all component design outputs into a final, detailed software architecture document.
+Component Designs (JSON string): {{component_design_results}}
+Original Technical Requirements & Feature Breakdown: {{original_user_idea}}
+Vetting Report & Final Technical Guidelines: {{vetting_report_and_guidelines}}
+Overall project constraints: {{original_constraints}}
+Project's technical vision: {{technical_vision}}''',
+        expected_output='''A detailed software architecture document, including: High-level system diagrams, Technology stack recommendations for each component, Data model design overview, API design guidelines, Integration points, Non-functional requirements considerations.''',
+        agent=project_architect_agent,
+        payload=architecture_synthesis_payload,
+        successCriteria=[
+            "software architecture document created",
+            "high-level system diagrams included",
+            "technology stack recommendations provided",
+            "data model design overview included",
+            "API design guidelines defined",
+            "integration points identified"
+        ]
+    )
+
+    print("Executing Architecture Design Synthesis task using qrew_main_crew...")
+    architecture_synthesis_result = qrew_main_crew.delegate_task(
+        task=task_design_architecture_synthesis,
+    )
+    print("Architecture Synthesis task completed.")
+
+    print("\nIdea-to-Architecture (Full Workflow) complete.")
+    return architecture_synthesis_result
 
 if __name__ == "__main__":
+# No change to this part of the file, it's just context. The main changes are above and inside run_idea_to_architecture_workflow.
     print("## Starting QREW Main Entry Point (which will call Idea to Architecture Workflow)")
 
     initial_user_idea_for_taskmaster = "Develop a market-leading application for interactive pet training that is fun and engaging. It should include video streaming, progress tracking, and social sharing features. We want it to be scalable and secure."
