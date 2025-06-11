@@ -28,12 +28,12 @@ class ValidatedCrew(Crew):
         self._keyword_check_enabled: bool = True
         self._custom_validators: List[callable] = []
 
-        # Check Task.DEFAULT_SCHEMA for payload configuration compatibility
-        if "payload" not in Task.DEFAULT_SCHEMA or not isinstance(Task.DEFAULT_SCHEMA["payload"], dict): # type: ignore
-            log.warning("Task.DEFAULT_SCHEMA does not define 'payload' as a dictionary. "
+        # Check Task.DEFAULT_SCHEMA for input configuration compatibility
+        if "input" not in Task.DEFAULT_SCHEMA or not isinstance(Task.DEFAULT_SCHEMA["input"], dict): # type: ignore
+            log.warning("Task.DEFAULT_SCHEMA does not define 'input' as a dictionary. "
                         "'previousFeedback' injection might not work as expected.")
-        elif Task.DEFAULT_SCHEMA["payload"].get("default", "NOT_SET") == "NOT_SET": # type: ignore
-            log.warning("Task.DEFAULT_SCHEMA['payload'] does not have a 'default' key. "
+        elif Task.DEFAULT_SCHEMA["input"].get("default", "NOT_SET") == "NOT_SET": # type: ignore
+            log.warning("Task.DEFAULT_SCHEMA['input'] does not have a 'default' key. "
                         "Consider adding 'default: {}' for robust 'previousFeedback' injection.")
 
 
@@ -85,15 +85,15 @@ class ValidatedCrew(Crew):
         for attempt in range(max_retries + 1):
             log.info(f"Executing task '{task.description}' with agent '{target_agent.role}'. Attempt {attempt + 1}/{max_retries + 1}.")
 
-            if task.payload is None: # Ensure payload exists
-                task.payload = {}
+            if task.input is None: # Ensure input exists
+                task.input = {}
 
             try:
                 result = target_agent.execute_task(task=task, context=context)
             except Exception as e:
                 log.error(f"Exception during task execution by '{target_agent.role}' for task '{task.description}' on attempt {attempt + 1}: {e}", exc_info=True)
                 if attempt < max_retries:
-                    task.payload["previousFeedback"] = f"Execution error on attempt {attempt + 1}: {str(e)}"
+                    task.input["previousFeedback"] = f"Execution error on attempt {attempt + 1}: {str(e)}" # Changed to task.input
                     log.info(f"Retrying task '{task.description}' due to execution error.")
                     continue
                 else:
@@ -132,13 +132,13 @@ class ValidatedCrew(Crew):
 
             if passed_quality_gate:
                 log.info(f"Task '{task.description}' passed quality gate on attempt {attempt + 1}.")
-                if "previousFeedback" in task.payload:
-                    del task.payload["previousFeedback"]
+                if "previousFeedback" in task.input: # Changed to task.input
+                    del task.input["previousFeedback"] # Changed to task.input
                 return result
 
             if attempt < max_retries:
-                task.payload["previousFeedback"] = ". ".join(feedback_messages)
-                log.info(f"Task '{task.description}' failed quality gate. Feedback: '{task.payload['previousFeedback']}'. Retrying ({attempt + 1}/{max_retries} retries used)...")
+                task.input["previousFeedback"] = ". ".join(feedback_messages) # Changed to task.input
+                log.info(f"Task '{task.description}' failed quality gate. Feedback: '{task.input['previousFeedback']}'. Retrying ({attempt + 1}/{max_retries} retries used)...") # Changed to task.input
             else:
                 log.error(f"Task '{task.description}' failed quality gate after {max_retries + 1} attempts. Final issues: {'; '.join(feedback_messages)}")
                 raise QualityGateFailedError(task.description, feedback_messages)

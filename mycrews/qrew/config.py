@@ -5,7 +5,7 @@ Task.DEFAULT_SCHEMA = {
     "id": {"type": "uuid", "default_factory": uuid4},
     "description": {"type": "string"},
     "expected_output": {"type": "string", "default": ""},
-    "payload": {"type": "object", "default": {}},
+    "input": {"type": "object", "default": {}}, # Changed key name
     "successCriteria": {"type": "list[string]", "default": []},
     "maxRetries": {"type": "integer", "default": 2},
     "metadata": {"type": "object", "default": {}},

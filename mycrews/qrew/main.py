@@ -55,7 +55,7 @@ def run_qrew():
                         "key deliverables, success criteria, initial assessment of complexity, "
                         "and a recommendation for the next orchestrator or Lead Agent.",
         agent=taskmaster_agent, # Assign the imported agent instance
-        inputs={ # Provide the inputs expected by the task description placeholders
+        input={ # Changed parameter name
             'user_request': sample_user_request,
             'project_goal_statement': sample_project_goal,
             'priority_level': sample_priority

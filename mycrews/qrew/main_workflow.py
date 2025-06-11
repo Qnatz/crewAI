@@ -120,14 +120,14 @@ For 'StackAdvisorAgent', the sub-task should be to "Analyze the provided 'projec
 You must return a JSON object with a key "sub_tasks_to_delegate". The value should be a list of dictionaries, where each dictionary represents a sub-task and includes:
 - "task_description": The detailed description for the sub-agent.
 - "assigned_agent_role": The role of the agent to delegate to (e.g., "ConstraintCheckerAgent", "StackAdvisorAgent").
-- "payload": A dictionary containing all necessary data for the sub-task (e.g., {"project_constraints_document": "...", "proposed_solution": "..."}).
+- "input": A dictionary containing all necessary data for the sub-task (e.g., {"project_constraints_document": "...", "proposed_solution": "..."}).
 - "successCriteria": A list of strings defining success for the sub-task (e.g., ["violations identified", "compliance report generated"]).
-Ensure placeholder values like "{constraints}" and the output from 'task_interpret_idea' are correctly incorporated into the descriptions and payloads you define for the sub-tasks.
-The output of 'task_interpret_idea' will be available in your context. Access its content as needed to formulate the 'payload' for the sub-tasks.
-Example for 'ConstraintCheckerAgent' payload: {"project_constraints_document": "{constraints}", "proposed_solution": "{task_interpret_idea.output}"}
-Example for 'StackAdvisorAgent' payload: {"project_requirements": "{task_interpret_idea.output}", "team_skills": "Extract from {constraints}", "budget_constraints": "Extract from {constraints}", "existing_architecture_details": "None - new project"}
+Ensure placeholder values like "{constraints}" and the output from 'task_interpret_idea' are correctly incorporated into the descriptions and inputs you define for the sub-tasks.
+The output of 'task_interpret_idea' will be available in your context. Access its content as needed to formulate the 'input' for the sub-tasks.
+Example for 'ConstraintCheckerAgent' input: {"project_constraints_document": "{constraints}", "proposed_solution": "{task_interpret_idea.output}"}
+Example for 'StackAdvisorAgent' input: {"project_requirements": "{task_interpret_idea.output}", "team_skills": "Extract from {constraints}", "budget_constraints": "Extract from {constraints}", "existing_architecture_details": "None - new project"}
 ''',
-        expected_output='''A JSON object containing a list under the key "sub_tasks_to_delegate". Each item in the list must be a dictionary with "task_description", "assigned_agent_role", "payload", and "successCriteria" for the sub-tasks intended for ConstraintCheckerAgent and StackAdvisorAgent.''',
+        expected_output='''A JSON object containing a list under the key "sub_tasks_to_delegate". Each item in the list must be a dictionary with "task_description", "assigned_agent_role", "input", and "successCriteria" for the sub-tasks intended for ConstraintCheckerAgent and StackAdvisorAgent.''',
         agent=tech_vetting_council_agent,
         context=[task_interpret_idea],
         successCriteria=[
@@ -152,13 +152,13 @@ You must define the sub-tasks to be delegated for designing various architectura
 Return a JSON object with a key "sub_tasks_to_delegate". The value should be a list of dictionaries, where each dictionary represents a sub-task for a component design and includes:
 - "task_description": Detailed description for the component design sub-task.
 - "assigned_agent_role": The role of the agent to delegate to (e.g., "BackendDeveloperAgent", "FrontendDeveloperAgent", "DatabaseAdminAgent" - you'll need to decide appropriate roles or use a generic "SoftwareEngineerAgent" if specific roles aren't defined yet).
-- "payload": A dictionary containing all necessary data for the sub-task.
+- "input": A dictionary containing all necessary data for the sub-task.
 - "successCriteria": A list of strings defining success for that component design.
-Example: { "task_description": "Design the detailed database schema for PostgreSQL based on data models...", "assigned_agent_role": "DatabaseAdminAgent", "payload": {...}, "successCriteria": ["schema diagram created", "SQL scripts provided"] }
+Example: { "task_description": "Design the detailed database schema for PostgreSQL based on data models...", "assigned_agent_role": "DatabaseAdminAgent", "input": {...}, "successCriteria": ["schema diagram created", "SQL scripts provided"] }
 ''',
-        expected_output='''A JSON object containing a list under the key "sub_tasks_to_delegate". Each item must be a dictionary with "task_description", "assigned_agent_role", "payload", and "successCriteria" for component design sub-tasks.''',
+        expected_output='''A JSON object containing a list under the key "sub_tasks_to_delegate". Each item must be a dictionary with "task_description", "assigned_agent_role", "input", and "successCriteria" for component design sub-tasks.''',
         agent=project_architect_agent, # Assigned to Project Architect
-        # Context will be implicitly handled by the payload constructed during execution
+        # Context will be implicitly handled by the input constructed during execution
         successCriteria=[
             "component design sub-tasks defined",
             "delegation plan for architecture created",
@@ -242,17 +242,17 @@ Example: { "task_description": "Design the detailed database schema for PostgreS
                 print(f"    Error: Agent for role '{assigned_role}' not found in agent_role_map. Skipping this sub-task.")
                 continue
 
-            # Ensure payload is a dictionary, even if not provided or malformed
-            payload = sub_task_def.get("payload")
-            if not isinstance(payload, dict):
-                print(f"    Warning: Payload for sub-task '{sub_task_def.get('task_description')}' is not a dictionary or missing. Using empty dict. Payload was: {payload}")
-                payload = {}
+            # Ensure input is a dictionary, even if not provided or malformed
+            task_input = sub_task_def.get("input", {}) # Use .get with a default for safety
+            if not isinstance(task_input, dict):
+                print(f"    Warning: Input for sub-task '{sub_task_def.get('task_description')}' is not a dictionary or missing. Using empty dict. Input was: {task_input}")
+                task_input = {}
 
             new_sub_task = Task(
                 description=sub_task_def["task_description"],
                 expected_output=sub_task_def.get("expected_output", "Actionable result for the delegated sub-task."),
                 agent=actual_agent,
-                payload=payload,
+                input=task_input, # Changed from payload
                 successCriteria=sub_task_def.get("successCriteria", ["output generated"]),
             )
 
@@ -309,7 +309,7 @@ Compile a final 'Vetting Report' and a set of 'Final Technical Guidelines'.''',
 The Vetting Report should summarize: Stack Advisor's evaluation, Constraint Checker's compliance report, and the Tech Vetting Council's final decision/recommendations.
 The Final Technical Guidelines should list approved technologies, patterns, or constraints.''',
         agent=tech_vetting_council_agent,
-        payload=synthesis_payload,
+        input=synthesis_payload, # Changed from payload
         successCriteria=[
             "Vetting Report compiled",
             "Final Technical Guidelines created",
@@ -341,8 +341,8 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
         "technical_vision_str": workflow_inputs["technical_vision"]
     }
     # The task_design_architecture_planning object is defined at the module level.
-    # We assign its payload here before execution.
-    task_design_architecture_planning.payload = architecture_planning_payload
+    # We assign its input here before execution.
+    task_design_architecture_planning.input = architecture_planning_payload # Changed from payload
 
     print("Executing Project Architecture Design Planning task using qrew_main_crew...")
     architecture_planning_result_obj = qrew_main_crew.delegate_task(
@@ -375,16 +375,16 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
             if actual_agent == project_architect_agent and assigned_role not in agent_role_map:
                  print(f"    Warning: Agent for role '{assigned_role}' not found. Assigning to ProjectArchitectAgent.")
 
-            payload_arch = sub_task_def.get("payload")
-            if not isinstance(payload_arch, dict):
-                print(f"    Warning: Payload for arch sub-task '{sub_task_def.get('task_description')}' is not a dictionary or missing. Using empty dict. Payload was: {payload_arch}")
-                payload_arch = {}
+            input_arch = sub_task_def.get("input", {}) # Changed from payload, added default
+            if not isinstance(input_arch, dict):
+                print(f"    Warning: Input for arch sub-task '{sub_task_def.get('task_description')}' is not a dictionary or missing. Using empty dict. Input was: {input_arch}")
+                input_arch = {}
 
             new_arch_sub_task = Task(
                 description=sub_task_def["task_description"],
                 expected_output=sub_task_def.get("expected_output", "Detailed design for the architectural component."),
                 agent=actual_agent,
-                payload=payload_arch,
+                input=input_arch, # Changed from payload
                 successCriteria=sub_task_def.get("successCriteria", ["component design completed"]),
             )
 
@@ -424,7 +424,7 @@ Overall project constraints: {{original_constraints}}
 Project's technical vision: {{technical_vision}}''',
         expected_output='''A detailed software architecture document, including: High-level system diagrams, Technology stack recommendations for each component, Data model design overview, API design guidelines, Integration points, Non-functional requirements considerations.''',
         agent=project_architect_agent,
-        payload=architecture_synthesis_payload,
+        input=architecture_synthesis_payload, # Changed from payload
         successCriteria=[
             "software architecture document created",
             "high-level system diagrams included",
