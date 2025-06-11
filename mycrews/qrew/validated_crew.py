@@ -27,14 +27,7 @@ class ValidatedCrew(Crew):
         super().__init__(*args, **kwargs)
         self._keyword_check_enabled: bool = True
         self._custom_validators: List[callable] = []
-
-        # Check Task.DEFAULT_SCHEMA for input configuration compatibility
-        if "input" not in Task.DEFAULT_SCHEMA or not isinstance(Task.DEFAULT_SCHEMA["input"], dict): # type: ignore
-            log.warning("Task.DEFAULT_SCHEMA does not define 'input' as a dictionary. "
-                        "'previousFeedback' injection might not work as expected.")
-        elif Task.DEFAULT_SCHEMA["input"].get("default", "NOT_SET") == "NOT_SET": # type: ignore
-            log.warning("Task.DEFAULT_SCHEMA['input'] does not have a 'default' key. "
-                        "Consider adding 'default: {}' for robust 'previousFeedback' injection.")
+        # Removed warning checks for Task.DEFAULT_SCHEMA["input"]
 
 
     def configure_quality_gate(
@@ -82,25 +75,35 @@ class ValidatedCrew(Crew):
             log.info(f"Task '{task.description}' maxRetries ({max_retries_from_task}) is overridden by schema default or invalid. Using: {max_retries}.")
 
 
+        feedback_messages_for_retry: List[str] = [] # Stores feedback from the most recent failed attempt
+
         for attempt in range(max_retries + 1):
             log.info(f"Executing task '{task.description}' with agent '{target_agent.role}'. Attempt {attempt + 1}/{max_retries + 1}.")
 
-            if task.input is None: # Ensure input exists
-                task.input = {}
+            current_execution_context = context # Original context for the first attempt
+
+            if attempt > 0: # This is a retry
+                feedback_string = ". ".join(feedback_messages_for_retry)
+                if context: # If there was an original context
+                    current_execution_context = f"{context}\n\nPREVIOUS ATTEMPT FEEDBACK:\n{feedback_string}"
+                else:
+                    current_execution_context = f"PREVIOUS ATTEMPT FEEDBACK:\n{feedback_string}"
+                log.info(f"Retrying task '{task.description}' with feedback in context: {feedback_string}")
 
             try:
-                result = target_agent.execute_task(task=task, context=context)
+                # Pass current_execution_context to the agent
+                result = target_agent.execute_task(task=task, context=current_execution_context)
             except Exception as e:
                 log.error(f"Exception during task execution by '{target_agent.role}' for task '{task.description}' on attempt {attempt + 1}: {e}", exc_info=True)
+                feedback_messages_for_retry = [f"Execution error on attempt {attempt + 1}: {str(e)}"]
                 if attempt < max_retries:
-                    task.input["previousFeedback"] = f"Execution error on attempt {attempt + 1}: {str(e)}" # Changed to task.input
                     log.info(f"Retrying task '{task.description}' due to execution error.")
                     continue
                 else:
-                    raise QualityGateFailedError(task.description, [f"Execution error on final attempt: {str(e)}"]) from e
+                    raise QualityGateFailedError(task.description, feedback_messages_for_retry) from e
 
             passed_quality_gate = True
-            feedback_messages: List[str] = []
+            current_attempt_feedback_messages: List[str] = [] # Feedback for *this* attempt's QG failures
 
             if self._keyword_check_enabled and task.successCriteria:
                 result_str_for_keyword_check = str(result.get("output", result) if isinstance(result, dict) else result)
@@ -132,20 +135,20 @@ class ValidatedCrew(Crew):
 
             if passed_quality_gate:
                 log.info(f"Task '{task.description}' passed quality gate on attempt {attempt + 1}.")
-                if "previousFeedback" in task.input: # Changed to task.input
-                    del task.input["previousFeedback"] # Changed to task.input
-                return result
+                return result # Successfully executed and passed QG
 
+            # If not passed, prepare feedback for next attempt or final failure
+            feedback_messages_for_retry = current_attempt_feedback_messages
             if attempt < max_retries:
-                task.input["previousFeedback"] = ". ".join(feedback_messages) # Changed to task.input
-                log.info(f"Task '{task.description}' failed quality gate. Feedback: '{task.input['previousFeedback']}'. Retrying ({attempt + 1}/{max_retries} retries used)...") # Changed to task.input
-            else:
-                log.error(f"Task '{task.description}' failed quality gate after {max_retries + 1} attempts. Final issues: {'; '.join(feedback_messages)}")
-                raise QualityGateFailedError(task.description, feedback_messages)
+                log.info(f"Task '{task.description}' failed quality gate. Feedback: '{'. '.join(feedback_messages_for_retry)}'. Retrying ({attempt + 1}/{max_retries} retries used)...")
+            else: # All retries used up
+                log.error(f"Task '{task.description}' failed quality gate after {max_retries + 1} attempts. Final issues: {'; '.join(feedback_messages_for_retry)}")
+                raise QualityGateFailedError(task.description, feedback_messages_for_retry)
 
-        # Fallback, should ideally not be reached if logic is correct
-        final_feedback = feedback_messages if 'feedback_messages' in locals() and feedback_messages else ["Unknown state after retries."]
-        raise QualityGateFailedError(task.description, final_feedback)
+        # Fallback, should ideally not be reached if max_retries >= 0, as loop runs max_retries + 1 times
+        # This implies an issue if reached, or if max_retries was < 0 initially (though that's guarded).
+        final_error_messages = feedback_messages_for_retry if feedback_messages_for_retry else ["Unknown state after all retry attempts."]
+        raise QualityGateFailedError(task.description, final_error_messages)
 
     def kickoff(self, inputs: Optional[dict] = None) -> Any:
         """

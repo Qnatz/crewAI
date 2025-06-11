@@ -1,4 +1,5 @@
 import json # Added for parsing sub-task definitions
+import logging # Added for logging in dynamic task creation
 from crewai import Process, Task # Crew removed from here
 from crewai.utilities.i18n import I18N
 import os
@@ -118,16 +119,14 @@ For 'ConstraintCheckerAgent', the sub-task should be to "Review the provided 'pr
 For 'StackAdvisorAgent', the sub-task should be to "Analyze the provided 'project_requirements' (Technical Requirements Specification and Feature Breakdown) to propose an optimal technology stack. Consider 'team_skills' and 'budget_constraints' (both from "{constraints}") and 'existing_architecture_details' (value: "None - new project"). Provide justifications for stack choices, considering scalability, maintainability, and alignment with the technical vision."
 
 You must return a JSON object with a key "sub_tasks_to_delegate". The value should be a list of dictionaries, where each dictionary represents a sub-task and includes:
-- "task_description": The detailed description for the sub-agent.
+- "task_description": A fully self-contained, detailed description for the sub-agent, embedding all necessary data (e.g., relevant parts of '{constraints}' or the output of 'task_interpret_idea').
 - "assigned_agent_role": The role of the agent to delegate to (e.g., "ConstraintCheckerAgent", "StackAdvisorAgent").
-- "input": A dictionary containing all necessary data for the sub-task (e.g., {"project_constraints_document": "...", "proposed_solution": "..."}).
 - "successCriteria": A list of strings defining success for the sub-task (e.g., ["violations identified", "compliance report generated"]).
-Ensure placeholder values like "{constraints}" and the output from 'task_interpret_idea' are correctly incorporated into the descriptions and inputs you define for the sub-tasks.
-The output of 'task_interpret_idea' will be available in your context. Access its content as needed to formulate the 'input' for the sub-tasks.
-Example for 'ConstraintCheckerAgent' input: {"project_constraints_document": "{constraints}", "proposed_solution": "{task_interpret_idea.output}"}
-Example for 'StackAdvisorAgent' input: {"project_requirements": "{task_interpret_idea.output}", "team_skills": "Extract from {constraints}", "budget_constraints": "Extract from {constraints}", "existing_architecture_details": "None - new project"}
+Ensure placeholder values like "{constraints}" and the output of 'task_interpret_idea' are correctly incorporated directly into the "task_description" string you define for the sub-tasks.
+Example for 'ConstraintCheckerAgent's task_description: "Review the proposed solution: [output of task_interpret_idea] against the project_constraints_document: [content of {constraints}]. Identify any violations..."
+Example for 'StackAdvisorAgent's task_description: "Analyze the project_requirements: [output of task_interpret_idea] to propose an optimal technology stack. Consider team_skills: [extracted from {constraints}], budget_constraints: [extracted from {constraints}], and existing_architecture_details: None - new project. Provide justifications..."
 ''',
-        expected_output='''A JSON object containing a list under the key "sub_tasks_to_delegate". Each item in the list must be a dictionary with "task_description", "assigned_agent_role", "input", and "successCriteria" for the sub-tasks intended for ConstraintCheckerAgent and StackAdvisorAgent.''',
+        expected_output='''A JSON object containing a list under the key "sub_tasks_to_delegate". Each item in the list must be a dictionary with "task_description" (self-contained), "assigned_agent_role", and "successCriteria" for the sub-tasks intended for ConstraintCheckerAgent and StackAdvisorAgent.''',
         agent=tech_vetting_council_agent,
         context=[task_interpret_idea],
         successCriteria=[
@@ -150,15 +149,14 @@ Based on:
 
 You must define the sub-tasks to be delegated for designing various architectural components (e.g., database schema, API design for specific modules, UI component structure).
 Return a JSON object with a key "sub_tasks_to_delegate". The value should be a list of dictionaries, where each dictionary represents a sub-task for a component design and includes:
-- "task_description": Detailed description for the component design sub-task.
+- "task_description": A fully self-contained, detailed description for the component design sub-task, embedding all necessary data (e.g., relevant sections from {user_idea_details_str}, {vetting_report_and_guidelines_str}, etc.).
 - "assigned_agent_role": The role of the agent to delegate to (e.g., "BackendDeveloperAgent", "FrontendDeveloperAgent", "DatabaseAdminAgent" - you'll need to decide appropriate roles or use a generic "SoftwareEngineerAgent" if specific roles aren't defined yet).
-- "input": A dictionary containing all necessary data for the sub-task.
 - "successCriteria": A list of strings defining success for that component design.
-Example: { "task_description": "Design the detailed database schema for PostgreSQL based on data models...", "assigned_agent_role": "DatabaseAdminAgent", "input": {...}, "successCriteria": ["schema diagram created", "SQL scripts provided"] }
+Example: { "task_description": "Design the detailed database schema for PostgreSQL based on data models found in [specific section of user_idea_details_str] and adhering to guidelines in [specific part of vetting_report_and_guidelines_str]...", "assigned_agent_role": "DatabaseAdminAgent", "successCriteria": ["schema diagram created", "SQL scripts provided"] }
 ''',
-        expected_output='''A JSON object containing a list under the key "sub_tasks_to_delegate". Each item must be a dictionary with "task_description", "assigned_agent_role", "input", and "successCriteria" for component design sub-tasks.''',
+        expected_output='''A JSON object containing a list under the key "sub_tasks_to_delegate". Each item must be a dictionary with "task_description" (self-contained), "assigned_agent_role", and "successCriteria" for component design sub-tasks.''',
         agent=project_architect_agent, # Assigned to Project Architect
-        # Context will be implicitly handled by the input constructed during execution
+        # Context will be implicitly handled by the formatted description during execution
         successCriteria=[
             "component design sub-tasks defined",
             "delegation plan for architecture created",
@@ -242,17 +240,12 @@ Example: { "task_description": "Design the detailed database schema for PostgreS
                 print(f"    Error: Agent for role '{assigned_role}' not found in agent_role_map. Skipping this sub-task.")
                 continue
 
-            # Ensure input is a dictionary, even if not provided or malformed
-            task_input = sub_task_def.get("input", {}) # Use .get with a default for safety
-            if not isinstance(task_input, dict):
-                print(f"    Warning: Input for sub-task '{sub_task_def.get('task_description')}' is not a dictionary or missing. Using empty dict. Input was: {task_input}")
-                task_input = {}
-
+            # Input data is now expected to be embedded in the sub_task_def["task_description"]
             new_sub_task = Task(
-                description=sub_task_def["task_description"],
+                description=sub_task_def["task_description"], # This description should be self-contained
                 expected_output=sub_task_def.get("expected_output", "Actionable result for the delegated sub-task."),
                 agent=actual_agent,
-                input=task_input, # Changed from payload
+                # input field removed
                 successCriteria=sub_task_def.get("successCriteria", ["output generated"]),
             )
 
@@ -297,19 +290,20 @@ Example: { "task_description": "Design the detailed database schema for PostgreS
     synthesis_payload["idea_interpretation_output"] = idea_task_output_str
 
 
+    synthesis_desc_vetting = f"""Synthesize the findings from the Constraint Checker and Stack Advisor.
+Constraint Checker Report: {synthesis_payload['constraint_checker_report']}
+Stack Advisor Report: {synthesis_payload['stack_advisor_report']}
+The original technical requirements and feature breakdown were based on: {synthesis_payload['idea_interpretation_output']}
+Original project constraints were: {synthesis_payload['original_constraints']}
+Original user idea was: {synthesis_payload['original_user_idea']}
+Compile a final 'Vetting Report' and a set of 'Final Technical Guidelines'."""
     task_vet_requirements_synthesis = Task(
-        description=f'''Synthesize the findings from the Constraint Checker and Stack Advisor.
-Constraint Checker Report: {{constraint_checker_report}}
-Stack Advisor Report: {{stack_advisor_report}}
-The original technical requirements and feature breakdown were based on: {{idea_interpretation_output}}
-Original project constraints were: {{original_constraints}}
-Original user idea was: {{original_user_idea}}
-Compile a final 'Vetting Report' and a set of 'Final Technical Guidelines'.''',
+        description=synthesis_desc_vetting,
         expected_output='''A Vetting Report and a set of Final Technical Guidelines.
 The Vetting Report should summarize: Stack Advisor's evaluation, Constraint Checker's compliance report, and the Tech Vetting Council's final decision/recommendations.
 The Final Technical Guidelines should list approved technologies, patterns, or constraints.''',
         agent=tech_vetting_council_agent,
-        input=synthesis_payload, # Changed from payload
+        # No 'input' parameter, data is in description
         successCriteria=[
             "Vetting Report compiled",
             "Final Technical Guidelines created",
@@ -341,12 +335,26 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
         "technical_vision_str": workflow_inputs["technical_vision"]
     }
     # The task_design_architecture_planning object is defined at the module level.
-    # We assign its input here before execution.
-    task_design_architecture_planning.input = architecture_planning_payload # Changed from payload
+    # We format its description with runtime data to create an executable instance.
+
+    original_planning_desc = task_design_architecture_planning.description
+    log = logging.getLogger(__name__) # Ensure log is defined if not already global
+    try:
+        execution_planning_desc = original_planning_desc.format(**architecture_planning_payload)
+    except KeyError as e:
+        log.error(f"KeyError during description formatting for task_design_architecture_planning: {e}. Payload keys: {architecture_planning_payload.keys()}")
+        execution_planning_desc = original_planning_desc # Fallback
+
+    executable_task_design_architecture_planning = Task(
+        description=execution_planning_desc,
+        expected_output=task_design_architecture_planning.expected_output,
+        agent=project_architect_agent,
+        successCriteria=task_design_architecture_planning.successCriteria
+    )
 
     print("Executing Project Architecture Design Planning task using qrew_main_crew...")
     architecture_planning_result_obj = qrew_main_crew.delegate_task(
-        task=task_design_architecture_planning,
+        task=executable_task_design_architecture_planning, # Use the new executable instance
     )
     architecture_planning_json_str = str(architecture_planning_result_obj.raw if hasattr(architecture_planning_result_obj, 'raw') else architecture_planning_result_obj)
 
@@ -375,16 +383,12 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
             if actual_agent == project_architect_agent and assigned_role not in agent_role_map:
                  print(f"    Warning: Agent for role '{assigned_role}' not found. Assigning to ProjectArchitectAgent.")
 
-            input_arch = sub_task_def.get("input", {}) # Changed from payload, added default
-            if not isinstance(input_arch, dict):
-                print(f"    Warning: Input for arch sub-task '{sub_task_def.get('task_description')}' is not a dictionary or missing. Using empty dict. Input was: {input_arch}")
-                input_arch = {}
-
+            # Input data is now expected to be embedded in the sub_task_def["task_description"]
             new_arch_sub_task = Task(
-                description=sub_task_def["task_description"],
+                description=sub_task_def["task_description"], # This description should be self-contained
                 expected_output=sub_task_def.get("expected_output", "Detailed design for the architectural component."),
                 agent=actual_agent,
-                input=input_arch, # Changed from payload
+                # input field removed
                 successCriteria=sub_task_def.get("successCriteria", ["component design completed"]),
             )
 
@@ -417,14 +421,16 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
 
     task_design_architecture_synthesis = Task(
         description=f'''Synthesize all component design outputs into a final, detailed software architecture document.
-Component Designs (JSON string): {{component_design_results}}
-Original Technical Requirements & Feature Breakdown: {{original_user_idea}}
-Vetting Report & Final Technical Guidelines: {{vetting_report_and_guidelines}}
-Overall project constraints: {{original_constraints}}
-Project's technical vision: {{technical_vision}}''',
+Component Designs (JSON string): {architecture_synthesis_payload['component_design_results']}
+Original Technical Requirements & Feature Breakdown: {architecture_synthesis_payload['original_user_idea']}
+Vetting Report & Final Technical Guidelines: {architecture_synthesis_payload['vetting_report_and_guidelines']}
+Overall project constraints: {architecture_synthesis_payload['original_constraints']}
+Project's technical vision: {architecture_synthesis_payload['technical_vision']}"""
+    task_design_architecture_synthesis = Task(
+        description=synthesis_desc_arch,
         expected_output='''A detailed software architecture document, including: High-level system diagrams, Technology stack recommendations for each component, Data model design overview, API design guidelines, Integration points, Non-functional requirements considerations.''',
         agent=project_architect_agent,
-        input=architecture_synthesis_payload, # Changed from payload
+        # No 'input' parameter, data is in description
         successCriteria=[
             "software architecture document created",
             "high-level system diagrams included",
