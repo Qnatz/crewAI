@@ -226,24 +226,24 @@ Absolutely NO other words, text, or characters are allowed between the ']'
 and the next structural character (',' or '}').
 
 Example sub-task definition:
-{
+{{
   "task_description_template": "Design the database schema based on these requirements: {{USER_IDEA_DETAILS}} and adhering to guidelines: {{VETTING_REPORT}}. Focus on PostgreSQL.",
   "required_context_keys": ["USER_IDEA_DETAILS", "VETTING_REPORT"],
   "assigned_agent_role": "DatabaseAdminAgent",
   "successCriteria": ["Schema diagram created", "SQL DDL scripts provided"]
-}
+}}
 
 Example of the overall JSON structure:
-{
+{{
   "sub_tasks_to_delegate": [
-    {
+    {{
       "task_description_template": "Design component X based on these requirements: {{COMPONENT_X_REQUIREMENTS}}",
       "required_context_keys": ["COMPONENT_X_REQUIREMENTS"],
       "assigned_agent_role": "SpecialistRoleA",
       "successCriteria": ["Design complete", "Docs provided"]
-    }
+    }}
   ]
-}
+}}
 Your response must be exactly in this format.
 ''',
         expected_output='''A single, valid JSON object with a key "sub_tasks_to_delegate". The value must be a list of dictionaries, where each dictionary contains "task_description_template" (string), "required_context_keys" (list of strings), "assigned_agent_role" (string), and "successCriteria" (list of strings). No other text or characters outside this JSON object.''',
