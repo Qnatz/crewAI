@@ -1,6 +1,9 @@
 from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from ...llm_config import default_llm # Corrected path to ..
+from ...config import example_summary_validator # Corrected path to ..
+
 # Import best-fit actual agents
 from mycrews.qrew.orchestrators.final_assembler_agent import final_assembler_agent
 # Using the tech_stack_committee's documentation writer, acknowledging it might be broader here.
@@ -37,7 +40,8 @@ class FinalAssemblyCrew:
                         "Input: {list_of_code_modules}, {data_artifacts}, {configuration_files}, {packaging_specifications}.",
             expected_output="A complete, packaged version of the project, including all components, "
                             "ready for deployment or handover. A manifest of package contents.",
-            agent=self.assembler # type: ignore[attr-defined]
+            agent=self.assembler, # type: ignore[attr-defined]
+            successCriteria=["All components assembled", "Project packaged", "Manifest created"]
         )
 
     @task
@@ -49,7 +53,8 @@ class FinalAssemblyCrew:
                         "Input: {compiled_project_information}, {documentation_requirements}, {template_files_path}.",
             expected_output="A complete set of final project documentation, formatted and ready for distribution.",
             agent=self.documenter, # type: ignore[attr-defined]
-            context=[self.component_integration_and_packaging_task] # Documentation after assembly
+            context=[self.component_integration_and_packaging_task], # Documentation after assembly
+            successCriteria=["Final documentation generated", "User manual included", "Release notes included", "System overview accurate"]
         )
 
     @task
@@ -62,18 +67,25 @@ class FinalAssemblyCrew:
             expected_output="A final QA review report, summarizing findings, "
                             "confirming adherence to checklist and acceptance criteria, or detailing any critical issues found.",
             agent=self.reviewer, # type: ignore[attr-defined]
-            context=[self.final_documentation_generation_task] # Review the final package and docs
+            context=[self.final_documentation_generation_task], # Review the final package and docs
+            successCriteria=["QA review report generated", "Checklist verified", "Acceptance criteria confirmed", "Issues detailed"]
         )
 
     @crew
     def crew(self) -> Crew:
         """Creates the Final Assembly Utility crew"""
-        return Crew(
+        created_crew = Crew(
             agents=[self.assembler, self.documenter, self.reviewer],
             tasks=self.tasks,
             process=Process.sequential, # Assembly, Ddcing, then Review is a logical sequence
-            verbose=True
+            verbose=True,
+            llm=default_llm
         )
+        created_crew.configure_quality_gate(
+            keyword_check=True,
+            custom_validators=[example_summary_validator]
+        )
+        return created_crew
 
 # Example usage (conceptual)
 # if __name__ == "__main__":

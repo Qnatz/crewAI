@@ -1,6 +1,9 @@
 from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from ..llm_config import default_llm
+from ..config import example_summary_validator
+
 # Import actual offline agents
 from mycrews.qrew.agents.offline import (
     local_storage_agent,
@@ -29,7 +32,8 @@ class OfflineSupportCrew:
             expected_output="A functional local database configured for {application_name}. "
                             "Schema applied and basic CRUD operations tested. "
                             "Documentation for accessing the local store.",
-            agent=local_storage_agent
+            agent=local_storage_agent,
+            successCriteria=["Local database configured", "Schema applied", "CRUD operations tested", "Documentation provided"]
         )
 
     @task
@@ -42,7 +46,8 @@ class OfflineSupportCrew:
                             "Data is synced efficiently when online. "
                             "Conflict resolution is handled as specified. "
                             "Monitoring for sync status is in place.",
-            agent=offline_sync_agent # Using the renamed property
+            agent=offline_sync_agent, # Using the renamed property
+            successCriteria=["Data sync mechanism implemented", "Efficient online sync", "Conflict resolution handled", "Sync monitoring in place"]
         )
 
     @task
@@ -53,18 +58,25 @@ class OfflineSupportCrew:
                         "Input: {feature_module}, {online_data_api}, {local_storage_interface}.",
             expected_output="Application logic that enables {feature_module} to function correctly in both online and offline modes, "
                             "providing a smooth user experience.",
-            agent=local_storage_agent # Local storage agent might handle the access logic or work with another dev agent
+            agent=local_storage_agent, # Local storage agent might handle the access logic or work with another dev agent
+            successCriteria=["Online/offline logic implemented", "Smooth user experience achieved", "Prioritizes local data correctly"]
         )
 
     @crew
     def crew(self) -> Crew:
         """Creates the Offline Support crew"""
-        return Crew(
+        created_crew = Crew(
             agents=[self.local_store_manager, self.data_synchronizer],
             tasks=self.tasks, # From @task decorator
             process=Process.sequential,
-            verbose=True
+            verbose=True,
+            llm=default_llm
         )
+        created_crew.configure_quality_gate(
+            keyword_check=True,
+            custom_validators=[example_summary_validator]
+        )
+        return created_crew
 
 # Example usage (conceptual)
 # if __name__ == '__main__':

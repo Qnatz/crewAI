@@ -1,6 +1,9 @@
 from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from ...llm_config import default_llm # Corrected path to ..
+from ...config import example_summary_validator # Corrected path to ..
+
 # Import actual dev utility agents
 from mycrews.qrew.agents.dev_utilities import (
     code_writer_agent,
@@ -37,7 +40,8 @@ class CodeWritingCrew:
                         "Input: {code_requirements}, {target_language_or_framework}.",
             expected_output="Well-written and functional code for {code_requirements} in {target_language_or_framework}, "
                             "including inline documentation and ready for initial review or testing.",
-            agent=self.writer # type: ignore[attr-defined]
+            agent=self.writer, # type: ignore[attr-defined]
+            successCriteria=["Code generated", "Follows coding standards", "Includes comments", "Basic error handling included"]
         )
 
     @task
@@ -49,7 +53,8 @@ class CodeWritingCrew:
             expected_output="Corrected code with the identified bug fixed. "
                             "A brief report detailing the root cause, the fix applied, and verification steps.",
             agent=self.debugger, # type: ignore[attr-defined]
-            context=[self.code_generation_task] # Optional context: debugging might follow initial generation
+            context=[self.code_generation_task], # Optional context: debugging might follow initial generation
+            successCriteria=["Bug fixed", "Root cause identified", "Fix explained", "Verification steps provided"]
         )
 
     @task
@@ -62,18 +67,25 @@ class CodeWritingCrew:
                             "A test execution report showing all tests passing and code coverage achieved. "
                             "Any identified bugs from testing should be reported.",
             agent=self.tester, # type: ignore[attr-defined]
-            context=[self.debugging_task] # Testing usually follows debugging (or initial dev)
+            context=[self.debugging_task], # Testing usually follows debugging (or initial dev)
+            successCriteria=["Unit tests written", "Tests executed successfully", "Test report generated", "Code coverage achieved"]
         )
 
     @crew
     def crew(self) -> Crew:
         """Creates the Code Writing Utility crew"""
-        return Crew(
+        created_crew = Crew(
             agents=[self.writer, self.debugger, self.tester],
             tasks=self.tasks,
             process=Process.sequential, # These tasks often follow a sequence
-            verbose=True
+            verbose=True,
+            llm=default_llm
         )
+        created_crew.configure_quality_gate(
+            keyword_check=True,
+            custom_validators=[example_summary_validator]
+        )
+        return created_crew
 
 # Example usage (conceptual)
 # if __name__ == "__main__":

@@ -1,6 +1,9 @@
 from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from ..llm_config import default_llm
+from ..config import example_summary_validator
+
 # Import actual mobile agents
 from mycrews.qrew.agents.mobile import (
     android_api_client_agent,
@@ -52,7 +55,8 @@ class MobileDevelopmentCrew:
                         "Input: {screen_name}, {platform}, {design_specifications}.",
             expected_output="UI code for {screen_name} on {platform}, matching design specifications.",
             # In a real scenario, agent assignment would be dynamic based on {platform}
-            agent=android_ui_agent # Placeholder assignment
+            agent=android_ui_agent, # Placeholder assignment
+            successCriteria=["UI code implemented", "Matches design specifications", "Platform guidelines followed"]
         )
 
     @task
@@ -62,7 +66,8 @@ class MobileDevelopmentCrew:
                         "Handle data fetching, posting, and error management. "
                         "Input: {api_endpoint}, {feature_name}, {platform}, {api_documentation}.",
             expected_output="Functional API integration for {feature_name} on {platform}.",
-            agent=android_api_client_agent # Placeholder assignment
+            agent=android_api_client_agent, # Placeholder assignment
+            successCriteria=["API integrated", "Data fetched/posted correctly", "Error handling implemented"]
         )
 
     @task
@@ -71,7 +76,8 @@ class MobileDevelopmentCrew:
             description="Implement local data storage for {data_entity} on {platform} using {storage_solution} (e.g., Room, CoreData, SQLite). "
                         "Input: {data_entity}, {platform}, {storage_solution}, {schema_details}.",
             expected_output="Local storage implementation for {data_entity} on {platform}.",
-            agent=android_storage_agent # Placeholder assignment
+            agent=android_storage_agent, # Placeholder assignment
+            successCriteria=["Local storage implemented", "Data saved/retrieved correctly", "Schema matches requirements"]
         )
 
     @crew
@@ -85,8 +91,14 @@ class MobileDevelopmentCrew:
             ],
             tasks=self.tasks, # From @task decorator
             process=Process.sequential, # Could be parallel if tasks are independent
-            verbose=True
+            verbose=True,
+            llm=default_llm
         )
+        created_crew.configure_quality_gate(
+            keyword_check=True,
+            custom_validators=[example_summary_validator]
+        )
+        return created_crew
 
 # Example usage (conceptual)
 # if __name__ == '__main__':

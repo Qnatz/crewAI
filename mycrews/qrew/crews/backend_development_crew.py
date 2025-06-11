@@ -1,6 +1,9 @@
 from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from ...llm_config import default_llm
+from ...config import example_summary_validator
+
 # Import actual backend agents
 from ..agents.backend import (
     api_creator_agent,
@@ -54,7 +57,8 @@ class BackendDevelopmentCrew:
                         "Input: {feature_description}, {endpoint_path}, {request_model_schema}, {response_model_schema}.",
             expected_output="A fully functional API endpoint for '{feature_description}' deployed and tested, "
                             "with clear API documentation.",
-            agent=api_creator_agent
+            agent=api_creator_agent,
+            successCriteria=["API endpoint functional", "Request/response models defined", "Business logic implemented", "API documentation clear"]
         )
 
     @task
@@ -65,7 +69,8 @@ class BackendDevelopmentCrew:
                         "Input: {module_name}, {data_requirements}, {database_type}.",
             expected_output="SQL DDL scripts for the '{module_name}' schema, a schema diagram, "
                             "and migration scripts if applicable.",
-            agent=data_model_agent
+            agent=data_model_agent,
+            successCriteria=["SQL DDL scripts created", "Schema diagram provided", "Migration scripts applicable"]
         )
 
     @task
@@ -76,7 +81,8 @@ class BackendDevelopmentCrew:
                         "Input: {auth_mechanism}, {service_name}, {security_requirements}.",
             expected_output="Authentication logic implemented for {service_name} using {auth_mechanism}, "
                             "with relevant endpoints secured.",
-            agent=backend_auth_agent
+            agent=backend_auth_agent,
+            successCriteria=["Authentication logic implemented", "Endpoints secured", "Credentials handled securely"]
         )
 
     @task
@@ -86,21 +92,25 @@ class BackendDevelopmentCrew:
                         "Configure message brokers, producers, and consumers. "
                         "Input: {queue_technology}, {task_type}, {message_payload_definition}.",
             expected_output="A functional asynchronous task processing system for {task_type} using {queue_technology}.",
-            agent=queue_agent
+            agent=queue_agent,
+            successCriteria=["Task processing system functional", "Message brokers configured", "Producers/consumers operational"]
         )
 
     @crew
     def crew(self) -> Crew:
         """Creates the Backend Development crew"""
-        return Crew(
-            agents=[
-                self.api_creator, self.auth_specialist, self.config_manager,
-                self.data_modeler, self.queue_manager, self.storage_manager, self.data_synchronizer
-            ],
-            tasks=self.tasks, # From @task decorator
+        created_crew = Crew(
+            agents=[self.api_creator, self.auth_specialist, self.config_manager, self.data_modeler, self.queue_manager, self.storage_manager, self.data_synchronizer],
+            tasks=self.tasks,
             process=Process.sequential,
-            verbose=True
+            verbose=True,
+            llm=default_llm
         )
+        created_crew.configure_quality_gate(
+            keyword_check=True,
+            custom_validators=[example_summary_validator]
+        )
+        return created_crew
 
 # Example usage (conceptual)
 # if __name__ == '__main__':

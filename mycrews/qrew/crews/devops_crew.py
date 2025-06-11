@@ -1,6 +1,9 @@
 from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from ..llm_config import default_llm
+from ..config import example_summary_validator
+
 # Import the actual devops agent
 from mycrews.qrew.agents.devops import devops_agent
 
@@ -22,7 +25,8 @@ class DevOpsCrew:
             expected_output="A functional CI/CD pipeline configuration for {application_name}. "
                             "A successful run of the pipeline deploying a sample change. "
                             "Documentation on how to trigger and monitor the pipeline.",
-            agent=devops_agent
+            agent=devops_agent,
+            successCriteria=["CI/CD pipeline configured", "Successful test deployment", "Pipeline documentation created"]
         )
 
     @task
@@ -34,7 +38,8 @@ class DevOpsCrew:
             expected_output="Infrastructure successfully provisioned on {cloud_provider} as per specifications. "
                             "IaC scripts committed to version control. "
                             "Access details and endpoints documented.",
-            agent=devops_agent
+            agent=devops_agent,
+            successCriteria=["Infrastructure provisioned", "IaC scripts versioned", "Access details documented"]
         )
 
     @task
@@ -46,18 +51,25 @@ class DevOpsCrew:
             expected_output="Monitoring dashboards displaying real-time application metrics. "
                             "Alerting system configured and tested. "
                             "Documentation on accessing dashboards and managing alerts.",
-            agent=devops_agent
+            agent=devops_agent,
+            successCriteria=["Dashboards created", "Alerts configured and tested", "Monitoring documentation provided"]
         )
 
     @crew
     def crew(self) -> Crew:
         """Creates the DevOps crew"""
-        return Crew(
+        created_crew = Crew(
             agents=[self.cicd_specialist], # Using the property name
             tasks=self.tasks, # From @task decorator
             process=Process.sequential,
-            verbose=True
+            verbose=True,
+            llm=default_llm
         )
+        created_crew.configure_quality_gate(
+            keyword_check=True,
+            custom_validators=[example_summary_validator]
+        )
+        return created_crew
 
 # Example usage (conceptual)
 # if __name__ == '__main__':

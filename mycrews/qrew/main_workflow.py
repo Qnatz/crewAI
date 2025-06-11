@@ -3,6 +3,7 @@ from crewai import Crew, Process, Task
 from crewai.utilities.i18n import I18N
 import os
 from .llm_config import default_llm # Added for qrew_main_crew
+from .config import example_summary_validator # Imported validator
 # from crewai import Task # Added for the validator's type hint - already imported
 
 # Orchestrator Agents
@@ -23,13 +24,7 @@ custom_delegate_tool = CustomDelegateWorkTool()
 custom_ask_tool = CustomAskQuestionTool()
 
 # --- Main Qrew Crew Setup ---
-def example_summary_validator(task: Task, result: dict) -> bool:
-    description_lower = task.description.lower()
-    if "summary" in description_lower or "summarize" in description_lower:
-        if not isinstance(result, dict) or "summary" not in result or not result.get("summary"):
-            print(f"QualityGate Fail (Custom Validator): Task '{task.description}' expected a summary, but it was missing or empty in the result.")
-            return False
-    return True
+# example_summary_validator is now imported from config.py
 
 qrew_main_crew = Crew(
     agents=[],

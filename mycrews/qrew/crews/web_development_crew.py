@@ -1,6 +1,9 @@
 from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from ....llm_config import default_llm
+from ....config import example_summary_validator
+
 # Import the actual web agents
 from mycrews.qrew.agents.web import (
     asset_manager_agent,
@@ -47,7 +50,8 @@ class WebDevelopmentCrew:
                             "validated for responsiveness and asset optimization.",
             # agent=self.static_page_builder() # This would be the ideal assignment
             # For now, let's assign one of the web agents as a placeholder for agent assignment logic
-            agent=static_page_builder_agent
+            agent=static_page_builder_agent,
+            successCriteria=["Static HTML page complete", "Page responsive", "Assets optimized", "Validation passed"]
         )
 
     @task
@@ -58,7 +62,8 @@ class WebDevelopmentCrew:
                         "Input: {feature_name}, {feature_details}, {api_endpoint}, {ui_mockups}.",
             expected_output="A fully functional dynamic feature '{feature_name}' integrated into the web application, "
                             "with frontend components and API interactions implemented as per specifications.",
-            agent=dynamic_page_builder_agent # Assigning the relevant agent
+            agent=dynamic_page_builder_agent, # Assigning the relevant agent
+            successCriteria=["Dynamic feature functional", "Frontend components implemented", "API interactions implemented"]
         )
 
     @task
@@ -69,18 +74,25 @@ class WebDevelopmentCrew:
                         "Input: {section_name}, {asset_paths}.",
             expected_output="Optimized static assets for {section_name}, with a report on improvements achieved. "
                             "Updated references in the codebase if necessary.",
-            agent=asset_manager_agent # Assigning the relevant agent
+            agent=asset_manager_agent, # Assigning the relevant agent
+            successCriteria=["Static assets optimized", "Report on improvements provided", "Codebase references updated"]
         )
 
     @crew
     def crew(self) -> Crew:
         """Creates the Web Development crew"""
-        return Crew(
+        created_crew = Crew(
             agents=[self.asset_manager, self.dynamic_page_builder, self.static_page_builder],
             tasks=self.tasks, # Automatically populated by @task decorator
             process=Process.sequential, # Can be adjusted as needed
-            verbose=True
+            verbose=True,
+            llm=default_llm
         )
+        created_crew.configure_quality_gate(
+            keyword_check=True,
+            custom_validators=[example_summary_validator]
+        )
+        return created_crew
 
 # Example usage (conceptual)
 # if __name__ == '__main__':

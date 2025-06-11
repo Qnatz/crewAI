@@ -1,6 +1,9 @@
 from crewai import Crew, Process, Agent, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from ..llm_config import default_llm
+from ..config import example_summary_validator
+
 # Import actual agents that could form a full-stack team
 from mycrews.qrew.agents.backend import api_creator_agent, data_model_agent
 from mycrews.qrew.agents.web import dynamic_page_builder_agent # Assuming frontend might be web for this crew
@@ -50,6 +53,7 @@ class FullStackCrew:
             expected_output="Fully functional and documented API endpoints for '{feature_name}'. "
                             "Swagger/OpenAPI documentation generated. Unit tests passed for API logic.",
             agent=self.backend_api_dev, # type: ignore[attr-defined]
+            successCriteria=["API endpoints functional", "Documentation generated", "Unit tests passed"],
             # No specific context, this is often a starting point.
         )
 
@@ -63,7 +67,8 @@ class FullStackCrew:
             expected_output="Database schema updated or created for '{feature_name}'. "
                             "Migration scripts generated and tested. Schema documentation updated.",
             agent=self.backend_data_modeler, # type: ignore[attr-defined]
-            context=[self.design_and_develop_api_task] # Schema might be influenced by API needs or vice-versa
+            context=[self.design_and_develop_api_task], # Schema might be influenced by API needs or vice-versa
+            successCriteria=["Schema updated/created", "Migration scripts functional", "Schema documented"]
         )
 
     @task
@@ -75,7 +80,8 @@ class FullStackCrew:
             expected_output="A responsive and interactive web interface for '{feature_name}', "
                             "meeting all UI/UX specifications and successfully integrated with the backend.",
             agent=self.frontend_web_dev, # type: ignore[attr-defined]
-            context=[self.design_and_develop_api_task] # Depends on API being ready
+            context=[self.design_and_develop_api_task], # Depends on API being ready
+            successCriteria=["Web interface implemented", "UI/UX specifications met", "Backend integrated"]
         )
 
     @task
@@ -86,6 +92,7 @@ class FullStackCrew:
                         "Input: {feature_name}, {coding_task_description}, {relevant_code_files}.",
             expected_output="Completed coding task as per {coding_task_description}. Code should be well-documented and tested.",
             agent=self.general_code_writer, # type: ignore[attr-defined]
+            successCriteria=["Coding task completed", "Code documented", "Code tested"],
             # This task might be triggered ad-hoc or be a dependency for others.
         )
 
@@ -100,7 +107,8 @@ class FullStackCrew:
                             "- List of identified bugs with steps to reproduce. "
                             "- Confirmation of requirements coverage.",
             agent=self.quality_assurer, # type: ignore[attr-defined]
-            context=[self.develop_frontend_web_task, self.develop_database_schema_task] # Depends on frontend and backend parts being somewhat ready
+            context=[self.develop_frontend_web_task, self.develop_database_schema_task], # Depends on frontend and backend parts being somewhat ready
+            successCriteria=["Test report generated", "Bugs listed", "Requirements coverage confirmed"]
         )
 
     @crew
@@ -117,7 +125,13 @@ class FullStackCrew:
             tasks=self.tasks,    # Automatically populated by @task decorator
             process=Process.sequential, # Default, can be hierarchical if manager agent is added
             verbose=True,
+            llm=default_llm
         )
+        created_crew.configure_quality_gate(
+            keyword_check=True,
+            custom_validators=[example_summary_validator]
+        )
+        return created_crew
 
 # Example of how this crew might be run (conceptual)
 # if __name__ == "__main__":
