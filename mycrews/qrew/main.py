@@ -71,9 +71,7 @@ def run_qrew():
     )
 
     # To execute this task, we use the qrew_main_crew
-    if taskmaster_agent not in qrew_main_crew.agents:
-        qrew_main_crew.agents.append(taskmaster_agent)
-        print(f"Registered {taskmaster_agent.role} with qrew_main_crew.")
+    # taskmaster_agent is now pre-registered in qrew_main_crew in main_workflow.py
 
     print("\nKicking off TaskMasterAgent for initial request processing using qrew_main_crew...")
     try:

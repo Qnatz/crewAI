@@ -16,6 +16,8 @@ from .orchestrators.tech_stack_committee.constraint_checker_agent.agent import c
 from .orchestrators.tech_stack_committee.stack_advisor_agent.agent import stack_advisor_agent
 from .orchestrators.tech_stack_committee.documentation_writer_agent.agent import documentation_writer_agent
 
+from .taskmaster import taskmaster_agent # Added taskmaster_agent import
+
 # Custom Tools
 from .tools.custom_agent_tools import CustomDelegateWorkTool, CustomAskQuestionTool
 
@@ -26,9 +28,19 @@ custom_ask_tool = CustomAskQuestionTool()
 # --- Main Qrew Crew Setup ---
 # example_summary_validator is now imported from config.py
 
+all_qrew_agents = [
+    idea_interpreter_agent,
+    tech_vetting_council_agent,
+    project_architect_agent,
+    constraint_checker_agent,
+    stack_advisor_agent,
+    documentation_writer_agent,
+    taskmaster_agent  # Add taskmaster_agent here
+]
+
 qrew_main_crew = Crew(
-    agents=[],
-    tasks=[],
+    agents=all_qrew_agents, # Use the comprehensive list
+    tasks=[],              # Tasks can remain empty at initialization
     llm=default_llm,
     verbose=True,
 )
