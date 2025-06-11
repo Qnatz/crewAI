@@ -91,6 +91,11 @@ def get_task_output_string(task_output_obj: Any, task_desc_for_log: str) -> Opti
     return None
 
 def run_idea_to_architecture_workflow(workflow_inputs: dict):
+    # Escape all string values in workflow_inputs at the beginning
+    for key, value in workflow_inputs.items():
+        if isinstance(value, str):
+            workflow_inputs[key] = value.replace("{", "{{").replace("}", "}}")
+
     print("## Initializing Idea to Architecture Workflow Agents & Tasks...")
 
     # Remove CustomDelegateWorkTool and CustomAskQuestionTool from tech_vetting_council_agent
@@ -373,7 +378,8 @@ Your response must be exactly in this format.
                 if key == "OUTPUT_OF_TASK_INTERPRET_IDEA": # Standardized key example
                     format_data[key] = output_of_task_interpret_idea_str
                 elif key == "PROJECT_CONSTRAINTS": # Standardized key example
-                    format_data[key] = workflow_inputs.get("constraints", f"[{key} - UNDEFINED IN WORKFLOW_INPUTS]")
+                    # workflow_inputs are now pre-escaped
+                    format_data[key] = workflow_inputs.get("constraints", f"[{key} - UNDEFINED IN WORKFLOW_INPUTS]".replace("{", "{{").replace("}", "}}"))
                 # Add more standardized keys here as you define them in prompts
                 else:
                     log.warning(f"Context key '{key}' for vetting sub-task has no defined mapping. Using placeholder.")
@@ -413,8 +419,9 @@ Your response must be exactly in this format.
     synthesis_payload = {
         "constraint_checker_report": delegated_task_results.get("ConstraintCheckerAgent", "Not available"),
         "stack_advisor_report": delegated_task_results.get("StackAdvisorAgent", "Not available"),
-        "original_user_idea": workflow_inputs.get("user_idea", "User idea not explicitly passed to synthesis payload.").replace("{", "{{").replace("}", "}}"), # Or retrieve from task_interpret_idea.output
-        "original_constraints": workflow_inputs.get("constraints", "Constraints not explicitly passed to synthesis payload.").replace("{", "{{").replace("}", "}}") # Or retrieve from workflow_inputs
+        # workflow_inputs are now pre-escaped, so direct .get() is fine
+        "original_user_idea": workflow_inputs.get("user_idea", "User idea not explicitly passed to synthesis payload."),
+        "original_constraints": workflow_inputs.get("constraints", "Constraints not explicitly passed to synthesis payload.")
     }
 
     # Note: 'idea_task_output_str' is already fetched before this block.
@@ -458,8 +465,9 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
     architecture_planning_context_data = {
         "USER_IDEA_DETAILS": output_of_task_interpret_idea_str, # Already escaped by get_task_output_string
         "VETTING_REPORT_AND_GUIDELINES": synthesis_result_vetting_str,
-        "PROJECT_CONSTRAINTS": workflow_inputs.get("constraints", "Project constraints not provided.").replace("{", "{{").replace("}", "}}"),
-        "TECHNICAL_VISION": workflow_inputs.get("technical_vision", "Technical vision not provided.").replace("{", "{{").replace("}", "}}")
+        # workflow_inputs are now pre-escaped, so direct .get() is fine
+        "PROJECT_CONSTRAINTS": workflow_inputs.get("constraints", "Project constraints not provided."),
+        "TECHNICAL_VISION": workflow_inputs.get("technical_vision", "Technical vision not provided.")
     }
 
     # The task_design_architecture_planning object is defined at the module level.
