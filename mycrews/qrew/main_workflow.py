@@ -197,8 +197,7 @@ Specific success criteria for this output include:
         print("Error: Vetting Requirements Planning task did not produce an output string.")
         return None
 
-    print("
-Processing output of Vetting Requirements Planning...")
+    print("\nProcessing output of Vetting Requirements Planning...")
     delegated_task_results = {}
     try:
         json_start_index = sub_task_definitions_json_str.find('{')
