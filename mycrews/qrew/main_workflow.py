@@ -180,7 +180,7 @@ Your response must be exactly in this format, with a top-level key "sub_tasks_to
             "sub_tasks_to_delegate list provided",
             "ConstraintCheckerAgent sub-task defined",
             "StackAdvisorAgent sub-task defined",
-            "sub-task definitions correctly structured", # Corrected "payloads"
+            "sub-task definitions correctly structured",
             "successCriteria for sub-tasks defined"
         ]
     )
@@ -240,9 +240,9 @@ Your response must be exactly in this format.
         successCriteria=[
             "component design sub-tasks defined",
             "delegation plan for architecture created",
-            "sub-task definitions correctly structured", # Corrected "payloads"
+            "sub-task definitions correctly structured",
             "successCriteria for component tasks specified"
-        ],
+        ], # Added missing comma here
         # Payload will be added dynamically during execution, so not defined here.
     )
 
