@@ -1,9 +1,9 @@
 import json
 from ..agents.dev_utilities.code_writer_agent.agent import code_writer_agent
 from ..agents.dev_utilities.tester_agent.agent import tester_agent
-from ..crews.backend_development_crew import backend_development_crew
-from ..crews.mobile_development_crew import mobile_development_crew
-from ..crews.web_development_crew import web_development_crew
+from ..crews.backend_development_crew import BackendDevelopmentCrew
+from ..crews.mobile_development_crew import MobileDevelopmentCrew
+from ..crews.web_development_crew import WebDevelopmentCrew
 from crewai import Task # Assuming crewai is installed in the environment and accessible
 
 def run_code_implementation_workflow(architecture_design):
@@ -58,6 +58,7 @@ def run_code_implementation_workflow(architecture_design):
 
     if backend_spec:
         print(f"Backend spec found. Preparing task for backend_development_crew. Spec: {str(backend_spec)[:100]}...")
+        backend_crew_instance = BackendDevelopmentCrew()
         task_backend = Task(
             description="Implement backend APIs from architecture.",
             agent=code_writer_agent,
@@ -65,9 +66,16 @@ def run_code_implementation_workflow(architecture_design):
             context={ "spec": backend_spec },
             successCriteria=["compilable", "auth logic implemented", "modular code"]
         )
-        if backend_development_crew:
-            backend_development_crew.tasks = [task_backend]
-            backend_result_item = backend_development_crew.kickoff()
+        if backend_crew_instance:
+            # The @task decorator in CrewBase adds tasks to an instance's list.
+            # We might need to pass the task to the kickoff method if tasks are not pre-registered on instantiation.
+            # For now, assuming tasks are handled by the .crew() method's setup.
+            # Let's assign the task to the list of tasks for the specific crew instance to be created.
+            # The @crew method in the CrewBase class should use self.tasks.
+            # So, we set the tasks on the instance of BackendDevelopmentCrew first.
+            backend_crew_instance.tasks = [task_backend] # Set the task for the crew instance
+            runnable_crew = backend_crew_instance.crew() # Get the actual ValidatedCrew object
+            backend_result_item = runnable_crew.kickoff()
             if backend_result_item is not None:
                  results.append(backend_result_item)
             else:
@@ -79,6 +87,7 @@ def run_code_implementation_workflow(architecture_design):
 
     if mobile_spec:
         print(f"Mobile spec found. Preparing task for mobile_development_crew. Spec: {str(mobile_spec)[:100]}...")
+        mobile_crew_instance = MobileDevelopmentCrew()
         task_mobile = Task(
             description="Implement Android mobile UI from design spec.",
             agent=code_writer_agent,
@@ -86,9 +95,10 @@ def run_code_implementation_workflow(architecture_design):
             context={ "spec": mobile_spec },
             successCriteria=["UI matches design", "navigable", "reactive layout"]
         )
-        if mobile_development_crew:
-            mobile_development_crew.tasks = [task_mobile]
-            mobile_result_item = mobile_development_crew.kickoff()
+        if mobile_crew_instance:
+            mobile_crew_instance.tasks = [task_mobile] # Set the task
+            runnable_crew = mobile_crew_instance.crew() # Get the actual ValidatedCrew object
+            mobile_result_item = runnable_crew.kickoff()
             if mobile_result_item is not None:
                 results.append(mobile_result_item)
             else:
@@ -100,6 +110,7 @@ def run_code_implementation_workflow(architecture_design):
 
     if web_spec:
         print(f"Web spec found. Preparing task for web_development_crew. Spec: {str(web_spec)[:100]}...")
+        web_crew_instance = WebDevelopmentCrew()
         task_web = Task(
             description="Implement responsive web UI from design spec.",
             agent=code_writer_agent,
@@ -107,9 +118,10 @@ def run_code_implementation_workflow(architecture_design):
             context={ "spec": web_spec },
             successCriteria=["responsive layout", "semantic HTML"]
         )
-        if web_development_crew:
-            web_development_crew.tasks = [task_web]
-            web_result_item = web_development_crew.kickoff()
+        if web_crew_instance:
+            web_crew_instance.tasks = [task_web] # Set the task
+            runnable_crew = web_crew_instance.crew() # Get the actual ValidatedCrew object
+            web_result_item = runnable_crew.kickoff()
             if web_result_item is not None:
                 results.append(web_result_item)
             else:
