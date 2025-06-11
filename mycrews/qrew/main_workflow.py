@@ -125,32 +125,21 @@ There should be no extraneous characters or words outside of the defined JSON st
 
 The JSON object must have a key "sub_tasks_to_delegate". The value should be a list of dictionaries.
 Each dictionary in the list represents a sub-task and must include:
-- "task_description": (string) The detailed, self-contained description for the sub-agent, embedding all necessary data (e.g., relevant parts of '{constraints}' or the output of 'task_interpret_idea').
+- "task_description_template": (string) A string that is the description for the sub-agent, using placeholders like {{PLACEHOLDER_NAME}} for data that needs to be injected from the main workflow context.
+- "required_context_keys": (list of strings) A list of strings, where each string is a placeholder name used in the task_description_template (e.g., ["PLACEHOLDER_NAME_1", "PLACEHOLDER_NAME_2"]). These keys MUST correspond to data available in the broader workflow context, such as the output of 'task_interpret_idea' or initial '{{constraints}}'.
 - "assigned_agent_role": (string) The role of the agent to delegate to (e.g., "ConstraintCheckerAgent", "StackAdvisorAgent").
 - "successCriteria": (list of strings) Specific criteria for the sub-task's success (e.g., ["violations identified", "compliance report generated"]).
 
-Ensure placeholder values like "{constraints}" and the output of 'task_interpret_idea' are correctly incorporated directly into the "task_description" string you define for the sub-tasks.
-Example for 'ConstraintCheckerAgent's task_description: "Review the proposed solution: [output of task_interpret_idea] against the project_constraints_document: [content of {constraints}]. Identify any violations..."
-Example for 'StackAdvisorAgent's task_description: "Analyze the project_requirements: [output of task_interpret_idea] to propose an optimal technology stack. Consider team_skills: [extracted from {constraints}], budget_constraints: [extracted from {constraints}], and existing_architecture_details: None - new project. Provide justifications..."
-
-Example of the overall JSON structure:
+Example sub-task definition:
 {
-  "sub_tasks_to_delegate": [
-    {
-      "task_description": "Fully self-contained description for sub-task 1...",
-      "assigned_agent_role": "Role1",
-      "successCriteria": ["Criterion A", "Criterion B"]
-    },
-    {
-      "task_description": "Fully self-contained description for sub-task 2...",
-      "assigned_agent_role": "Role2",
-      "successCriteria": ["Criterion C", "Criterion D"]
-    }
-  ]
+  "task_description_template": "Review the proposed solution (details: {{SOLUTION_DETAILS}}) against the project constraints (document: {{CONSTRAINTS_DOC}}). Identify violations.",
+  "required_context_keys": ["SOLUTION_DETAILS", "CONSTRAINTS_DOC"],
+  "assigned_agent_role": "ConstraintCheckerAgent",
+  "successCriteria": ["Violations identified", "Report generated"]
 }
-Your response must be exactly in this format.
+Your response must be exactly in this format, with a top-level key "sub_tasks_to_delegate" containing a list of such dictionaries.
 ''',
-        expected_output='''A single, valid JSON object with a key "sub_tasks_to_delegate". The value must be a list of dictionaries, where each dictionary contains "task_description" (string, self-contained), "assigned_agent_role" (string), and "successCriteria" (list of strings). No other text or characters outside this JSON object.''',
+        expected_output='''A single, valid JSON object with a key "sub_tasks_to_delegate". The value must be a list of dictionaries, where each dictionary contains "task_description_template" (string), "required_context_keys" (list of strings), "assigned_agent_role" (string), and "successCriteria" (list of strings). No other text or characters outside this JSON object.''',
         agent=tech_vetting_council_agent,
         context=[task_interpret_idea],
         successCriteria=[
@@ -179,17 +168,27 @@ Ensure all string values within the JSON are properly quoted.
 There should be no extraneous characters or words outside of the defined JSON structure itself.
 
 The JSON structure for each sub-task dictionary in the list is:
-- "task_description": (string) The detailed, self-contained description for the component design sub-task, embedding all necessary data (e.g., relevant sections from {user_idea_details_str}, {vetting_report_and_guidelines_str}, etc.).
-- "assigned_agent_role": (string) The role of the agent to delegate to (e.g., "BackendDeveloperAgent", "FrontendDeveloperAgent", "DatabaseAdminAgent" - you'll need to decide appropriate roles or use a generic "SoftwareEngineerAgent" if specific roles aren't defined yet).
+- "task_description_template": (string) A string that is the description for the sub-agent, using placeholders like {{PLACEHOLDER_NAME}} for data that needs to be injected from the main workflow context.
+- "required_context_keys": (list of strings) A list of strings, where each string is a placeholder name used in the task_description_template (e.g., ["PLACEHOLDER_NAME_1"]). These keys MUST correspond to data available in the broader workflow context (e.g., output of 'task_interpret_idea' as 'USER_IDEA_DETAILS', output of vetting synthesis as 'VETTING_REPORT', original constraints as 'PROJECT_CONSTRAINTS').
+- "assigned_agent_role": (string) The role of the agent to delegate to.
 - "successCriteria": (list of strings) Specific criteria for the sub-task's success.
 
-Example: { "task_description": "Design the detailed database schema for PostgreSQL based on data models found in [specific section of user_idea_details_str] and adhering to guidelines in [specific part of vetting_report_and_guidelines_str]...", "assigned_agent_role": "DatabaseAdminAgent", "successCriteria": ["schema diagram created", "SQL scripts provided"] }
+Example sub-task definition:
+{
+Example sub-task definition:
+{
+  "task_description_template": "Design the database schema based on these requirements: {{USER_IDEA_DETAILS}} and adhering to guidelines: {{VETTING_REPORT}}. Focus on PostgreSQL.",
+  "required_context_keys": ["USER_IDEA_DETAILS", "VETTING_REPORT"],
+  "assigned_agent_role": "DatabaseAdminAgent",
+  "successCriteria": ["Schema diagram created", "SQL DDL scripts provided"]
+}
 
 Example of the overall JSON structure:
 {
   "sub_tasks_to_delegate": [
     {
-      "task_description": "Design component X based on these details...",
+      "task_description_template": "Design component X based on these requirements: {{COMPONENT_X_REQUIREMENTS}}",
+      "required_context_keys": ["COMPONENT_X_REQUIREMENTS"],
       "assigned_agent_role": "SpecialistRoleA",
       "successCriteria": ["Design complete", "Docs provided"]
     }
@@ -197,7 +196,7 @@ Example of the overall JSON structure:
 }
 Your response must be exactly in this format.
 ''',
-        expected_output='''A single, valid JSON object with a key "sub_tasks_to_delegate". The value must be a list of dictionaries, where each dictionary contains "task_description" (string, self-contained), "assigned_agent_role" (string), and "successCriteria" (list of strings). No other text or characters outside this JSON object.''',
+        expected_output='''A single, valid JSON object with a key "sub_tasks_to_delegate". The value must be a list of dictionaries, where each dictionary contains "task_description_template" (string), "required_context_keys" (list of strings), "assigned_agent_role" (string), and "successCriteria" (list of strings). No other text or characters outside this JSON object.''',
         agent=project_architect_agent, # Assigned to Project Architect
         # Context will be implicitly handled by the formatted description during execution
         successCriteria=[
@@ -237,25 +236,44 @@ Your response must be exactly in this format.
     # This assumes the last task in the sequential crew is task_vet_requirements_planning.
     # Adjust if CrewAI's kickoff result structure is different or if a specific task output is needed.
     sub_task_definitions_json_str = None
-    if hasattr(planning_crew_result_obj, 'raw'): # Common for single task output or final raw output
+    output_of_task_interpret_idea_str = "Error: Could not retrieve task_interpret_idea output" # Initialize
+    log = logging.getLogger(__name__) # Ensure log is available
+
+    if hasattr(planning_crew_result_obj, 'tasks') and planning_crew_result_obj.tasks:
+        for task_output_obj in planning_crew_result_obj.tasks:
+            # Robustly find the output of task_interpret_idea
+            # Check if the module-level task's original description is part of the executed task's description
+            # This handles cases where the description might have been formatted with kickoff inputs
+            if hasattr(task_output_obj, 'description') and task_interpret_idea.description in task_output_obj.description:
+                if hasattr(task_output_obj, 'output') and hasattr(task_output_obj.output, 'raw_output'):
+                    output_of_task_interpret_idea_str = task_output_obj.output.raw_output
+                    log.info("Successfully extracted raw_output from task_interpret_idea.")
+                elif hasattr(task_output_obj, 'output'):
+                    output_of_task_interpret_idea_str = str(task_output_obj.output)
+                    log.info("Successfully extracted stringified output from task_interpret_idea.")
+                break # Found task_interpret_idea's output
+        if output_of_task_interpret_idea_str == "Error: Could not retrieve task_interpret_idea output":
+            log.warning("Failed to retrieve specific output for 'task_interpret_idea' from structured kickoff result.")
+
+        # Find the output of task_vet_requirements_planning (usually the last one in this specific crew)
+        planning_task_output_data = planning_crew_result_obj.tasks[-1].output
+        if hasattr(planning_task_output_data, 'raw_output'):
+            sub_task_definitions_json_str = planning_task_output_data.raw_output
+        else:
+            sub_task_definitions_json_str = str(planning_task_output_data)
+            log.warning("Using stringified output for task_vet_requirements_planning as raw_output not found.")
+
+    elif hasattr(planning_crew_result_obj, 'raw'): # Fallback if kickoff returns only the last raw output
         sub_task_definitions_json_str = planning_crew_result_obj.raw
-    elif hasattr(planning_crew_result_obj, 'tasks') and planning_crew_result_obj.tasks:
-        # If kickoff returns a result object with a list of task outputs
-        # Find the output of task_vet_requirements_planning
-        planning_task_output = next((t.output for t in planning_crew_result_obj.tasks if t.description == task_vet_requirements_planning.description), None)
-        if planning_task_output and hasattr(planning_task_output, 'raw_output'):
-            sub_task_definitions_json_str = planning_task_output.raw_output
-        elif planning_task_output: # Fallback if raw_output is not present but output itself might be the string
-             sub_task_definitions_json_str = str(planning_task_output) # Convert to string if it's an object
-    else: # Fallback if the structure is unexpected
-        print("Warning: Could not determine the standard way to extract raw output from planning_crew_result_obj. Falling back to string conversion.")
-        sub_task_definitions_json_str = str(planning_crew_result_obj)
+        log.warning("Using kickoff's direct raw output for task_vet_requirements_planning. Output of task_interpret_idea might be unavailable for context mapping if not in workflow_inputs.")
+        # Attempt to get task_interpret_idea output from workflow_inputs if not found in structured results
+        if output_of_task_interpret_idea_str == "Error: Could not retrieve task_interpret_idea output":
+             output_of_task_interpret_idea_str = str(workflow_inputs.get("user_idea", "User idea from workflow_inputs as fallback"))
 
 
     if not sub_task_definitions_json_str:
         print("Error: Vetting Requirements Planning task did not produce an output string.")
         return None
-
 
     print("\nProcessing output of Vetting Requirements Planning...")
     delegated_task_results = {}
@@ -267,32 +285,52 @@ Your response must be exactly in this format.
             actual_json_str = sub_task_definitions_json_str[json_start_index:json_end_index]
             sub_task_data = json.loads(actual_json_str)
         else:
-            raise json.JSONDecodeError("No JSON object found in output", sub_task_definitions_json_str, 0)
+            raise json.JSONDecodeError("No JSON object found in Vetting Planning output", sub_task_definitions_json_str, 0)
 
         if "sub_tasks_to_delegate" not in sub_task_data:
-            print("Error: 'sub_tasks_to_delegate' key missing in planning output JSON.")
+            print("Error: 'sub_tasks_to_delegate' key missing in Vetting Planning output JSON.")
             print(f"Received JSON: {actual_json_str}")
             return None
 
         for sub_task_def in sub_task_data["sub_tasks_to_delegate"]:
-            print(f"  Preparing sub-task: {sub_task_def.get('task_description', 'No description')[:70]}...")
+            task_template = sub_task_def.get("task_description_template")
+            context_keys = sub_task_def.get("required_context_keys", [])
             assigned_role = sub_task_def.get("assigned_agent_role")
-            actual_agent = agent_role_map.get(assigned_role)
 
-            if not actual_agent:
-                print(f"    Error: Agent for role '{assigned_role}' not found in agent_role_map. Skipping this sub-task.")
+            if not task_template or not assigned_role:
+                log.warning(f"Skipping sub-task due to missing template or role: {sub_task_def}")
                 continue
 
-            # Input data is now expected to be embedded in the sub_task_def["task_description"]
+            actual_agent = agent_role_map.get(assigned_role)
+            if not actual_agent:
+                log.warning(f"Agent for role '{assigned_role}' not found. Skipping sub-task: {task_template[:70]}...")
+                continue
+
+            format_data = {}
+            for key in context_keys:
+                if key == "OUTPUT_OF_TASK_INTERPRET_IDEA": # Standardized key example
+                    format_data[key] = output_of_task_interpret_idea_str
+                elif key == "PROJECT_CONSTRAINTS": # Standardized key example
+                    format_data[key] = workflow_inputs.get("constraints", f"[{key} - UNDEFINED IN WORKFLOW_INPUTS]")
+                # Add more standardized keys here as you define them in prompts
+                else:
+                    log.warning(f"Context key '{key}' for vetting sub-task has no defined mapping. Using placeholder.")
+                    format_data[key] = f"[{key} - MAPPING UNDEFINED]"
+
+            try:
+                final_description = task_template.format(**format_data)
+            except KeyError as e:
+                log.error(f"KeyError formatting description for vetting sub-task '{task_template[:70]}...': {e}. Data: {format_data}")
+                final_description = task_template # Use template as fallback
+
             new_sub_task = Task(
-                description=sub_task_def["task_description"], # This description should be self-contained
+                description=final_description,
                 expected_output=sub_task_def.get("expected_output", "Actionable result for the delegated sub-task."),
                 agent=actual_agent,
-                # input field removed
                 successCriteria=sub_task_def.get("successCriteria", ["output generated"]),
             )
 
-            print(f"    Delegating to {actual_agent.role} ({actual_agent.id}) using qrew_main_crew...")
+            log.info(f"Delegating vetting sub-task to {actual_agent.role}: {final_description[:70]}...")
             sub_task_result = qrew_main_crew.delegate_task(task=new_sub_task)
             delegated_task_results[assigned_role] = str(sub_task_result.raw if hasattr(sub_task_result, 'raw') else sub_task_result) # Store raw string output
             print(f"    Sub-task for {assigned_role} completed. Result: {str(sub_task_result)[:100]}...")
@@ -316,21 +354,8 @@ Your response must be exactly in this format.
         "original_constraints": workflow_inputs.get("constraints", "Constraints not explicitly passed to synthesis payload.") # Or retrieve from workflow_inputs
     }
 
-    # Retrieving output from task_interpret_idea for context, if available and kickoff result is structured
-    # This is a more robust way if planning_crew_result_obj is a rich object
-    idea_task_output_str = "Not available from planning_crew_result_obj"
-    if hasattr(planning_crew_result_obj, 'tasks') and planning_crew_result_obj.tasks:
-        # Ensure there's at least one task and its output is accessible
-        if planning_crew_result_obj.tasks[0].output:
-            idea_task_output = next((t.output for t in planning_crew_result_obj.tasks if t.description == task_interpret_idea.description), None)
-            if idea_task_output and hasattr(idea_task_output, 'raw_output'):
-                idea_task_output_str = idea_task_output.raw_output
-            elif idea_task_output: # Fallback if raw_output is not present
-                idea_task_output_str = str(idea_task_output)
-        else:
-            idea_task_output_str = "Output of task_interpret_idea not found or not in expected format."
-
-    synthesis_payload["idea_interpretation_output"] = idea_task_output_str
+    # Note: 'idea_task_output_str' is already fetched before this block.
+    synthesis_payload["idea_interpretation_output"] = output_of_task_interpret_idea_str
 
 
     synthesis_desc_vetting = f"""Synthesize the findings from the Constraint Checker and Stack Advisor.
@@ -363,29 +388,36 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
     # --- Architecture Design Phase ---
     print("\nPreparing Project Architecture Design Planning task...")
 
-    # Determine the source for idea_interpretation_output for the payload
-    # Prefer the more robust extraction if available, otherwise use workflow_inputs as fallback
-    idea_output_for_arch_planning = idea_task_output_str # From previous extraction attempt
-    if idea_output_for_arch_planning == "Not available from planning_crew_result_obj" or \
-       idea_output_for_arch_planning == "Output of task_interpret_idea not found or not in expected format.":
-        idea_output_for_arch_planning = workflow_inputs.get('user_idea', "User idea not available.")
+    # Determine the source for idea_interpretation_output for the architecture planning payload
+    # 'output_of_task_interpret_idea_str' is already defined and populated.
+    synthesis_result_vetting_str = str(synthesis_result.raw if hasattr(synthesis_result, 'raw') else synthesis_result)
 
-
-    architecture_planning_payload = {
-        "user_idea_details_str": idea_output_for_arch_planning,
-        "vetting_report_and_guidelines_str": str(synthesis_result.raw if hasattr(synthesis_result, 'raw') else synthesis_result),
-        "original_constraints_str": workflow_inputs["constraints"],
-        "technical_vision_str": workflow_inputs["technical_vision"]
+    architecture_planning_context_data = {
+        "USER_IDEA_DETAILS": output_of_task_interpret_idea_str,
+        "VETTING_REPORT_AND_GUIDELINES": synthesis_result_vetting_str,
+        "PROJECT_CONSTRAINTS": workflow_inputs.get("constraints", "Project constraints not provided."),
+        "TECHNICAL_VISION": workflow_inputs.get("technical_vision", "Technical vision not provided.")
     }
+
     # The task_design_architecture_planning object is defined at the module level.
     # We format its description with runtime data to create an executable instance.
-
     original_planning_desc = task_design_architecture_planning.description
-    log = logging.getLogger(__name__) # Ensure log is defined if not already global
+
     try:
-        execution_planning_desc = original_planning_desc.format(**architecture_planning_payload)
+        # Format the description using only the keys expected by its template.
+        # The LLM for task_design_architecture_planning itself defines what placeholders it uses (e.g., {user_idea_details_str})
+        # For this execution, we pass a dict that the .format() method can use.
+        # This requires that the original_planning_desc uses placeholders that match keys in architecture_planning_context_data,
+        # OR that the LLM was instructed to use generic placeholders and we map them here.
+        # Given the prompt asked for {user_idea_details_str} etc., we map them.
+        execution_planning_desc = original_planning_desc.format(
+            user_idea_details_str=architecture_planning_context_data["USER_IDEA_DETAILS"],
+            vetting_report_and_guidelines_str=architecture_planning_context_data["VETTING_REPORT_AND_GUIDELINES"],
+            original_constraints_str=architecture_planning_context_data["PROJECT_CONSTRAINTS"],
+            technical_vision_str=architecture_planning_context_data["TECHNICAL_VISION"]
+        )
     except KeyError as e:
-        log.error(f"KeyError during description formatting for task_design_architecture_planning: {e}. Payload keys: {architecture_planning_payload.keys()}")
+        log.error(f"KeyError during description formatting for task_design_architecture_planning: {e}. Available data keys: {architecture_planning_context_data.keys()}")
         execution_planning_desc = original_planning_desc # Fallback
 
     executable_task_design_architecture_planning = Task(
@@ -395,7 +427,7 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
         successCriteria=task_design_architecture_planning.successCriteria
     )
 
-    print("Executing Project Architecture Design Planning task using qrew_main_crew...")
+    log.info("Executing Project Architecture Design Planning task using qrew_main_crew...")
     architecture_planning_result_obj = qrew_main_crew.delegate_task(
         task=executable_task_design_architecture_planning, # Use the new executable instance
     )
@@ -424,14 +456,38 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
             # Use ProjectArchitectAgent as a fallback if a specific role is not in agent_role_map
             actual_agent = agent_role_map.get(assigned_role, project_architect_agent)
             if actual_agent == project_architect_agent and assigned_role not in agent_role_map:
-                 print(f"    Warning: Agent for role '{assigned_role}' not found. Assigning to ProjectArchitectAgent.")
+                 log.warning(f"Agent for role '{assigned_role}' not found. Assigning to ProjectArchitectAgent for sub-task: {sub_task_def.get('task_description_template')[:70]}")
 
-            # Input data is now expected to be embedded in the sub_task_def["task_description"]
+            arch_task_template = sub_task_def.get("task_description_template")
+            arch_context_keys = sub_task_def.get("required_context_keys", [])
+
+            if not arch_task_template:
+                log.warning(f"Skipping architecture sub-task due to missing description template: {sub_task_def}")
+                continue
+
+            arch_format_data = {}
+            for key in arch_context_keys:
+                if key in architecture_planning_context_data:
+                    arch_format_data[key] = architecture_planning_context_data[key]
+                # Add more specific key mappings if the LLM uses different placeholders than the main context data keys
+                elif key == "USER_IDEA_DETAILS": # Example if LLM used this specific key
+                     arch_format_data[key] = output_of_task_interpret_idea_str
+                elif key == "VETTING_REPORT":
+                     arch_format_data[key] = synthesis_result_vetting_str
+                else:
+                    log.warning(f"Context key '{key}' for architecture sub-task has no defined mapping. Using placeholder.")
+                    arch_format_data[key] = f"[{key} - MAPPING UNDEFINED]"
+
+            try:
+                final_arch_description = arch_task_template.format(**arch_format_data)
+            except KeyError as e:
+                log.error(f"KeyError formatting description for architecture sub-task '{arch_task_template[:70]}...': {e}. Data: {arch_format_data}")
+                final_arch_description = arch_task_template # Fallback
+
             new_arch_sub_task = Task(
-                description=sub_task_def["task_description"], # This description should be self-contained
+                description=final_arch_description,
                 expected_output=sub_task_def.get("expected_output", "Detailed design for the architectural component."),
                 agent=actual_agent,
-                # input field removed
                 successCriteria=sub_task_def.get("successCriteria", ["component design completed"]),
             )
 
@@ -454,20 +510,15 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
         return None
 
     print("\nPreparing Architecture Design Synthesis task...")
-    architecture_synthesis_payload = {
-        "component_design_results": json.dumps(architecture_delegated_task_results), # Pass results as JSON string
-        "original_user_idea": idea_output_for_arch_planning,
-        "vetting_report_and_guidelines": str(synthesis_result.raw if hasattr(synthesis_result, 'raw') else synthesis_result),
-        "original_constraints": workflow_inputs["constraints"],
-        "technical_vision": workflow_inputs["technical_vision"]
-    }
+    # architecture_synthesis_payload already defined using 'idea_output_for_arch_planning'
+    # and 'synthesis_result_vetting_str' (implicitly via str(synthesis_result...))
 
     synthesis_desc_arch = f"""Synthesize all component design outputs into a final, detailed software architecture document.
-Component Designs (JSON string): {architecture_synthesis_payload['component_design_results']}
-Original Technical Requirements & Feature Breakdown: {architecture_synthesis_payload['original_user_idea']}
-Vetting Report & Final Technical Guidelines: {architecture_synthesis_payload['vetting_report_and_guidelines']}
-Overall project constraints: {architecture_synthesis_payload['original_constraints']}
-Project's technical vision: {architecture_synthesis_payload['technical_vision']}"""
+Component Designs (JSON string): {json.dumps(architecture_delegated_task_results)}
+Original Technical Requirements & Feature Breakdown: {architecture_planning_context_data["USER_IDEA_DETAILS"]}
+Vetting Report & Final Technical Guidelines: {architecture_planning_context_data["VETTING_REPORT_AND_GUIDELINES"]}
+Overall project constraints: {architecture_planning_context_data["PROJECT_CONSTRAINTS"]}
+Project's technical vision: {architecture_planning_context_data["TECHNICAL_VISION"]}"""
     task_design_architecture_synthesis = Task(
         description=synthesis_desc_arch,
         expected_output='''A detailed software architecture document, including: High-level system diagrams, Technology stack recommendations for each component, Data model design overview, API design guidelines, Integration points, Non-functional requirements considerations.''',

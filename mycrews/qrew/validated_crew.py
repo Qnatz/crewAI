@@ -105,6 +105,27 @@ class ValidatedCrew(Crew):
             passed_quality_gate = True
             current_attempt_feedback_messages: List[str] = [] # Feedback for *this* attempt's QG failures
 
+            # --- Start of added debug logging ---
+            log.debug(f"QG PRE-CHECK FOR TASK: '{task.description[:100]}...'")
+            log.debug(f"Task object type: {type(task)}")
+            try:
+                task_vars = [attr for attr in dir(task) if not attr.startswith('_')]
+                log.debug(f"Task attributes: {task_vars}")
+            except Exception as e:
+                log.debug(f"Could not get dir(task): {e}")
+
+            has_sc_attr = hasattr(task, 'successCriteria')
+            log.debug(f"Task has 'successCriteria' attribute: {has_sc_attr}")
+
+            if has_sc_attr:
+                try:
+                    sc_value = task.successCriteria
+                    log.debug(f"Value of task.successCriteria: {sc_value}")
+                    log.debug(f"Type of task.successCriteria: {type(sc_value)}")
+                except Exception as e:
+                    log.debug(f"Error accessing task.successCriteria directly: {e}")
+            # --- End of added debug logging ---
+
             # 1. Keyword Check
             criteria_to_check = getattr(task, 'successCriteria', []) # Use getattr with default empty list
 
