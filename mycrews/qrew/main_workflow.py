@@ -118,15 +118,39 @@ You MUST define the sub-tasks to be delegated to 'ConstraintCheckerAgent' and 'S
 For 'ConstraintCheckerAgent', the sub-task should be to "Review the provided 'proposed_solution' (Technical Requirements Specification and Feature Breakdown) against the 'project_constraints_document' (value: "{constraints}"). Identify any violations or potential conflicts regarding budget, team skills, security policies, licensing, or infrastructure."
 For 'StackAdvisorAgent', the sub-task should be to "Analyze the provided 'project_requirements' (Technical Requirements Specification and Feature Breakdown) to propose an optimal technology stack. Consider 'team_skills' and 'budget_constraints' (both from "{constraints}") and 'existing_architecture_details' (value: "None - new project"). Provide justifications for stack choices, considering scalability, maintainability, and alignment with the technical vision."
 
-You must return a JSON object with a key "sub_tasks_to_delegate". The value should be a list of dictionaries, where each dictionary represents a sub-task and includes:
-- "task_description": A fully self-contained, detailed description for the sub-agent, embedding all necessary data (e.g., relevant parts of '{constraints}' or the output of 'task_interpret_idea').
-- "assigned_agent_role": The role of the agent to delegate to (e.g., "ConstraintCheckerAgent", "StackAdvisorAgent").
-- "successCriteria": A list of strings defining success for the sub-task (e.g., ["violations identified", "compliance report generated"]).
+IMPORTANT: Your entire response MUST be ONLY a single, valid JSON object.
+Do not include any explanatory text, greetings, or any characters before or after the JSON object.
+Ensure all string values within the JSON are properly quoted.
+There should be no extraneous characters or words outside of the defined JSON structure itself.
+
+The JSON object must have a key "sub_tasks_to_delegate". The value should be a list of dictionaries.
+Each dictionary in the list represents a sub-task and must include:
+- "task_description": (string) The detailed, self-contained description for the sub-agent, embedding all necessary data (e.g., relevant parts of '{constraints}' or the output of 'task_interpret_idea').
+- "assigned_agent_role": (string) The role of the agent to delegate to (e.g., "ConstraintCheckerAgent", "StackAdvisorAgent").
+- "successCriteria": (list of strings) Specific criteria for the sub-task's success (e.g., ["violations identified", "compliance report generated"]).
+
 Ensure placeholder values like "{constraints}" and the output of 'task_interpret_idea' are correctly incorporated directly into the "task_description" string you define for the sub-tasks.
 Example for 'ConstraintCheckerAgent's task_description: "Review the proposed solution: [output of task_interpret_idea] against the project_constraints_document: [content of {constraints}]. Identify any violations..."
 Example for 'StackAdvisorAgent's task_description: "Analyze the project_requirements: [output of task_interpret_idea] to propose an optimal technology stack. Consider team_skills: [extracted from {constraints}], budget_constraints: [extracted from {constraints}], and existing_architecture_details: None - new project. Provide justifications..."
+
+Example of the overall JSON structure:
+{
+  "sub_tasks_to_delegate": [
+    {
+      "task_description": "Fully self-contained description for sub-task 1...",
+      "assigned_agent_role": "Role1",
+      "successCriteria": ["Criterion A", "Criterion B"]
+    },
+    {
+      "task_description": "Fully self-contained description for sub-task 2...",
+      "assigned_agent_role": "Role2",
+      "successCriteria": ["Criterion C", "Criterion D"]
+    }
+  ]
+}
+Your response must be exactly in this format.
 ''',
-        expected_output='''A JSON object containing a list under the key "sub_tasks_to_delegate". Each item in the list must be a dictionary with "task_description" (self-contained), "assigned_agent_role", and "successCriteria" for the sub-tasks intended for ConstraintCheckerAgent and StackAdvisorAgent.''',
+        expected_output='''A single, valid JSON object with a key "sub_tasks_to_delegate". The value must be a list of dictionaries, where each dictionary contains "task_description" (string, self-contained), "assigned_agent_role" (string), and "successCriteria" (list of strings). No other text or characters outside this JSON object.''',
         agent=tech_vetting_council_agent,
         context=[task_interpret_idea],
         successCriteria=[
@@ -148,13 +172,32 @@ Based on:
 4. Project's technical vision (available as {technical_vision_str}).
 
 You must define the sub-tasks to be delegated for designing various architectural components (e.g., database schema, API design for specific modules, UI component structure).
-Return a JSON object with a key "sub_tasks_to_delegate". The value should be a list of dictionaries, where each dictionary represents a sub-task for a component design and includes:
-- "task_description": A fully self-contained, detailed description for the component design sub-task, embedding all necessary data (e.g., relevant sections from {user_idea_details_str}, {vetting_report_and_guidelines_str}, etc.).
-- "assigned_agent_role": The role of the agent to delegate to (e.g., "BackendDeveloperAgent", "FrontendDeveloperAgent", "DatabaseAdminAgent" - you'll need to decide appropriate roles or use a generic "SoftwareEngineerAgent" if specific roles aren't defined yet).
-- "successCriteria": A list of strings defining success for that component design.
+Return a JSON object with a key "sub_tasks_to_delegate". The value should be a list of dictionaries.
+IMPORTANT: Your entire response MUST be ONLY this single, valid JSON object.
+Do not include any explanatory text, greetings, or any characters before or after the JSON object.
+Ensure all string values within the JSON are properly quoted.
+There should be no extraneous characters or words outside of the defined JSON structure itself.
+
+The JSON structure for each sub-task dictionary in the list is:
+- "task_description": (string) The detailed, self-contained description for the component design sub-task, embedding all necessary data (e.g., relevant sections from {user_idea_details_str}, {vetting_report_and_guidelines_str}, etc.).
+- "assigned_agent_role": (string) The role of the agent to delegate to (e.g., "BackendDeveloperAgent", "FrontendDeveloperAgent", "DatabaseAdminAgent" - you'll need to decide appropriate roles or use a generic "SoftwareEngineerAgent" if specific roles aren't defined yet).
+- "successCriteria": (list of strings) Specific criteria for the sub-task's success.
+
 Example: { "task_description": "Design the detailed database schema for PostgreSQL based on data models found in [specific section of user_idea_details_str] and adhering to guidelines in [specific part of vetting_report_and_guidelines_str]...", "assigned_agent_role": "DatabaseAdminAgent", "successCriteria": ["schema diagram created", "SQL scripts provided"] }
+
+Example of the overall JSON structure:
+{
+  "sub_tasks_to_delegate": [
+    {
+      "task_description": "Design component X based on these details...",
+      "assigned_agent_role": "SpecialistRoleA",
+      "successCriteria": ["Design complete", "Docs provided"]
+    }
+  ]
+}
+Your response must be exactly in this format.
 ''',
-        expected_output='''A JSON object containing a list under the key "sub_tasks_to_delegate". Each item must be a dictionary with "task_description" (self-contained), "assigned_agent_role", and "successCriteria" for component design sub-tasks.''',
+        expected_output='''A single, valid JSON object with a key "sub_tasks_to_delegate". The value must be a list of dictionaries, where each dictionary contains "task_description" (string, self-contained), "assigned_agent_role" (string), and "successCriteria" (list of strings). No other text or characters outside this JSON object.''',
         agent=project_architect_agent, # Assigned to Project Architect
         # Context will be implicitly handled by the formatted description during execution
         successCriteria=[
