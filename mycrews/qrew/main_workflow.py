@@ -419,8 +419,7 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
         "technical_vision": workflow_inputs["technical_vision"]
     }
 
-    task_design_architecture_synthesis = Task(
-        description=f'''Synthesize all component design outputs into a final, detailed software architecture document.
+    synthesis_desc_arch = f"""Synthesize all component design outputs into a final, detailed software architecture document.
 Component Designs (JSON string): {architecture_synthesis_payload['component_design_results']}
 Original Technical Requirements & Feature Breakdown: {architecture_synthesis_payload['original_user_idea']}
 Vetting Report & Final Technical Guidelines: {architecture_synthesis_payload['vetting_report_and_guidelines']}
