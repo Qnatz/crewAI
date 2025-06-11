@@ -65,23 +65,30 @@ def get_task_output_string(task_output_obj: Any, task_desc_for_log: str) -> Opti
     Tries attributes 'raw', then 'raw_output'. If object is str, returns it.
     Falls back to str(object). Logs the method used. Returns None if output is effectively empty.
     """
+    extracted_str = None
     if hasattr(task_output_obj, 'raw') and isinstance(task_output_obj.raw, str) and task_output_obj.raw.strip():
         log.info(f"Extracted output for '{task_desc_for_log}' using .raw attribute.")
-        return task_output_obj.raw.strip()
+        extracted_str = task_output_obj.raw.strip()
     elif hasattr(task_output_obj, 'raw_output') and isinstance(task_output_obj.raw_output, str) and task_output_obj.raw_output.strip():
         log.info(f"Extracted output for '{task_desc_for_log}' using .raw_output attribute.")
-        return task_output_obj.raw_output.strip()
+        extracted_str = task_output_obj.raw_output.strip()
     elif isinstance(task_output_obj, str) and task_output_obj.strip():
         log.info(f"Task output for '{task_desc_for_log}' is already a string.")
-        return task_output_obj.strip()
+        extracted_str = task_output_obj.strip()
     else:
         str_output = str(task_output_obj).strip()
         log.warning(f"Could not find .raw or .raw_output string attributes for '{task_desc_for_log}', "
                     f"nor was the object itself a non-empty string. Falling back to str(). Type was: {type(task_output_obj)}, Str_output: '{str_output[:100]}...'")
         if str_output and str_output.lower() != "none": # Check if stringified output is meaningful
-            return str_output
-        log.warning(f"Fallback str(task_output_obj) for '{task_desc_for_log}' resulted in 'None' or empty string.")
-        return None
+            extracted_str = str_output
+        else: # Added else to handle the case where str_output is None or "none"
+            log.warning(f"Fallback str(task_output_obj) for '{task_desc_for_log}' resulted in 'None' or empty string.")
+            # extracted_str remains None
+
+    if extracted_str:
+        # Apply escaping here
+        return extracted_str.replace("{", "{{").replace("}", "}}")
+    return None
 
 def run_idea_to_architecture_workflow(workflow_inputs: dict):
     print("## Initializing Idea to Architecture Workflow Agents & Tasks...")
@@ -387,7 +394,8 @@ Your response must be exactly in this format.
 
             log.info(f"Delegating vetting sub-task to {actual_agent.role}: {final_description[:70]}...")
             sub_task_result = qrew_main_crew.delegate_task(task=new_sub_task)
-            delegated_task_results[assigned_role] = str(sub_task_result.raw if hasattr(sub_task_result, 'raw') else sub_task_result) # Store raw string output
+            raw_result_str = str(sub_task_result.raw if hasattr(sub_task_result, 'raw') else sub_task_result)
+            delegated_task_results[assigned_role] = raw_result_str.replace("{", "{{").replace("}", "}}") # Store raw string output
             print(f"    Sub-task for {assigned_role} completed. Result: {str(sub_task_result)[:100]}...")
 
     except json.JSONDecodeError as e:
@@ -405,8 +413,8 @@ Your response must be exactly in this format.
     synthesis_payload = {
         "constraint_checker_report": delegated_task_results.get("ConstraintCheckerAgent", "Not available"),
         "stack_advisor_report": delegated_task_results.get("StackAdvisorAgent", "Not available"),
-        "original_user_idea": workflow_inputs.get("user_idea", "User idea not explicitly passed to synthesis payload."), # Or retrieve from task_interpret_idea.output
-        "original_constraints": workflow_inputs.get("constraints", "Constraints not explicitly passed to synthesis payload.") # Or retrieve from workflow_inputs
+        "original_user_idea": workflow_inputs.get("user_idea", "User idea not explicitly passed to synthesis payload.").replace("{", "{{").replace("}", "}}"), # Or retrieve from task_interpret_idea.output
+        "original_constraints": workflow_inputs.get("constraints", "Constraints not explicitly passed to synthesis payload.").replace("{", "{{").replace("}", "}}") # Or retrieve from workflow_inputs
     }
 
     # Note: 'idea_task_output_str' is already fetched before this block.
@@ -445,13 +453,13 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
 
     # Determine the source for idea_interpretation_output for the architecture planning payload
     # 'output_of_task_interpret_idea_str' is already defined and populated.
-    synthesis_result_vetting_str = str(synthesis_result.raw if hasattr(synthesis_result, 'raw') else synthesis_result)
+    synthesis_result_vetting_str = str(synthesis_result.raw if hasattr(synthesis_result, 'raw') else synthesis_result).replace("{", "{{").replace("}", "}}")
 
     architecture_planning_context_data = {
-        "USER_IDEA_DETAILS": output_of_task_interpret_idea_str,
+        "USER_IDEA_DETAILS": output_of_task_interpret_idea_str, # Already escaped by get_task_output_string
         "VETTING_REPORT_AND_GUIDELINES": synthesis_result_vetting_str,
-        "PROJECT_CONSTRAINTS": workflow_inputs.get("constraints", "Project constraints not provided."),
-        "TECHNICAL_VISION": workflow_inputs.get("technical_vision", "Technical vision not provided.")
+        "PROJECT_CONSTRAINTS": workflow_inputs.get("constraints", "Project constraints not provided.").replace("{", "{{").replace("}", "}}"),
+        "TECHNICAL_VISION": workflow_inputs.get("technical_vision", "Technical vision not provided.").replace("{", "{{").replace("}", "}}")
     }
 
     # The task_design_architecture_planning object is defined at the module level.
@@ -554,7 +562,8 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
             arch_sub_task_result = qrew_main_crew.delegate_task(task=new_arch_sub_task)
             # Using description as key for uniqueness if multiple sub-tasks assigned to same role
             result_key = f"{assigned_role}_{sub_task_def.get('task_description', 'Unnamed_Arch_Sub_Task')[:30]}"
-            architecture_delegated_task_results[result_key] = str(arch_sub_task_result.raw if hasattr(arch_sub_task_result, 'raw') else arch_sub_task_result)
+            raw_arch_result_str = str(arch_sub_task_result.raw if hasattr(arch_sub_task_result, 'raw') else arch_sub_task_result)
+            architecture_delegated_task_results[result_key] = raw_arch_result_str.replace("{", "{{").replace("}", "}}")
             print(f"    Architecture sub-task for '{assigned_role}' completed.")
 
     except json.JSONDecodeError as e:
