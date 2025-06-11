@@ -250,8 +250,7 @@ Specific success criteria for this output include:
         traceback.print_exc()
         return None
 
-    print("
-Preparing Vetting Requirements Synthesis task...")
+    print("\nPreparing Vetting Requirements Synthesis task...")
     synthesis_payload = {
         "constraint_checker_report": delegated_task_results.get("ConstraintCheckerAgent", "Not available"),
         "stack_advisor_report": delegated_task_results.get("StackAdvisorAgent", "Not available"),
@@ -302,8 +301,7 @@ Specific success criteria for this output include:
     print(f"Synthesis task completed. Result: {str(synthesis_result)[:100]}...")
 
     # --- Architecture Design Phase ---
-    print("
-Preparing Project Architecture Design Planning task...")
+    print("\nPreparing Project Architecture Design Planning task...")
 
     idea_output_for_arch_planning = idea_task_output_str
     if idea_output_for_arch_planning == "Not available from planning_crew_result_obj" or        idea_output_for_arch_planning == "Output of task_interpret_idea not found or not in expected format.":
@@ -336,8 +334,7 @@ Preparing Project Architecture Design Planning task...")
     )
     architecture_planning_json_str = str(architecture_planning_result_obj.raw if hasattr(architecture_planning_result_obj, 'raw') else architecture_planning_result_obj)
 
-    print("
-Processing output of Architecture Design Planning...")
+    print("\nProcessing output of Architecture Design Planning...")
     architecture_delegated_task_results = {}
     try:
         json_start_index_arch = architecture_planning_json_str.find('{')
@@ -389,8 +386,7 @@ Processing output of Architecture Design Planning...")
         traceback.print_exc()
         return None
 
-    print("
-Preparing Architecture Design Synthesis task...")
+    print("\nPreparing Architecture Design Synthesis task...")
     architecture_synthesis_payload = {
         "component_design_results": json.dumps(architecture_delegated_task_results),
         "original_user_idea": idea_output_for_arch_planning,
@@ -426,8 +422,7 @@ Specific success criteria for this output include:
     )
     print("Architecture Synthesis task completed.")
 
-    print("
-Idea-to-Architecture (Full Workflow) complete.")
+    print("\nIdea-to-Architecture (Full Workflow) complete.")
     return architecture_synthesis_result
 
 if __name__ == "__main__":
