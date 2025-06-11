@@ -113,7 +113,7 @@ def run_idea_to_architecture_workflow(workflow_inputs: dict):
 
     # Task Definitions
     task_interpret_idea = Task(
-        description='''Analyze the provided user idea: "{user_idea}", stakeholder feedback: "{stakeholder_feedback}", and market research data: "{market_research_data}".
+        description='''[TASK_ID_task_interpret_idea] Analyze the provided user idea: "{user_idea}", stakeholder feedback: "{stakeholder_feedback}", and market research data: "{market_research_data}".
 Your primary goal is to deeply understand these inputs.
 Consult the Knowledge Base for any relevant past projects, architectural decisions, or definitions that could clarify or enrich the user\'s concept.
 Produce a structured set of technical requirements and a detailed feature breakdown.
@@ -141,7 +141,7 @@ The feature breakdown should detail individual components and user interactions 
     )
 
     task_vet_requirements_planning = Task(
-        description='''Your primary goal is to plan the vetting process for the Technical Requirements Specification and Feature Breakdown (available from 'task_interpret_idea' in your context).
+        description='''[TASK_ID_task_vet_requirements_planning] Your primary goal is to plan the vetting process for the Technical Requirements Specification and Feature Breakdown (available from 'task_interpret_idea' in your context).
 You MUST define the sub-tasks to be delegated to 'ConstraintCheckerAgent' and 'StackAdvisorAgent'.
 For 'ConstraintCheckerAgent', the sub-task should be to "Review the provided 'proposed_solution' (Technical Requirements Specification and Feature Breakdown) against the 'project_constraints_document' (value: "{constraints}"). Identify any violations or potential conflicts regarding budget, team skills, security policies, licensing, or infrastructure."
 For 'StackAdvisorAgent', the sub-task should be to "Analyze the provided 'project_requirements' (Technical Requirements Specification and Feature Breakdown) to propose an optimal technology stack. Consider 'team_skills' and 'budget_constraints' (both from "{constraints}") and 'existing_architecture_details' (value: "None - new project"). Provide justifications for stack choices, considering scalability, maintainability, and alignment with the technical vision."
@@ -157,6 +157,12 @@ Each dictionary in the list represents a sub-task and must include:
 - "required_context_keys": (list of strings) A list of strings, where each string is a placeholder name used in the task_description_template (e.g., ["PLACEHOLDER_NAME_1", "PLACEHOLDER_NAME_2"]). These keys MUST correspond to data available in the broader workflow context, such as the output of 'task_interpret_idea' or initial '{{constraints}}'.
 - "assigned_agent_role": (string) The role of the agent to delegate to (e.g., "ConstraintCheckerAgent", "StackAdvisorAgent").
 - "successCriteria": (list of strings) Specific criteria for the sub-task's success (e.g., ["violations identified", "compliance report generated"]).
+IMPORTANT SYNTAX NOTE FOR LISTS: After the closing square bracket ']' of any list
+(e.g., for 'required_context_keys' or 'successCriteria'), the very next character
+MUST be either a comma ',' (if another field follows in the same JSON object)
+or the closing curly brace '}' (if it's the last field in that object).
+Absolutely NO other words, text, or characters are allowed between the ']'
+and the next structural character (',' or '}').
 
 Example sub-task definition:
 {
@@ -174,7 +180,7 @@ Your response must be exactly in this format, with a top-level key "sub_tasks_to
             "sub_tasks_to_delegate list provided",
             "ConstraintCheckerAgent sub-task defined",
             "StackAdvisorAgent sub-task defined",
-            "payloads for sub-tasks correctly structured",
+            "sub-task definitions correctly structured", # Corrected "payloads"
             "successCriteria for sub-tasks defined"
         ]
     )
@@ -200,9 +206,13 @@ The JSON structure for each sub-task dictionary in the list is:
 - "required_context_keys": (list of strings) A list of strings, where each string is a placeholder name used in the task_description_template (e.g., ["PLACEHOLDER_NAME_1"]). These keys MUST correspond to data available in the broader workflow context (e.g., output of 'task_interpret_idea' as 'USER_IDEA_DETAILS', output of vetting synthesis as 'VETTING_REPORT', original constraints as 'PROJECT_CONSTRAINTS').
 - "assigned_agent_role": (string) The role of the agent to delegate to.
 - "successCriteria": (list of strings) Specific criteria for the sub-task's success.
+IMPORTANT SYNTAX NOTE FOR LISTS: After the closing square bracket ']' of any list
+(e.g., for 'required_context_keys' or 'successCriteria'), the very next character
+MUST be either a comma ',' (if another field follows in the same JSON object)
+or the closing curly brace '}' (if it's the last field in that object).
+Absolutely NO other words, text, or characters are allowed between the ']'
+and the next structural character (',' or '}').
 
-Example sub-task definition:
-{
 Example sub-task definition:
 {
   "task_description_template": "Design the database schema based on these requirements: {{USER_IDEA_DETAILS}} and adhering to guidelines: {{VETTING_REPORT}}. Focus on PostgreSQL.",
@@ -230,7 +240,7 @@ Your response must be exactly in this format.
         successCriteria=[
             "component design sub-tasks defined",
             "delegation plan for architecture created",
-            "payloads for component tasks structured",
+            "sub-task definitions correctly structured", # Corrected "payloads"
             "successCriteria for component tasks specified"
         ],
         # Payload will be added dynamically during execution, so not defined here.
@@ -265,7 +275,7 @@ Your response must be exactly in this format.
         interpret_idea_completed_task = None
         for completed_task in planning_crew_result_obj.tasks:
             if hasattr(completed_task, 'description') and isinstance(completed_task.description, str) and \
-               task_interpret_idea.description in completed_task.description:
+               "[TASK_ID_task_interpret_idea]" in completed_task.description: # Using unique marker
                 interpret_idea_completed_task = completed_task
                 break
 
@@ -278,7 +288,7 @@ Your response must be exactly in this format.
         elif interpret_idea_completed_task:
             log.warning("task_interpret_idea (completed) found but has no 'output' attribute.")
         else:
-            log.warning("task_interpret_idea (completed) not found in kickoff results.")
+            log.warning("task_interpret_idea (completed) not found in kickoff results using marker.")
 
     if output_of_task_interpret_idea_str == "Error: Could not retrieve task_interpret_idea output":
         log.warning("Failed to retrieve specific output for 'task_interpret_idea'. Using fallback or error string.")
@@ -290,7 +300,7 @@ Your response must be exactly in this format.
         vetting_planning_completed_task = None
         for completed_task in planning_crew_result_obj.tasks:
             if hasattr(completed_task, 'description') and isinstance(completed_task.description, str) and \
-               task_vet_requirements_planning.description in completed_task.description:
+               "[TASK_ID_task_vet_requirements_planning]" in completed_task.description: # Using unique marker
                 vetting_planning_completed_task = completed_task
                 break
 
@@ -303,7 +313,7 @@ Your response must be exactly in this format.
         elif vetting_planning_completed_task:
             log.warning("task_vet_requirements_planning (completed) found but has no 'output' attribute.")
         else:
-            log.warning("task_vet_requirements_planning (completed) not found in kickoff results by description match.")
+            log.warning("task_vet_requirements_planning (completed) not found in kickoff results by marker.")
 
     if not sub_task_definitions_json_str: # Check if still None or empty from tasks list processing
         # Fallback to direct .raw from kickoff result if that's a possible structure
@@ -622,3 +632,5 @@ if __name__ == "__main__":
         print(final_result.raw if hasattr(final_result, 'raw') else str(final_result))
     else:
         print("Idea-to-Architecture Crew produced no output or an error occurred.")
+
+[end of mycrews/qrew/main_workflow.py]
