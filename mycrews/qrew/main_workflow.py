@@ -404,26 +404,128 @@ Project's technical vision: {architecture_synthesis_payload['technical_vision']}
 
     task_design_architecture_synthesis = Task(
         description=synthesis_desc_arch,
-        expected_output='''A detailed software architecture document, including: High-level system diagrams, Technology stack recommendations for each component, Data model design overview, API design guidelines, Integration points, Non-functional requirements considerations.
+        expected_output='''Return a JSON STRING that represents the final architecture.
+The JSON object MUST include the following top-level keys:
+- "type": Set this to the string "software".
+- "summary": A comprehensive textual summary of the entire architecture, including an overview, key decisions, security, cost, CI/CD, monitoring, and any risks or pending items. This should be similar to the detailed textual document previously generated.
+- "approved_technologies": A dictionary or list detailing core approved technologies (e.g., frontend, backend, database, infrastructure).
+- "pending_decisions": A list of critical decisions that are still unresolved (e.g., specific frameworks, compute services).
+- "security_plan_summary": A brief summary of the security implementation plan.
+- "cost_analysis_summary": A brief summary of the cost analysis and optimization strategies.
+- "ci_cd_pipeline_summary": A brief summary of the CI/CD automation pipeline design.
+- "monitoring_strategy_summary": A brief summary of the monitoring strategy.
+- "backend_spec": A string detailing backend architecture, technologies, APIs, and data models. If not fully detailed, provide a high-level overview and placeholders for further breakdown.
+- "frontend_spec": A string detailing frontend architecture (e.g., for web or a general placeholder if mobile is separate), technologies, and key UI components. If not fully detailed, provide a high-level overview.
+- "mobile_spec": A string detailing mobile architecture (if applicable, otherwise null or a note that it's not in scope), technologies, and key UI components. If not fully detailed, provide a high-level overview.
+- "data_model_summary": A brief overview of the data model design.
+- "api_guidelines_summary": A brief summary of API design guidelines.
+- "integration_points_summary": A brief summary of key integration points.
+- "non_functional_requirements_summary": A brief summary of how non-functional requirements are addressed.
 
+Example of the expected JSON STRING structure (content is illustrative):
+{
+  "type": "software",
+  "summary": "This document provides the approved technical foundation... Strengths... Risks...",
+  "approved_technologies": {
+    "frontend": "React/TypeScript",
+    "backend": "Python",
+    "database": "PostgreSQL on RDS",
+    "infrastructure": "AWS ecosystem"
+  },
+  "pending_decisions": [
+    "Backend Framework: Django vs Flask",
+    "Compute Service: ECS Fargate vs AWS Lambda"
+  ],
+  "security_plan_summary": "Detailed measures for encryption (KMS), vulnerability scanning (Inspector)...",
+  "cost_analysis_summary": "Projected $2K-$3.2K monthly operational costs. Optimization strategies defined...",
+  "ci_cd_pipeline_summary": "GitHub Actions pipeline with environment promotion gates...",
+  "monitoring_strategy_summary": "CloudWatch-centered observability with structured JSON logging...",
+  "backend_spec": "Backend will be Python-based (Django or Flask decision pending). Key modules include user management, pet profiles, training logs. RESTful APIs will be designed. Data models will revolve around User, Pet, TrainingSession entities.",
+  "frontend_spec": "Web frontend will use React/TypeScript. Key components: Dashboard, ProfileView, SessionPlayer. Will communicate with backend via REST APIs.",
+  "mobile_spec": "Mobile app (platform TBD or if specified elsewhere) will provide similar functionality to the web frontend, focusing on native user experience. Will use the same backend APIs.",
+  "data_model_summary": "Relational data model using PostgreSQL. Key entities: Users, Pets, TrainingSessions, Progress.",
+  "api_guidelines_summary": "RESTful APIs, versioned, secured with JWT.",
+  "integration_points_summary": "Auth0 for authentication, Stripe for payments, Sentry for error monitoring.",
+  "non_functional_requirements_summary": "Scalability addressed via modular design and AWS auto-scaling. Security via KMS, IAM, and regular pen-testing."
+}
+
+Ensure the output is a single, valid JSON string.
 Specific success criteria for this output include:
-- software architecture document created
-- high-level system diagrams included
-- technology stack recommendations provided
-- data model design overview included
-- API design guidelines defined
-- integration points identified''',
+- Valid JSON string produced.
+- All specified top-level keys are present in the JSON object.
+- The "type" field is "software".
+- The "summary" field contains a comprehensive textual architectural overview.
+- Other fields contain relevant summaries or details as requested.''',
         agent=project_architect_agent
     )
 
     print("Executing Architecture Design Synthesis task using qrew_main_crew...")
-    architecture_synthesis_result = qrew_main_crew.delegate_task(
+    architecture_synthesis_result_obj = qrew_main_crew.delegate_task(
         task=task_design_architecture_synthesis,
     )
     print("Architecture Synthesis task completed.")
 
+    final_output_data = None
+    raw_json_string = None
+
+    if hasattr(architecture_synthesis_result_obj, 'raw_output') and architecture_synthesis_result_obj.raw_output:
+        raw_json_string = architecture_synthesis_result_obj.raw_output
+    elif hasattr(architecture_synthesis_result_obj, 'raw') and architecture_synthesis_result_obj.raw:
+        raw_json_string = architecture_synthesis_result_obj.raw
+    elif isinstance(architecture_synthesis_result_obj, str):
+        raw_json_string = architecture_synthesis_result_obj
+    else:
+        print(f"Warning: Architecture synthesis result is not a string or standard TaskOutput. Type: {type(architecture_synthesis_result_obj)}. Attempting to stringify.")
+        raw_json_string = str(architecture_synthesis_result_obj)
+
+    if raw_json_string:
+        try:
+            # The agent might return a markdown code block like ```json
+#{...}
+#```
+            # Try to extract JSON from markdown code block if present
+            if raw_json_string.strip().startswith("```json"):
+                json_block = raw_json_string.strip()
+                # Remove ```json prefix and ``` suffix
+                json_block = json_block[len("```json"):].strip()
+                if json_block.endswith("```"):
+                    json_block = json_block[:-len("```")].strip()
+                raw_json_string = json_block
+            elif raw_json_string.strip().startswith("```"): # Generic markdown code block
+                 json_block = raw_json_string.strip()
+                 json_block = json_block[len("```"):].strip()
+                 if json_block.endswith("```"):
+                    json_block = json_block[:-len("```")].strip()
+                 raw_json_string = json_block
+
+
+            final_output_data = json.loads(raw_json_string)
+            print("Successfully parsed architecture synthesis JSON string.")
+        except json.JSONDecodeError as e:
+            print(f"Error: Failed to parse JSON from architecture synthesis result: {e}")
+            print(f"Raw output that failed parsing:\n'''{raw_json_string}'''")
+            # Fallback: return a dictionary with an error and the raw content
+            final_output_data = {
+                "error": "Failed to parse architecture JSON",
+                "raw_content": raw_json_string,
+                "type": "error_parsing_architecture" # To prevent triggering next phase
+            }
+        except Exception as e:
+            print(f"An unexpected error occurred during JSON parsing of architecture result: {e}")
+            final_output_data = {
+                "error": f"Unexpected error during JSON parsing: {str(e)}",
+                "raw_content": raw_json_string,
+                "type": "error_parsing_architecture"
+            }
+    else:
+        print("Error: Architecture synthesis result was empty or None.")
+        final_output_data = {
+            "error": "Architecture synthesis result was empty",
+            "type": "error_empty_architecture_result"
+        }
+
     print("\nIdea-to-Architecture (Full Workflow) complete.")
-    return architecture_synthesis_result
+    return final_output_data
 
 if __name__ == "__main__":
     print("## Starting QREW Main Entry Point (which will call Idea to Architecture Workflow)")
