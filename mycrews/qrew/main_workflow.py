@@ -1,5 +1,6 @@
 import json # Added for parsing sub-task definitions
 import logging # Added for logging in dynamic task creation
+from typing import Any, Optional # Added Optional
 from crewai import Process, Task # Crew removed from here
 from crewai.utilities.i18n import I18N
 import os
@@ -7,6 +8,8 @@ from .llm_config import default_llm # Added for qrew_main_crew
 from .config import example_summary_validator # Imported validator
 from .validated_crew import ValidatedCrew # Added ValidatedCrew import
 # from crewai import Task # Added for the validator's type hint - already imported
+
+log = logging.getLogger(__name__) # Define module-level logger
 
 # Orchestrator Agents
 from .orchestrators.idea_interpreter_agent.agent import idea_interpreter_agent
@@ -54,6 +57,31 @@ qrew_main_crew.configure_quality_gate(
 )
 print("qrew_main_crew initialized and Quality Gate configured in main_workflow.py.")
 # --- End of Main Qrew Crew Setup ---
+
+# Helper function for robust output string extraction
+def get_task_output_string(task_output_obj: Any, task_desc_for_log: str) -> Optional[str]:
+    """
+    Attempts to extract a raw string output from a Task's output object.
+    Tries attributes 'raw', then 'raw_output'. If object is str, returns it.
+    Falls back to str(object). Logs the method used. Returns None if output is effectively empty.
+    """
+    if hasattr(task_output_obj, 'raw') and isinstance(task_output_obj.raw, str) and task_output_obj.raw.strip():
+        log.info(f"Extracted output for '{task_desc_for_log}' using .raw attribute.")
+        return task_output_obj.raw.strip()
+    elif hasattr(task_output_obj, 'raw_output') and isinstance(task_output_obj.raw_output, str) and task_output_obj.raw_output.strip():
+        log.info(f"Extracted output for '{task_desc_for_log}' using .raw_output attribute.")
+        return task_output_obj.raw_output.strip()
+    elif isinstance(task_output_obj, str) and task_output_obj.strip():
+        log.info(f"Task output for '{task_desc_for_log}' is already a string.")
+        return task_output_obj.strip()
+    else:
+        str_output = str(task_output_obj).strip()
+        log.warning(f"Could not find .raw or .raw_output string attributes for '{task_desc_for_log}', "
+                    f"nor was the object itself a non-empty string. Falling back to str(). Type was: {type(task_output_obj)}, Str_output: '{str_output[:100]}...'")
+        if str_output and str_output.lower() != "none": # Check if stringified output is meaningful
+            return str_output
+        log.warning(f"Fallback str(task_output_obj) for '{task_desc_for_log}' resulted in 'None' or empty string.")
+        return None
 
 def run_idea_to_architecture_workflow(workflow_inputs: dict):
     print("## Initializing Idea to Architecture Workflow Agents & Tasks...")
@@ -232,47 +260,64 @@ Your response must be exactly in this format.
     # Initial crew for idea interpretation and vetting planning
     planning_crew_result_obj = idea_to_architecture_crew.kickoff(inputs=workflow_inputs)
 
-    # Extracting the raw output string from the planning task.
-    # This assumes the last task in the sequential crew is task_vet_requirements_planning.
-    # Adjust if CrewAI's kickoff result structure is different or if a specific task output is needed.
-    sub_task_definitions_json_str = None
-    output_of_task_interpret_idea_str = "Error: Could not retrieve task_interpret_idea output" # Initialize
-    log = logging.getLogger(__name__) # Ensure log is available
+    output_of_task_interpret_idea_str = "Error: Could not retrieve task_interpret_idea output" # Default
+    if planning_crew_result_obj and hasattr(planning_crew_result_obj, 'tasks') and planning_crew_result_obj.tasks:
+        interpret_idea_completed_task = None
+        for completed_task in planning_crew_result_obj.tasks:
+            if hasattr(completed_task, 'description') and isinstance(completed_task.description, str) and \
+               task_interpret_idea.description in completed_task.description:
+                interpret_idea_completed_task = completed_task
+                break
 
-    if hasattr(planning_crew_result_obj, 'tasks') and planning_crew_result_obj.tasks:
-        for task_output_obj in planning_crew_result_obj.tasks:
-            # Robustly find the output of task_interpret_idea
-            # Check if the module-level task's original description is part of the executed task's description
-            # This handles cases where the description might have been formatted with kickoff inputs
-            if hasattr(task_output_obj, 'description') and task_interpret_idea.description in task_output_obj.description:
-                if hasattr(task_output_obj, 'output') and hasattr(task_output_obj.output, 'raw_output'):
-                    output_of_task_interpret_idea_str = task_output_obj.output.raw_output
-                    log.info("Successfully extracted raw_output from task_interpret_idea.")
-                elif hasattr(task_output_obj, 'output'):
-                    output_of_task_interpret_idea_str = str(task_output_obj.output)
-                    log.info("Successfully extracted stringified output from task_interpret_idea.")
-                break # Found task_interpret_idea's output
-        if output_of_task_interpret_idea_str == "Error: Could not retrieve task_interpret_idea output":
-            log.warning("Failed to retrieve specific output for 'task_interpret_idea' from structured kickoff result.")
-
-        # Find the output of task_vet_requirements_planning (usually the last one in this specific crew)
-        planning_task_output_data = planning_crew_result_obj.tasks[-1].output
-        if hasattr(planning_task_output_data, 'raw_output'):
-            sub_task_definitions_json_str = planning_task_output_data.raw_output
+        if interpret_idea_completed_task and hasattr(interpret_idea_completed_task, 'output'):
+            extracted_str = get_task_output_string(interpret_idea_completed_task.output, "task_interpret_idea")
+            if extracted_str:
+                 output_of_task_interpret_idea_str = extracted_str
+            else:
+                 log.warning("get_task_output_string returned None or empty for task_interpret_idea.")
+        elif interpret_idea_completed_task:
+            log.warning("task_interpret_idea (completed) found but has no 'output' attribute.")
         else:
-            sub_task_definitions_json_str = str(planning_task_output_data)
-            log.warning("Using stringified output for task_vet_requirements_planning as raw_output not found.")
+            log.warning("task_interpret_idea (completed) not found in kickoff results.")
 
-    elif hasattr(planning_crew_result_obj, 'raw'): # Fallback if kickoff returns only the last raw output
-        sub_task_definitions_json_str = planning_crew_result_obj.raw
-        log.warning("Using kickoff's direct raw output for task_vet_requirements_planning. Output of task_interpret_idea might be unavailable for context mapping if not in workflow_inputs.")
-        # Attempt to get task_interpret_idea output from workflow_inputs if not found in structured results
-        if output_of_task_interpret_idea_str == "Error: Could not retrieve task_interpret_idea output":
-             output_of_task_interpret_idea_str = str(workflow_inputs.get("user_idea", "User idea from workflow_inputs as fallback"))
+    if output_of_task_interpret_idea_str == "Error: Could not retrieve task_interpret_idea output":
+        log.warning("Failed to retrieve specific output for 'task_interpret_idea'. Using fallback or error string.")
+        # Fallback to workflow_inputs if essential and not found, or handle error
+        # output_of_task_interpret_idea_str = str(workflow_inputs.get("user_idea", "User idea from workflow_inputs as fallback"))
 
+    sub_task_definitions_json_str = None # Initialize
+    if planning_crew_result_obj and hasattr(planning_crew_result_obj, 'tasks') and len(planning_crew_result_obj.tasks) > 0:
+        vetting_planning_completed_task = None
+        for completed_task in planning_crew_result_obj.tasks:
+            if hasattr(completed_task, 'description') and isinstance(completed_task.description, str) and \
+               task_vet_requirements_planning.description in completed_task.description:
+                vetting_planning_completed_task = completed_task
+                break
+
+        if vetting_planning_completed_task and hasattr(vetting_planning_completed_task, 'output'):
+            extracted_str = get_task_output_string(vetting_planning_completed_task.output, "task_vet_requirements_planning")
+            if extracted_str:
+                sub_task_definitions_json_str = extracted_str
+            else:
+                log.warning("get_task_output_string returned None or empty for task_vet_requirements_planning.")
+        elif vetting_planning_completed_task:
+            log.warning("task_vet_requirements_planning (completed) found but has no 'output' attribute.")
+        else:
+            log.warning("task_vet_requirements_planning (completed) not found in kickoff results by description match.")
+
+    if not sub_task_definitions_json_str: # Check if still None or empty from tasks list processing
+        # Fallback to direct .raw from kickoff result if that's a possible structure
+        if hasattr(planning_crew_result_obj, 'raw') and isinstance(planning_crew_result_obj.raw, str) and planning_crew_result_obj.raw.strip():
+            log.info("Using planning_crew_result_obj.raw for task_vet_requirements_planning output as tasks list processing failed or yielded empty.")
+            sub_task_definitions_json_str = planning_crew_result_obj.raw.strip()
+        # Fallback if kickoff result itself is a string
+        elif isinstance(planning_crew_result_obj, str) and planning_crew_result_obj.strip():
+             log.info("Using planning_crew_result_obj (string) for task_vet_requirements_planning output.")
+             sub_task_definitions_json_str = planning_crew_result_obj.strip()
 
     if not sub_task_definitions_json_str:
-        print("Error: Vetting Requirements Planning task did not produce an output string.")
+        print("Error: Vetting Requirements Planning task did not produce a usable output string.")
+        log.error("sub_task_definitions_json_str is None or empty after attempting all extraction methods.")
         return None
 
     print("\nProcessing output of Vetting Requirements Planning...")
@@ -431,7 +476,11 @@ The Final Technical Guidelines should list approved technologies, patterns, or c
     architecture_planning_result_obj = qrew_main_crew.delegate_task(
         task=executable_task_design_architecture_planning, # Use the new executable instance
     )
-    architecture_planning_json_str = str(architecture_planning_result_obj.raw if hasattr(architecture_planning_result_obj, 'raw') else architecture_planning_result_obj)
+    architecture_planning_json_str = get_task_output_string(architecture_planning_result_obj, "executable_task_design_architecture_planning")
+    if not architecture_planning_json_str: # Check if None or empty
+        print("Error: Architecture Design Planning task did not produce a usable output string.") # Keep this error
+        log.error("architecture_planning_json_str is None or empty after get_task_output_string for arch planning.")
+        return None
 
     print("\nProcessing output of Architecture Design Planning...")
     architecture_delegated_task_results = {}
