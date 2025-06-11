@@ -1,8 +1,8 @@
 from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
-from ...llm_config import default_llm
-from ...config import example_summary_validator
+from ..llm_config import default_llm
+from ..config import example_summary_validator
 from ..validated_crew import ValidatedCrew # Added ValidatedCrew
 
 # Import actual backend agents

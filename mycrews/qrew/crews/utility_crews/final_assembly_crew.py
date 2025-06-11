@@ -1,9 +1,9 @@
 from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
-from ...llm_config import default_llm # Corrected path to ..
-from ...config import example_summary_validator # Corrected path to ..
-from ...validated_crew import ValidatedCrew # Added ValidatedCrew
+from ..llm_config import default_llm # Corrected path to ..
+from ..config import example_summary_validator # Corrected path to ..
+from ..validated_crew import ValidatedCrew # Added ValidatedCrew
 
 # Import best-fit actual agents
 from mycrews.qrew.orchestrators.final_assembler_agent import final_assembler_agent
