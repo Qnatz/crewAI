@@ -105,19 +105,26 @@ class ValidatedCrew(Crew):
             passed_quality_gate = True
             current_attempt_feedback_messages: List[str] = [] # Feedback for *this* attempt's QG failures
 
-            if self._keyword_check_enabled and task.successCriteria:
+            # 1. Keyword Check
+            criteria_to_check = getattr(task, 'successCriteria', []) # Use getattr with default empty list
+
+            if self._keyword_check_enabled and criteria_to_check: # Now checks criteria_to_check
                 result_str_for_keyword_check = str(result.get("output", result) if isinstance(result, dict) else result)
-                if not result_str_for_keyword_check and not task.successCriteria: # Allow empty output if no criteria
-                    pass # Considered a pass
-                elif not result_str_for_keyword_check and task.successCriteria:
+
+                # Handle empty output vs empty criteria explicitly first
+                if not result_str_for_keyword_check and not criteria_to_check:
+                    # This case means: output is empty, and no criteria were set. This is a PASS for keyword check.
+                    pass
+                elif not result_str_for_keyword_check and criteria_to_check:
+                     # Output is empty, but criteria were expected. This is a FAIL.
                      passed_quality_gate = False
-                     feedback_messages.append("Output was empty, but successCriteria were expected.")
+                     current_attempt_feedback_messages.append("Output was empty, but successCriteria were expected.")
                      log.info(f"Task '{task.description}' failed keyword check: Output empty, criteria present.")
-                else:
-                    for criterion in task.successCriteria:
+                else: # Output is not empty, and criteria might be present
+                    for criterion in criteria_to_check: # Iterate using criteria_to_check
                         if criterion.lower() not in result_str_for_keyword_check.lower():
                             passed_quality_gate = False
-                            feedback_messages.append(f"Keyword criterion not met: '{criterion}'")
+                            current_attempt_feedback_messages.append(f"Keyword criterion not met: '{criterion}'")
                             log.info(f"Task '{task.description}' failed keyword check: '{criterion}' not in output.")
 
             if self._custom_validators:
@@ -126,11 +133,11 @@ class ValidatedCrew(Crew):
                         if not validator(task, result):
                             passed_quality_gate = False
                             # Assuming validator logs its own failure reason if it wants to be specific
-                            feedback_messages.append(f"Custom validator '{validator.__name__}' failed.")
+                            current_attempt_feedback_messages.append(f"Custom validator '{validator.__name__}' failed.")
                             log.info(f"Task '{task.description}' failed custom validator '{validator.__name__}'.")
                     except Exception as e:
                         passed_quality_gate = False
-                        feedback_messages.append(f"Error in custom validator '{validator.__name__}': {str(e)}")
+                        current_attempt_feedback_messages.append(f"Error in custom validator '{validator.__name__}': {str(e)}")
                         log.error(f"Task '{task.description}': Error executing custom validator '{validator.__name__}': {e}", exc_info=True)
 
             if passed_quality_gate:
