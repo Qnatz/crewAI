@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 # Add the project root (/app) to sys.path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 if project_root not in sys.path:
@@ -25,6 +26,7 @@ os.environ["LITELLM_DEBUG"] = "1"
 
 from crewai import Task, Crew # type: ignore
 from .main_workflow import qrew_main_crew, run_idea_to_architecture_workflow # Modified import
+from .workflows.code_implementation_workflow import run_code_implementation_workflow
 
 def run_qrew():
     print("Initializing Qrew System...")
@@ -107,8 +109,85 @@ def run_qrew():
             print("## Main Workflow (Idea-to-Architecture) Execution Result:")
             print("####################################################\n")
             if architecture_crew_result:
+                # Attempt to get the raw output, trying common CrewAI TaskOutput attributes
+                arch_output_data = None
+                if hasattr(architecture_crew_result, 'raw_output') and architecture_crew_result.raw_output:
+                    arch_output_data = architecture_crew_result.raw_output
+                elif hasattr(architecture_crew_result, 'raw') and architecture_crew_result.raw:
+                    arch_output_data = architecture_crew_result.raw
+                elif hasattr(architecture_crew_result, 'pydantic_output') and architecture_crew_result.pydantic_output:
+                    arch_output_data = architecture_crew_result.pydantic_output
+                elif isinstance(architecture_crew_result, str): # If it's just a string
+                    arch_output_data = architecture_crew_result
+                elif isinstance(architecture_crew_result, dict): # If it's a dictionary
+                    arch_output_data = architecture_crew_result
+                else:
+                    print(f"Architecture Crew produced an output of type: {type(architecture_crew_result)}, attempting to print string representation.")
+                    print(str(architecture_crew_result))
+
+                # If arch_output_data is a string, try to parse it as JSON
+                if isinstance(arch_output_data, str):
+                    try:
+                        parsed_json = json.loads(arch_output_data)
+                        if isinstance(parsed_json, dict): # Ensure parsing resulted in a dictionary
+                            arch_output_data = parsed_json
+                        else: # If parsing results in something else (e.g. a list), log it but don't replace
+                            print(f"Warning: Parsed architecture output (from string) is not a dictionary. Type: {type(parsed_json)}. Using raw string for 'type' check.")
+                    except json.JSONDecodeError:
+                        print(f"Warning: Architecture output is a string but not valid JSON. Raw string: {arch_output_data[:200]}")
+                        # Keep arch_output_data as string for the .get("type") attempt if it's not JSON
+                    except Exception as e:
+                        print(f"Error during JSON parsing of architecture output string: {e}. Using raw string.")
+
+
                 print("Final output from the Architecture Crew:")
-                print(architecture_crew_result.raw if hasattr(architecture_crew_result, 'raw') else str(architecture_crew_result))
+                if isinstance(arch_output_data, dict):
+                    # Pretty print if it's a dictionary
+                    try:
+                        print(json.dumps(arch_output_data, indent=2))
+                    except Exception as e:
+                        print(f"Could not JSON dump arch_output_data (dict), printing as is: {arch_output_data}")
+
+                elif isinstance(arch_output_data, str):
+                    print(arch_output_data) # Print as is if it's a string
+                else: # Fallback for other types
+                    print(str(arch_output_data))
+
+
+                # Check the 'type' of the architecture result to decide if code implementation should run
+                architecture_type = None
+                if isinstance(arch_output_data, dict):
+                    architecture_type = arch_output_data.get("type")
+                elif isinstance(arch_output_data, str): # If it's a string, we can't reliably get "type" unless it's simple key-value like.
+                    print("Warning: Architecture output is a string, cannot reliably get 'type'. Assuming not 'software'.")
+
+
+                if architecture_type == "software":
+                    print("\n🚀 Architecture type is 'software'. Proceeding to Code Implementation Pipeline...")
+                    # Ensure json is imported in main.py if not already
+                    # import json # Add this at the top of main.py if not present
+                    code_impl_results = run_code_implementation_workflow(arch_output_data) # Pass the potentially parsed dict
+                    print("\n####################################################")
+                    print("## Code Implementation Workflow Execution Result:")
+                    print("####################################################\n")
+                    if code_impl_results:
+                        print("Final output from the Code Implementation Workflow:")
+                        # Assuming code_impl_results is a list of TaskOutput objects or similar
+                        for idx, result_item in enumerate(code_impl_results):
+                            print(f"--- Result {idx + 1} ---")
+                            if hasattr(result_item, 'raw_output') and result_item.raw_output:
+                                print(result_item.raw_output)
+                            elif hasattr(result_item, 'raw') and result_item.raw:
+                                print(result_item.raw)
+                            elif isinstance(result_item, str):
+                                print(result_item)
+                            else:
+                                print(str(result_item))
+                            print("--- End Result ---")
+                    else:
+                        print("Code Implementation Workflow produced no output or an error occurred.")
+                else:
+                    print(f"\nArchitecture type is '{architecture_type}' (or type not found/string). Skipping Code Implementation Pipeline.")
             else:
                 print("Architecture Crew produced no output or an error occurred.")
         else:
