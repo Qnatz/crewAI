@@ -482,27 +482,52 @@ Specific success criteria for this output include:
 
     if raw_json_string:
         try:
-            # The agent might return a markdown code block like ```json
-#{...}
-#```
-            # Try to extract JSON from markdown code block if present
-            if raw_json_string.strip().startswith("```json"):
-                json_block = raw_json_string.strip()
-                # Remove ```json prefix and ``` suffix
-                json_block = json_block[len("```json"):].strip()
-                if json_block.endswith("```"):
-                    json_block = json_block[:-len("```")].strip()
-                raw_json_string = json_block
-            elif raw_json_string.strip().startswith("```"): # Generic markdown code block
-                 json_block = raw_json_string.strip()
-                 json_block = json_block[len("```"):].strip()
-                 if json_block.endswith("```"):
-                    json_block = json_block[:-len("```")].strip()
-                 raw_json_string = json_block
+            # Attempt to find the start of a JSON markdown block or a raw JSON object
+            content_to_parse = raw_json_string # Start with the original raw string
+
+            # Most specific case: ```json ... ```
+            md_json_start_index = content_to_parse.find("```json")
+            if md_json_start_index != -1:
+                # Slice from the start of "```json"
+                temp_str = content_to_parse[md_json_start_index + len("```json"):]
+                # Find the end of this block
+                md_end_index = temp_str.find("```")
+                if md_end_index != -1:
+                    content_to_parse = temp_str[:md_end_index].strip()
+                else: # Should not happen if markdown is well-formed, but as a fallback
+                    content_to_parse = temp_str.strip() # Assume rest of string is JSON
+            else:
+                # Generic case: ``` ... ```
+                md_code_start_index = content_to_parse.find("```")
+                if md_code_start_index != -1:
+                    # Slice from after the first ```
+                    temp_str = content_to_parse[md_code_start_index + len("```"):]
+                    # Find the end of this block
+                    md_end_index = temp_str.find("```")
+                    if md_end_index != -1:
+                        content_to_parse = temp_str[:md_end_index].strip()
+                    else: # Fallback: assume rest of string after first ``` is the content
+                        content_to_parse = temp_str.strip()
+                else:
+                    # Fallback if no markdown fences were found *anywhere*:
+                    # try to find the first '{' and last '}' in the original raw_json_string
+                    # This is more brittle but can catch raw JSON outputs if agent forgets fences.
+                    first_brace = raw_json_string.find('{')
+                    last_brace = raw_json_string.rfind('}')
+                    if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+                        content_to_parse = raw_json_string[first_brace : last_brace + 1].strip()
+                    else:
+                        # If none of the above, assume the whole string was meant to be JSON.
+                        content_to_parse = raw_json_string.strip()
 
 
-            final_output_data = json.loads(raw_json_string)
-            print("Successfully parsed architecture synthesis JSON string.")
+            if content_to_parse: # Ensure we have something to parse
+                final_output_data = json.loads(content_to_parse)
+                print("Successfully parsed architecture synthesis JSON string.")
+            else:
+                # This case would be hit if raw_json_string was not empty, but all parsing attempts resulted in an empty string.
+                raise json.JSONDecodeError("Could not isolate a non-empty JSON string from the raw output.", raw_json_string, 0)
+
         except json.JSONDecodeError as e:
             print(f"Error: Failed to parse JSON from architecture synthesis result: {e}")
             print(f"Raw output that failed parsing:\n'''{raw_json_string}'''")
