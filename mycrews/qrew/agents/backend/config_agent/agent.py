@@ -1,5 +1,10 @@
 from crewai import Agent
 from ....llm_config import get_llm_for_agent
+from ....tools import FileSystemTool, ShellTool # Assuming this path
+
+# Instantiate tools
+file_system_tool = FileSystemTool()
+shell_tool = ShellTool()
 
 # Use the agent's role or a unique key for the lookup
 agent_identifier = "config_agent_backend" # Matching the key in MODEL_BY_AGENT
@@ -10,6 +15,7 @@ config_agent = Agent(
     goal="Manage and maintain configuration settings for backend applications and services",
     backstory="An organized agent dedicated to ensuring backend systems are correctly configured for optimal performance, security, and reliability.",
     llm=specific_llm, # Assign the fetched LLM
+    tools=[file_system_tool, shell_tool], # Added tools
     allow_delegation=False,
     verbose=True
 )
