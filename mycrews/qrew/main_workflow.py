@@ -404,8 +404,9 @@ Project's technical vision: {architecture_synthesis_payload['technical_vision']}
 
     task_design_architecture_synthesis = Task(
         description=synthesis_desc_arch,
-        expected_output='''Return a JSON STRING that represents the final architecture.
-The JSON object MUST include the following top-level keys:
+        expected_output='''CRITICAL INSTRUCTION: YOUR ENTIRE RESPONSE MUST BE A SINGLE, VALID JSON STRING. DO NOT OUTPUT ANY TEXT, CONVERSATION, MARKDOWN FENCES (unless the fence perfectly encloses ONLY the JSON object), OR EXPLANATIONS BEFORE OR AFTER THE JSON STRING. START YOUR RESPONSE IMMEDIATELY WITH '{' (the opening curly brace of the JSON object) OR WITH '```json\n{' (if using a markdown fence). THE JSON OBJECT MUST ADHERE TO THE STRUCTURE DESCRIBED BELOW.
+
+The JSON object you return MUST include the following top-level keys:
 - "type": Set this to the string "software".
 - "summary": A comprehensive textual summary of the entire architecture, including an overview, key decisions, security, cost, CI/CD, monitoring, and any risks or pending items. This should be similar to the detailed textual document previously generated.
 - "approved_technologies": A dictionary or list detailing core approved technologies (e.g., frontend, backend, database, infrastructure).
@@ -422,31 +423,31 @@ The JSON object MUST include the following top-level keys:
 - "integration_points_summary": A brief summary of key integration points.
 - "non_functional_requirements_summary": A brief summary of how non-functional requirements are addressed.
 
-Example of the expected JSON STRING structure (content is illustrative):
+Example of the expected JSON STRING structure (content is illustrative and should be brief in this example):
 {
   "type": "software",
-  "summary": "This document provides the approved technical foundation... Strengths... Risks...",
+  "summary": "Brief overall summary of the architecture.",
   "approved_technologies": {
-    "frontend": "React/TypeScript",
-    "backend": "Python",
-    "database": "PostgreSQL on RDS",
-    "infrastructure": "AWS ecosystem"
+    "frontend": "ExampleFrontendTech",
+    "backend": "ExampleBackendTech",
+    "database": "ExampleDB",
+    "infrastructure": "ExampleInfra"
   },
   "pending_decisions": [
-    "Backend Framework: Django vs Flask",
-    "Compute Service: ECS Fargate vs AWS Lambda"
+    "Decision A",
+    "Decision B"
   ],
-  "security_plan_summary": "Detailed measures for encryption (KMS), vulnerability scanning (Inspector)...",
-  "cost_analysis_summary": "Projected $2K-$3.2K monthly operational costs. Optimization strategies defined...",
-  "ci_cd_pipeline_summary": "GitHub Actions pipeline with environment promotion gates...",
-  "monitoring_strategy_summary": "CloudWatch-centered observability with structured JSON logging...",
-  "backend_spec": "Backend will be Python-based (Django or Flask decision pending). Key modules include user management, pet profiles, training logs. RESTful APIs will be designed. Data models will revolve around User, Pet, TrainingSession entities.",
-  "frontend_spec": "Web frontend will use React/TypeScript. Key components: Dashboard, ProfileView, SessionPlayer. Will communicate with backend via REST APIs.",
-  "mobile_spec": "Mobile app (platform TBD or if specified elsewhere) will provide similar functionality to the web frontend, focusing on native user experience. Will use the same backend APIs.",
-  "data_model_summary": "Relational data model using PostgreSQL. Key entities: Users, Pets, TrainingSessions, Progress.",
-  "api_guidelines_summary": "RESTful APIs, versioned, secured with JWT.",
-  "integration_points_summary": "Auth0 for authentication, Stripe for payments, Sentry for error monitoring.",
-  "non_functional_requirements_summary": "Scalability addressed via modular design and AWS auto-scaling. Security via KMS, IAM, and regular pen-testing."
+  "security_plan_summary": "Brief security plan summary.",
+  "cost_analysis_summary": "Brief cost analysis summary.",
+  "ci_cd_pipeline_summary": "Brief CI/CD pipeline summary.",
+  "monitoring_strategy_summary": "Brief monitoring strategy summary.",
+  "backend_spec": "Brief backend specification details.",
+  "frontend_spec": "Brief frontend specification details.",
+  "mobile_spec": "Brief mobile specification details (or null if not applicable).",
+  "data_model_summary": "Brief data model summary.",
+  "api_guidelines_summary": "Brief API guidelines summary.",
+  "integration_points_summary": "Brief integration points summary.",
+  "non_functional_requirements_summary": "Brief NFR summary."
 }
 
 Ensure the output is a single, valid JSON string.
@@ -456,8 +457,6 @@ Specific success criteria for this output include:
 - The "type" field is "software".
 - The "summary" field contains a comprehensive textual architectural overview.
 - Other fields contain relevant summaries or details as requested.
-
-IMPORTANT: Your response MUST start directly with the JSON structure (e.g., starting with '{' or '```json\n{'). Do NOT include any introductory text, conversational remarks, explanations, or any other text before the JSON object itself. The entire output must be only the JSON string content that adheres to the structure described above.
 ''',
         agent=project_architect_agent
     )
