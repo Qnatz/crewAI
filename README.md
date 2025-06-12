@@ -407,6 +407,7 @@ CrewAI stands apart as a lean, standalone, high-performance multi-AI Agent frame
 
 - **Standalone & Lean**: Completely independent from other frameworks like LangChain, offering faster execution and lighter resource demands.
 - **Flexible & Precise**: Easily orchestrate autonomous agents through intuitive [Crews](https://docs.crewai.com/concepts/crews) or precise [Flows](https://docs.crewai.com/concepts/flows), achieving perfect balance for your needs.
+- **Configurable Vector Storage**: Supports swappable vector storage backends (e.g., ChromaDB, SQLite) for Knowledge Base and Agent Memory, enhancing compatibility for environments like Termux where ChromaDB might be problematic. This allows `crewai` to adapt to different operational needs and constraints.
 - **Seamless Integration**: Effortlessly combine Crews (autonomy) and Flows (precision) to create complex, real-world automations.
 - **Deep Customization**: Tailor every aspect—from high-level workflows down to low-level internal prompts and agent behaviors.
 - **Reliable Performance**: Consistent results across simple tasks and complex, enterprise-level automations.

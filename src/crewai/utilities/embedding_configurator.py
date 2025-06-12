@@ -1,236 +1,61 @@
-import os
-from typing import Any, Dict, Optional, cast
+# src/crewai/utilities/embedding_configurator.py
 
-from chromadb import Documents, EmbeddingFunction, Embeddings
-from chromadb.api.types import validate_embedding_function
-
+import sqlite3
+import numpy as np
 
 class EmbeddingConfigurator:
-    def __init__(self):
-        self.embedding_functions = {
-            "openai": self._configure_openai,
-            "azure": self._configure_azure,
-            "ollama": self._configure_ollama,
-            "vertexai": self._configure_vertexai,
-            "google": self._configure_google,
-            "cohere": self._configure_cohere,
-            "voyageai": self._configure_voyageai,
-            "bedrock": self._configure_bedrock,
-            "huggingface": self._configure_huggingface,
-            "watson": self._configure_watson,
-            "custom": self._configure_custom,
-        }
+    """
+    Simple embedding store using SQLite for persistence
+    and NumPy arrays for vector math.
+    """
 
-    def configure_embedder(
-        self,
-        embedder_config: Optional[Dict[str, Any]] = None,
-    ) -> EmbeddingFunction:
-        """Configures and returns an embedding function based on the provided config."""
-        if embedder_config is None:
-            return self._create_default_embedding_function()
+    def __init__(self, db_path: str = "embeddings.db", table: str = "embeddings"):
+        # connect (creates file if not exists)
+        self.conn = sqlite3.connect(db_path)
+        self.table = table
+        self._create_table()
 
-        provider = embedder_config.get("provider")
-        config = embedder_config.get("config", {})
-        model_name = config.get("model") if provider != "custom" else None
-
-        if provider not in self.embedding_functions:
-            raise Exception(
-                f"Unsupported embedding provider: {provider}, supported providers: {list(self.embedding_functions.keys())}"
+    def _create_table(self):
+        cur = self.conn.cursor()
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {self.table} (
+                id TEXT PRIMARY KEY,
+                embedding BLOB
             )
+        """)
+        self.conn.commit()
 
-        embedding_function = self.embedding_functions[provider]
-        return (
-            embedding_function(config)
-            if provider == "custom"
-            else embedding_function(config, model_name)
+    def add_embedding(self, id: str, vector: np.ndarray):
+        """Store or replace an embedding."""
+        blob = vector.astype(np.float32).tobytes()
+        self.conn.execute(
+            f"INSERT OR REPLACE INTO {self.table}(id, embedding) VALUES (?, ?)",
+            (id, blob)
         )
+        self.conn.commit()
 
-    @staticmethod
-    def _create_default_embedding_function():
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+    def get_embedding(self, id: str) -> np.ndarray | None:
+        """Retrieve an embedding by ID."""
+        cur = self.conn.cursor()
+        row = cur.execute(
+            f"SELECT embedding FROM {self.table} WHERE id = ?",
+            (id,)
+        ).fetchone()
+        if not row:
+            return None
+        return np.frombuffer(row[0], dtype=np.float32)
 
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
-
-    @staticmethod
-    def _configure_openai(config, model_name):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
-
-        return OpenAIEmbeddingFunction(
-            api_key=config.get("api_key") or os.getenv("OPENAI_API_KEY"),
-            model_name=model_name,
-            api_base=config.get("api_base", None),
-            api_type=config.get("api_type", None),
-            api_version=config.get("api_version", None),
-            default_headers=config.get("default_headers", None),
-            dimensions=config.get("dimensions", None),
-            deployment_id=config.get("deployment_id", None),
-            organization_id=config.get("organization_id", None),
-        )
-
-    @staticmethod
-    def _configure_azure(config, model_name):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
-
-        return OpenAIEmbeddingFunction(
-            api_key=config.get("api_key"),
-            api_base=config.get("api_base"),
-            api_type=config.get("api_type", "azure"),
-            api_version=config.get("api_version"),
-            model_name=model_name,
-            default_headers=config.get("default_headers"),
-            dimensions=config.get("dimensions"),
-            deployment_id=config.get("deployment_id"),
-            organization_id=config.get("organization_id"),
-        )
-
-    @staticmethod
-    def _configure_ollama(config, model_name):
-        from chromadb.utils.embedding_functions.ollama_embedding_function import (
-            OllamaEmbeddingFunction,
-        )
-
-        return OllamaEmbeddingFunction(
-            url=config.get("url", "http://localhost:11434/api/embeddings"),
-            model_name=model_name,
-        )
-
-    @staticmethod
-    def _configure_vertexai(config, model_name):
-        from chromadb.utils.embedding_functions.google_embedding_function import (
-            GoogleVertexEmbeddingFunction,
-        )
-
-        return GoogleVertexEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-            project_id=config.get("project_id"),
-            region=config.get("region"),
-        )
-
-    @staticmethod
-    def _configure_google(config, model_name):
-        from chromadb.utils.embedding_functions.google_embedding_function import (
-            GoogleGenerativeAiEmbeddingFunction,
-        )
-
-        return GoogleGenerativeAiEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-            task_type=config.get("task_type"),
-        )
-
-    @staticmethod
-    def _configure_cohere(config, model_name):
-        from chromadb.utils.embedding_functions.cohere_embedding_function import (
-            CohereEmbeddingFunction,
-        )
-
-        return CohereEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-        )
-
-    @staticmethod
-    def _configure_voyageai(config, model_name):
-        from chromadb.utils.embedding_functions.voyageai_embedding_function import (
-            VoyageAIEmbeddingFunction,
-        )
-
-        return VoyageAIEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-        )
-
-    @staticmethod
-    def _configure_bedrock(config, model_name):
-        from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
-            AmazonBedrockEmbeddingFunction,
-        )
-
-        # Allow custom model_name override with backwards compatibility
-        kwargs = {"session": config.get("session")}
-        if model_name is not None:
-            kwargs["model_name"] = model_name
-        return AmazonBedrockEmbeddingFunction(**kwargs)
-
-    @staticmethod
-    def _configure_huggingface(config, model_name):
-        from chromadb.utils.embedding_functions.huggingface_embedding_function import (
-            HuggingFaceEmbeddingServer,
-        )
-
-        return HuggingFaceEmbeddingServer(
-            url=config.get("api_url"),
-        )
-
-    @staticmethod
-    def _configure_watson(config, model_name):
-        try:
-            import ibm_watsonx_ai.foundation_models as watson_models
-            from ibm_watsonx_ai import Credentials
-            from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames as EmbedParams
-        except ImportError as e:
-            raise ImportError(
-                "IBM Watson dependencies are not installed. Please install them to use Watson embedding."
-            ) from e
-
-        class WatsonEmbeddingFunction(EmbeddingFunction):
-            def __call__(self, input: Documents) -> Embeddings:
-                if isinstance(input, str):
-                    input = [input]
-
-                embed_params = {
-                    EmbedParams.TRUNCATE_INPUT_TOKENS: 3,
-                    EmbedParams.RETURN_OPTIONS: {"input_text": True},
-                }
-
-                embedding = watson_models.Embeddings(
-                    model_id=config.get("model"),
-                    params=embed_params,
-                    credentials=Credentials(
-                        api_key=config.get("api_key"), url=config.get("api_url")
-                    ),
-                    project_id=config.get("project_id"),
-                )
-
-                try:
-                    embeddings = embedding.embed_documents(input)
-                    return cast(Embeddings, embeddings)
-                except Exception as e:
-                    print("Error during Watson embedding:", e)
-                    raise e
-
-        return WatsonEmbeddingFunction()
-
-    @staticmethod
-    def _configure_custom(config):
-        custom_embedder = config.get("embedder")
-        if isinstance(custom_embedder, EmbeddingFunction):
-            try:
-                validate_embedding_function(custom_embedder)
-                return custom_embedder
-            except Exception as e:
-                raise ValueError(f"Invalid custom embedding function: {str(e)}")
-        elif callable(custom_embedder):
-            try:
-                instance = custom_embedder()
-                if isinstance(instance, EmbeddingFunction):
-                    validate_embedding_function(instance)
-                    return instance
-                raise ValueError(
-                    "Custom embedder does not create an EmbeddingFunction instance"
-                )
-            except Exception as e:
-                raise ValueError(f"Error instantiating custom embedder: {str(e)}")
-        else:
-            raise ValueError(
-                "Custom embedder must be an instance of `EmbeddingFunction` or a callable that creates one"
-            )
+    def search_similar(self, vector: np.ndarray, top_k: int = 5) -> list[tuple[str, float]]:
+        """
+        Naïve similarity search: loads all and ranks by Euclidean distance.
+        Returns list of (id, distance).
+        """
+        cur = self.conn.cursor()
+        rows = cur.execute(f"SELECT id, embedding FROM {self.table}").fetchall()
+        candidates = []
+        for doc_id, blob in rows:
+            emb = np.frombuffer(blob, dtype=np.float32)
+            dist = np.linalg.norm(emb - vector.astype(np.float32))
+            candidates.append((doc_id, dist))
+        candidates.sort(key=lambda x: x[1])
+        return candidates[:top_k]
