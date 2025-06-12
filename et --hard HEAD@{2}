@@ -1,0 +1,71 @@
+[33m4f5a1a4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mjules_wip_1814376729940231112[m[33m)[m HEAD@{0}: reset: moving to HEAD~2
+[33m8b51b9e[m[33m ([m[1;31morigin/jules_wip_1814376729940231112[m[33m)[m HEAD@{1}: pull: Fast-forward
+[33m741c038[m HEAD@{2}: pull: Fast-forward
+[33m4f5a1a4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mjules_wip_1814376729940231112[m[33m)[m HEAD@{3}: pull: Fast-forward
+[33mde4fbce[m HEAD@{4}: pull: Fast-forward
+[33m30eefee[m HEAD@{5}: pull: Fast-forward
+[33maa9fddd[m HEAD@{6}: pull: Fast-forward
+[33m2ff12a7[m HEAD@{7}: pull: Fast-forward
+[33m5b08ed7[m HEAD@{8}: pull: Fast-forward
+[33m7b63ae8[m HEAD@{9}: pull: Fast-forward
+[33md050ba5[m HEAD@{10}: pull: Fast-forward
+[33m3428c02[m HEAD@{11}: reset: moving to HEAD
+[33m3428c02[m HEAD@{12}: pull: Fast-forward
+[33m9202793[m HEAD@{13}: pull: Fast-forward
+[33mf9efe5b[m HEAD@{14}: pull: Fast-forward
+[33m4fd8ee9[m HEAD@{15}: pull: Fast-forward
+[33m98c288d[m HEAD@{16}: pull: Fast-forward
+[33mf2cadd3[m HEAD@{17}: checkout: moving from jules_wip_4459879766893839247 to jules_wip_1814376729940231112
+[33m2f54ed1[m[33m ([m[1;31morigin/jules_wip_4459879766893839247[m[33m, [m[1;32mjules_wip_4459879766893839247[m[33m)[m HEAD@{18}: checkout: moving from fix/taskmaster-flow-handover to jules_wip_4459879766893839247
+[33mefb0a34[m[33m ([m[1;31morigin/fix/taskmaster-flow-handover[m[33m, [m[1;32mfix/taskmaster-flow-handover[m[33m)[m HEAD@{19}: pull: Fast-forward
+[33m512d9a9[m HEAD@{20}: pull: Fast-forward
+[33mc4b0a60[m HEAD@{21}: checkout: moving from fix/missing-llm-error to fix/taskmaster-flow-handover
+[33m85221ec[m[33m ([m[1;31morigin/fix/missing-llm-error[m[33m, [m[1;32mfix/missing-llm-error[m[33m)[m HEAD@{22}: pull: Fast-forward
+[33m3bc6d55[m HEAD@{23}: pull: Fast-forward
+[33m6399bfa[m HEAD@{24}: pull: Fast-forward
+[33m3153429[m HEAD@{25}: pull: Fast-forward
+[33m703e39d[m HEAD@{26}: pull: Fast-forward
+[33m932549b[m HEAD@{27}: pull: Fast-forward
+[33mca0174d[m HEAD@{28}: pull: Fast-forward
+[33mfe581c1[m HEAD@{29}: checkout: moving from fix-delegate-input-vars to fix/missing-llm-error
+[33mc18a633[m[33m ([m[1;31morigin/fix-delegate-input-vars[m[33m, [m[1;32mfix-delegate-input-vars[m[33m)[m HEAD@{30}: pull: Fast-forward
+[33m7d03f88[m HEAD@{31}: pull: Fast-forward
+[33m72cf8dd[m HEAD@{32}: checkout: moving from feat/custom-delegation-tools to fix-delegate-input-vars
+[33me9667cc[m[33m ([m[1;31morigin/feat/custom-delegation-tools[m[33m, [m[1;32mfeat/custom-delegation-tools[m[33m)[m HEAD@{33}: pull: Fast-forward
+[33m16e1954[m HEAD@{34}: pull: Fast-forward
+[33md515e80[m HEAD@{35}: pull: Fast-forward
+[33md34ffec[m HEAD@{36}: pull: Fast-forward
+[33mefe6acb[m HEAD@{37}: pull: Fast-forward
+[33m5599edd[m HEAD@{38}: pull: Fast-forward
+[33mf2b8e47[m HEAD@{39}: pull: Fast-forward
+[33m3642c5b[m HEAD@{40}: checkout: moving from feat/idea-interpreter-setup to feat/custom-delegation-tools
+[33mf247a1d[m[33m ([m[1;31morigin/feat/idea-interpreter-setup[m[33m, [m[1;32mfeat/idea-interpreter-setup[m[33m)[m HEAD@{41}: checkout: moving from jules_wip_10994345925148950042 to feat/idea-interpreter-setup
+[33m2dae5ee[m[33m ([m[1;31morigin/jules_wip_10994345925148950042[m[33m, [m[1;32mjules_wip_10994345925148950042[m[33m)[m HEAD@{42}: pull: Fast-forward
+[33mf74f313[m HEAD@{43}: pull: Fast-forward
+[33m78f9176[m HEAD@{44}: pull: Fast-forward
+[33m58acb2f[m HEAD@{45}: pull: Fast-forward
+[33mc4b99e0[m HEAD@{46}: pull: Fast-forward
+[33m0f5996f[m HEAD@{47}: pull: Fast-forward
+[33mff33090[m HEAD@{48}: checkout: moving from fix/qrew-import-gemini-config to jules_wip_10994345925148950042
+[33m2c7babf[m[33m ([m[1;31morigin/fix/qrew-import-gemini-config[m[33m, [m[1;32mfix/qrew-import-gemini-config[m[33m)[m HEAD@{49}: pull: Fast-forward
+[33md0e7d9a[m HEAD@{50}: pull: Fast-forward
+[33mfd8835e[m HEAD@{51}: pull: Fast-forward
+[33m035b8a3[m HEAD@{52}: pull: Fast-forward
+[33m1979a1f[m HEAD@{53}: pull: Fast-forward
+[33m05e7a96[m HEAD@{54}: checkout: moving from new_working_order to fix/qrew-import-gemini-config
+[33ma415766[m[33m ([m[1;31morigin/new_working_order[m[33m, [m[1;32mnew_working_order[m[33m)[m HEAD@{55}: pull --rebase origin new_working_order (finish): returning to refs/heads/new_working_order
+[33ma415766[m[33m ([m[1;31morigin/new_working_order[m[33m, [m[1;32mnew_working_order[m[33m)[m HEAD@{56}: pull --rebase origin new_working_order (start): checkout a4157664dfa7a5b41d83f49f832099fac0ae28b3
+[33m832e7ef[m[33m ([m[1;31morigin/improve-api-key-guidance[m[33m, [m[1;32mimprove-api-key-guidance[m[33m)[m HEAD@{57}: checkout: moving from new_working_order to new_working_order
+[33m832e7ef[m[33m ([m[1;31morigin/improve-api-key-guidance[m[33m, [m[1;32mimprove-api-key-guidance[m[33m)[m HEAD@{58}: reset: moving to HEAD
+[33m832e7ef[m[33m ([m[1;31morigin/improve-api-key-guidance[m[33m, [m[1;32mimprove-api-key-guidance[m[33m)[m HEAD@{59}: checkout: moving from improve-api-key-guidance to new_working_order
+[33m832e7ef[m[33m ([m[1;31morigin/improve-api-key-guidance[m[33m, [m[1;32mimprove-api-key-guidance[m[33m)[m HEAD@{60}: pull: Fast-forward
+[33m3b99b7e[m HEAD@{61}: checkout: moving from jules_wip_63574474838497699 to improve-api-key-guidance
+[33m0a72b9a[m[33m ([m[1;31morigin/jules_wip_63574474838497699[m[33m, [m[1;32mjules_wip_63574474838497699[m[33m)[m HEAD@{62}: pull: Fast-forward
+[33m7ae51bf[m HEAD@{63}: pull: Fast-forward
+[33m16ab8a8[m HEAD@{64}: pull: Fast-forward
+[33m73d8ac6[m HEAD@{65}: pull: Fast-forward
+[33m01c1d27[m HEAD@{66}: pull: Fast-forward
+[33mee47cdd[m HEAD@{67}: pull: Fast-forward
+[33me874b0a[m HEAD@{68}: pull: Fast-forward
+[33m51b58ef[m HEAD@{69}: checkout: moving from jules_wip_15147073649897292714 to jules_wip_63574474838497699
+[33m33ed395[m[33m ([m[1;31morigin/jules_wip_15147073649897292714[m[33m, [m[1;32mjules_wip_15147073649897292714[m[33m)[m HEAD@{70}: clone: from https://github.com/Qnatz/crewAI.git

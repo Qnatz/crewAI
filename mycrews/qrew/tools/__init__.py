@@ -1,15 +1,10 @@
-# This file makes the tools directory a Python package.
-# Export tools to make them easily importable.
+from .knowledge_base_tool import KnowledgeBaseTool
+from .objectbox_memory import ObjectBoxMemory
 
-# from .file_io_tool import FileIOTool # FileIOTool.py does not exist
-# from .network_request_tool import NetworkRequestTool # NetworkRequestTool.py does not exist
-
-# Import the new KnowledgeBaseTool
-from .knowledge_base_tool import KnowledgeBaseTool, knowledge_base_tool_instance
+memory = ObjectBoxMemory()
+knowledge_base_tool_instance = KnowledgeBaseTool(memory_instance=memory)
 
 __all__ = [
-    # 'FileIOTool',
-    # 'NetworkRequestTool',
-    'KnowledgeBaseTool', # Export the class
-    'knowledge_base_tool_instance' # Export an instance for convenience
+    'KnowledgeBaseTool',
+    'knowledge_base_tool_instance'
 ]

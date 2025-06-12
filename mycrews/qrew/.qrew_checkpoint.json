@@ -1,0 +1,30 @@
+{
+  "completed": {
+    "initial_analysis": true,
+    "content_generation": true,
+    "review_and_edit": true,
+    "final_assembly": true
+  },
+  "results": {
+    "initial_analysis": {
+      "analysis_summary": "Initial analysis complete.",
+      "data_points": [
+        1,
+        2,
+        3
+      ]
+    },
+    "content_generation": {
+      "generated_content": "This is the generated content.",
+      "version": "1.0"
+    },
+    "review_and_edit": {
+      "edited_content": "This is the reviewed and edited content.",
+      "feedback_notes": "All good."
+    },
+    "final_assembly": {
+      "final_product_path": "/root/crewAI/mycrews/qrew/projects/qrew_feature__resumable_operations_8f392e68/final_output.txt",
+      "status": "successfully assembled"
+    }
+  }
+}
