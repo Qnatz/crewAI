@@ -4,10 +4,12 @@ import json
 import hashlib
 from pathlib import Path
 
+print(f"DEBUG: project_manager.py __file__: {__file__}")
 # Paths are relative to this file's location, so projects_index.json
 # and the projects/ directory will be inside mycrews/qrew/
 PROJECTS_INDEX = Path(__file__).parent / "projects_index.json"
 PROJECTS_ROOT = Path(__file__).parent / "projects/"
+print(f"DEBUG: project_manager.py PROJECTS_ROOT: {PROJECTS_ROOT.resolve()}")
 
 def _load_index():
     if PROJECTS_INDEX.exists():

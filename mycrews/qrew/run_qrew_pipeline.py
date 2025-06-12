@@ -4,6 +4,7 @@ import os
 import time
 from pathlib import Path
 
+print(f"DEBUG: run_qrew_pipeline.py __file__: {__file__}")
 # Use relative imports since utils and project_manager are in the same directory
 from .utils import ErrorSummary
 from .project_manager import get_or_create_project
@@ -18,6 +19,7 @@ STAGES = [
 
 # CHECKPOINT_FILE will be created in mycrews/qrew/
 CHECKPOINT_FILE = Path(__file__).parent / ".qrew_checkpoint.json"
+print(f"DEBUG: run_qrew_pipeline.py CHECKPOINT_FILE: {CHECKPOINT_FILE.resolve()}")
 
 def load_progress():
     if os.path.exists(CHECKPOINT_FILE):
