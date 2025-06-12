@@ -5,7 +5,7 @@ from pydantic import Field
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
-from crewai.tools.base_tool import BaseTool
+from crewai_tools import BaseTool # Changed this line
 from crewai.utilities import I18N
 
 logger = logging.getLogger(__name__)

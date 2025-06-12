@@ -49,7 +49,8 @@ from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
-from crewai.tools.base_tool import BaseTool, Tool
+from crewai.tools.base_tool import BaseTool, Tool # Existing import
+from crewai_tools import BaseTool as CrewAIToolsBaseTool # New import for crew-level tools
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
@@ -244,6 +245,7 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",
     )
+    tools: Optional[List[CrewAIToolsBaseTool]] = Field(default=None, description="Tools available to all agents in the crew.")
 
     @field_validator("id", mode="before")
     @classmethod
@@ -649,6 +651,16 @@ class Crew(FlowTrackable, BaseModel):
 
                 if not agent.step_callback:  # type: ignore # "BaseAgent" has no attribute "step_callback"
                     agent.step_callback = self.step_callback  # type: ignore # "BaseAgent" has no attribute "step_callback"
+
+                # Add crew-level tools to the agent's tools
+                if self.tools:
+                    agent_existing_tools = agent.tools or []
+                    # Prioritize agent-specific tools in case of name collision
+                    merged_tools = list(agent_existing_tools) + [
+                        crew_tool for crew_tool in self.tools
+                        if crew_tool.name not in [ag_tool.name for ag_tool in agent_existing_tools]
+                    ]
+                    agent.tools = merged_tools
 
                 agent.create_agent_executor()
 

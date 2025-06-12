@@ -1,5 +1,6 @@
 from crewai import Agent
 from ....llm_config import get_llm_for_agent
+from ....tools.custom_agent_tools import save_code
 
 # Use the agent's role or a unique key for the lookup
 agent_identifier = "code_writer_agent" # Matching the key in MODEL_BY_AGENT
@@ -11,5 +12,6 @@ code_writer_agent = Agent(
     backstory="A proficient software developer with expertise in multiple programming languages, dedicated to producing high-quality code.",
     llm=specific_llm, # Assign the fetched LLM
     allow_delegation=False,
-    verbose=True
+    verbose=True,
+    tools=[save_code]
 )

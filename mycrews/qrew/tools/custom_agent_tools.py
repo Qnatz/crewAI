@@ -5,12 +5,12 @@ from pydantic import BaseModel, Field # Use Pydantic V2
 # CrewAI specific imports - adjust paths if these are not standard crewai locations
 # For this subtask, we'll assume these are the correct import paths.
 # If these cause issues later, they might need to be from `crewai.agent`, `crewai.task`, etc.
-from crewai.agent import Agent
-from crewai.task import Task
-from crewai.tools.base_tool import BaseTool
-from crewai.utilities.constants import NOT_SPECIFIED
-from crewai.utilities.string_utils import interpolate_only
+from crewai.agent import Agent # Remains as this is for type hinting and creating Task objects
+from crewai.task import Task # Remains as this is for type hinting and creating Task objects
+from crewai_tools import BaseTool, tool # Changed from crewai.tools.base_tool and added tool
+from crewai.utilities.string_utils import interpolate_only # Retained for its usage
 # from crewai.i18n import I18N # I18N might be needed for Task creation if agent doesn't have it
+# NOT_SPECIFIED was not used, so it's effectively removed by not re-adding.
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +38,8 @@ class CustomDelegateWorkTool(BaseTool):
     description: str = "A custom tool to delegate a specific task to a designated coworker agent, allowing for input interpolation and prerequisite task context."
     args_schema: Type[BaseModel] = CustomDelegateWorkToolSchema
     # context will be injected by the agent using the tool if properly set up
-    # agents: List[Agent] = Field(default_factory=list, description="List of agents in the crew available for delegation.")
-    # crew_tasks: List[Task] = Field(default_factory=list, description="List of all tasks executed so far in the crew.")
 
+    # _sanitize_agent_name is a helper method, no changes needed here due to BaseTool change
     def _sanitize_agent_name(self, name: str) -> str:
         if not name:
             return ""
@@ -140,9 +139,8 @@ class CustomAskQuestionTool(BaseTool):
     description: str = "A custom tool to ask a specific question to a designated coworker agent, allowing for input interpolation and prerequisite task context."
     args_schema: Type[BaseModel] = CustomAskQuestionToolSchema
     # context will be injected by the agent using the tool
-    # agents: List[Agent] = Field(default_factory=list, description="List of agents in the crew available for questioning.")
-    # crew_tasks: List[Task] = Field(default_factory=list, description="List of all tasks executed so far in the crew.")
 
+    # _sanitize_agent_name is a helper method, no changes needed here due to BaseTool change
     def _sanitize_agent_name(self, name: str) -> str: # Added sanitize method
         if not name:
             return ""
@@ -228,3 +226,19 @@ class CustomAskQuestionTool(BaseTool):
         except Exception as e:
             logger.error(f"Error during question execution by '{delegatee_agent.role}': {e}")
             return f"Error during execution by '{delegatee_agent.role}': {e}"
+
+@tool("Save Code to File")
+def save_code(code: str, filename: str) -> str:
+    """Saves the given code content to a file with the specified filename.
+    Args:
+        code (str): The code content to save.
+        filename (str): The name of the file to save the code to.
+    Returns:
+        str: A message indicating the result of the save operation.
+    """
+    try:
+        with open(filename, "w") as f:
+            f.write(code)
+        return f"Successfully saved code to {filename}"
+    except Exception as e:
+        return f"Error saving code to {filename}: {e}"
