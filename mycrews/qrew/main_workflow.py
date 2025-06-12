@@ -455,7 +455,10 @@ Specific success criteria for this output include:
 - All specified top-level keys are present in the JSON object.
 - The "type" field is "software".
 - The "summary" field contains a comprehensive textual architectural overview.
-- Other fields contain relevant summaries or details as requested.''',
+- Other fields contain relevant summaries or details as requested.
+
+IMPORTANT: Your response MUST start directly with the JSON structure (e.g., starting with '{' or '```json\n{'). Do NOT include any introductory text, conversational remarks, explanations, or any other text before the JSON object itself. The entire output must be only the JSON string content that adheres to the structure described above.
+''',
         agent=project_architect_agent
     )
 
