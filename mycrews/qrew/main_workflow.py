@@ -423,33 +423,6 @@ The JSON object you return MUST include the following top-level keys:
 - "integration_points_summary": A brief summary of key integration points.
 - "non_functional_requirements_summary": A brief summary of how non-functional requirements are addressed.
 
-Example of the expected JSON STRING structure (content is illustrative and should be brief in this example):
-{
-  "type": "software",
-  "summary": "Brief overall summary of the architecture.",
-  "approved_technologies": {
-    "frontend": "ExampleFrontendTech",
-    "backend": "ExampleBackendTech",
-    "database": "ExampleDB",
-    "infrastructure": "ExampleInfra"
-  },
-  "pending_decisions": [
-    "Decision A",
-    "Decision B"
-  ],
-  "security_plan_summary": "Brief security plan summary.",
-  "cost_analysis_summary": "Brief cost analysis summary.",
-  "ci_cd_pipeline_summary": "Brief CI/CD pipeline summary.",
-  "monitoring_strategy_summary": "Brief monitoring strategy summary.",
-  "backend_spec": "Brief backend specification details.",
-  "frontend_spec": "Brief frontend specification details.",
-  "mobile_spec": "Brief mobile specification details (or null if not applicable).",
-  "data_model_summary": "Brief data model summary.",
-  "api_guidelines_summary": "Brief API guidelines summary.",
-  "integration_points_summary": "Brief integration points summary.",
-  "non_functional_requirements_summary": "Brief NFR summary."
-}
-
 Ensure the output is a single, valid JSON string.
 Specific success criteria for this output include:
 - Valid JSON string produced.
@@ -583,3 +556,5 @@ if __name__ == "__main__":
         print(final_result.raw if hasattr(final_result, 'raw') else str(final_result))
     else:
         print("Idea-to-Architecture Crew produced no output or an error occurred.")
+
+[end of mycrews/qrew/main_workflow.py]
