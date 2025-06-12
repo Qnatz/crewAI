@@ -587,5 +587,3 @@ if __name__ == "__main__":
         print(str(final_result))
     else:
         print("Idea-to-Architecture Crew produced no output or an error occurred.")
-
-[end of mycrews/qrew/main_workflow.py]
