@@ -1,5 +1,7 @@
 from crewai import Agent
 from ....llm_config import get_llm_for_agent
+from ....tools.knowledge_tools import file_reader_tool, directory_reader_tool
+from ....tools.knowledge_base_tool import knowledge_base_tool_instance
 
 # Use the agent's role or a unique key for the lookup
 agent_identifier = "debugger_agent" # Matching the key in MODEL_BY_AGENT
@@ -11,5 +13,6 @@ debugger_agent = Agent(
     backstory="A meticulous troubleshooter with a keen eye for detail, adept at finding and fixing software defects.",
     llm=specific_llm, # Assign the fetched LLM
     allow_delegation=False,
-    verbose=True
+    verbose=True,
+    tools=[file_reader_tool, directory_reader_tool, knowledge_base_tool_instance]
 )
