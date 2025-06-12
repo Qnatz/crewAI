@@ -6,8 +6,8 @@ from pathlib import Path
 
 # Paths are relative to this file's location, so projects_index.json
 # and the projects/ directory will be inside mycrews/qrew/
-PROJECTS_INDEX = Path("projects_index.json")
-PROJECTS_ROOT = Path("projects/")
+PROJECTS_INDEX = Path(__file__).parent / "projects_index.json"
+PROJECTS_ROOT = Path(__file__).parent / "projects/"
 
 def _load_index():
     if PROJECTS_INDEX.exists():

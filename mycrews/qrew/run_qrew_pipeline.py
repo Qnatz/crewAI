@@ -17,7 +17,7 @@ STAGES = [
 ]
 
 # CHECKPOINT_FILE will be created in mycrews/qrew/
-CHECKPOINT_FILE = ".qrew_checkpoint.json"
+CHECKPOINT_FILE = Path(__file__).parent / ".qrew_checkpoint.json"
 
 def load_progress():
     if os.path.exists(CHECKPOINT_FILE):
