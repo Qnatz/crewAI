@@ -48,24 +48,18 @@ def run_qrew():
     # Define the task for the TaskMasterAgent based on its first defined task
     # This simulates how an orchestrator might prepare and assign a task.
     taskmaster_initial_task = Task(
-        description=f"Analyze the incoming user request: '{sample_user_request}' "
-                    f"and project goal statement: '{sample_project_goal}'. "
-                    "Clarify ambiguities, define primary objectives, scope, and desired outcomes. "
-                    "Consult with the IdeaInterpreterAgent if the request is vague or needs significant refinement. "
-                    "Determine the next steps for delegation.",
-        expected_output="A clear and concise project brief, including defined scope and objectives, "
-                        "key deliverables, success criteria, initial assessment of complexity, "
-                        "and a recommendation for the next orchestrator or Lead Agent.",
-        agent=taskmaster_agent, # Assign the imported agent instance
-        # input parameter removed as values are in f-string description
-        successCriteria=[
-            "project brief created",
-            "scope defined",
-            "objectives defined",
-            "key deliverables listed",
-            "complexity assessed",
-            "recommendation for next step provided"
-        ]
+        description=f"A new user request has come in: '{sample_user_request}'. "
+                    f"The overall project goal is: '{sample_project_goal}'. "
+                    "Your primary responsibility is to initiate and manage this project using your available tools. "
+                    "To do this, you MUST use the 'Orchestrate Project Tool'. "
+                    f"Pass the original user request, which is '{sample_user_request}', to the 'user_request' parameter of the 'Orchestrate Project Tool'. "
+                    "Do not use any other tools for this initial project setup and orchestration. "
+                    "If the Orchestrate Project Tool also takes a 'project_deliverables_list' and none is provided in this request, let the tool use its default.",
+        expected_output="The project MUST be initiated using the 'Orchestrate Project Tool'. "
+                        "The direct output from the 'Orchestrate Project Tool', which is a JSON string summarizing the project's progress (including status, results, and any errors from the orchestration), "
+                        "should be returned as the result of this task. No additional analysis or briefing is required beyond invoking the tool and returning its output.",
+        agent=taskmaster_agent # This remains the same
+        # successCriteria removed
     )
 
     # To execute this task, we use the qrew_main_crew

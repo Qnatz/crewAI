@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
-from crewai import Agent, Task # Added Task import
-from ..tools import knowledge_base_tool_instance # Kept existing import
-from ..llm_config import get_llm_for_agent # Kept existing import
-from ..project_manager import get_or_create_project # Added new import
+from crewai import Agent, Task
+from crewai_tools import tool # Added tool import
+from ..tools import knowledge_base_tool_instance
+from ..llm_config import get_llm_for_agent
+from ..project_manager import get_or_create_project
 
 agent_identifier = "taskmaster_agent"
 specific_llm = get_llm_for_agent(agent_identifier)
@@ -12,18 +13,26 @@ PROJECT_CHECKPOINT_FILENAME = ".taskmaster_checkpoint.json"
 
 class TaskMasterGeneralCoordinatorAgent(Agent): # Inherit from Agent
     def __init__(self, **kwargs): # Add __init__
+        # The @tool decorator on an instance method makes that method directly usable as a tool.
+        # self.orchestrate_project will be picked up by the Agent class if it's decorated with @tool
+        # and then we can pass it in the tools list.
+        # However, the method needs to be defined before __init__ or self needs to exist.
+        # The standard way: Agent's tools are initialized with the list of tool objects.
+        # self.orchestrate_project (the method) becomes a tool object due to the decorator.
+
+        # Tools list should be defined before super().__init__ if self.orchestrate_project is to be included directly
+        # or Agent class handles methods decorated with @tool automatically (less explicit).
+        # For clarity, we define the tools list and pass it.
+        # `self.orchestrate_project` will refer to the bound method instance which is also a tool.
+        _tools = [knowledge_base_tool_instance, self.orchestrate_project]
+
         super().__init__(
             role="TaskMaster General Coordinator and Project Manager",
-            goal="Receive, interpret, and decompose high-level user requests or project goals into a structured plan of deliverables. "
-                 "Manage the lifecycle of these projects, tracking progress and ensuring successful completion. "
-                 "Delegate major components of this plan to appropriate orchestrator agents or specialized Lead Agents for execution. "
-                 "Ensure a clear path from initial request to final delivery, maintaining project state and enabling resumability. "
-                 "Input: {user_request} (e.g., 'develop fitness app'), {project_goal_statement}, {priority_level}, {expected_outcome_description}.",
-            backstory="The central intelligence of the Qrew system, responsible for initial request processing, strategic delegation, and comprehensive project lifecycle management. "
-                      "The TaskMaster doesn't just initiate tasks but actively manages ongoing projects, tracking deliverables, "
-                      "handling errors, and ensuring that all project-related data is stored and resumable. It ensures that the right agents "
-                      "and crews are mobilized and that project progress is meticulously recorded.",
-            tools=[knowledge_base_tool_instance],
+            goal="Receive, interpret, decompose user requests into structured plans, and manage project lifecycles using the Orchestrate Project Tool. "
+                 "Delegate components to other agents. Ensure resumability and clear progress tracking.",
+            backstory="The central intelligence of the Qrew system, responsible for request processing, strategic delegation, and comprehensive project lifecycle management via its Orchestrate Project Tool. "
+                      "It actively manages projects, tracking deliverables, handling errors, and ensuring project data is stored and resumable.",
+            tools=_tools, # Pass the list of tool objects
             llm=specific_llm,
             allow_delegation=True,
             verbose=True,
@@ -57,10 +66,19 @@ class TaskMasterGeneralCoordinatorAgent(Agent): # Inherit from Agent
         project_checkpoint_file.write_text(json.dumps(progress, indent=4))
         print(f"Project progress saved to {project_checkpoint_file}")
 
-    def orchestrate_project(self, user_request: str, project_deliverables_list: list = None):
-        print("DEBUG: TaskMasterGeneralCoordinatorAgent.orchestrate_project called.") # ADD THIS
-        print(f"DEBUG:   user_request: '{user_request}'") # ADD THIS
-        print(f"DEBUG:   project_deliverables_list: {project_deliverables_list}") # ADD THIS
+    @tool("Orchestrate Project Tool")
+    def orchestrate_project(self, user_request: str, project_deliverables_list: list = None) -> str:
+        """
+        Orchestrates a new or existing project based on a user request.
+        This tool handles project creation, loads progress, processes deliverables sequentially,
+        and saves progress. It should be used when a new project needs to be started or continued.
+        Input: user_request (string): The detailed request from the user that describes the project.
+               project_deliverables_list (list, optional): A predefined list of deliverable keys. If None, default deliverables will be used.
+        Output: A JSON string summarizing the final project progress, including completion status and any errors.
+        """
+        print("DEBUG: TaskMasterGeneralCoordinatorAgent.orchestrate_project tool called.") # MODIFIED THIS
+        print(f"DEBUG:   user_request: '{user_request}'")
+        print(f"DEBUG:   project_deliverables_list: {project_deliverables_list}")
 
         print(f"TaskMaster starting orchestration for: {user_request}")
 
@@ -149,7 +167,8 @@ class TaskMasterGeneralCoordinatorAgent(Agent): # Inherit from Agent
 
         print(f"All deliverables processed for project: {user_request}")
         print(f"Final project progress: {project_progress}")
-        return project_progress
+        # Ensure the method returns a string as per the docstring's output description for the LLM
+        return json.dumps(project_progress, indent=2)
 
     def delegate_task(self, task: Task, context: dict): # Add this method
         # This is a simplified delegation. In a real scenario, you might add context to task or agent
