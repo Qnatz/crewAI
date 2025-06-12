@@ -15,22 +15,17 @@ def run_code_implementation_workflow(architecture_design):
     web_spec = None
 
     # Attempt to extract specs from various possible structures of architecture_design
+    actual_design_dict = None
     if isinstance(architecture_design, dict):
-        backend_spec = architecture_design.get("backend_spec")
-        mobile_spec = architecture_design.get("mobile_spec")
-        web_spec = architecture_design.get("web_spec")
+        actual_design_dict = architecture_design
     elif hasattr(architecture_design, 'raw_output') and architecture_design.raw_output:
         if isinstance(architecture_design.raw_output, dict):
-            backend_spec = architecture_design.raw_output.get("backend_spec")
-            mobile_spec = architecture_design.raw_output.get("mobile_spec")
-            web_spec = architecture_design.raw_output.get("web_spec")
+            actual_design_dict = architecture_design.raw_output
         elif isinstance(architecture_design.raw_output, str):
             try:
                 parsed_output = json.loads(architecture_design.raw_output)
                 if isinstance(parsed_output, dict):
-                    backend_spec = parsed_output.get("backend_spec")
-                    mobile_spec = parsed_output.get("mobile_spec")
-                    web_spec = parsed_output.get("web_spec")
+                    actual_design_dict = parsed_output
                 else:
                     print(f"Warning: Parsed architecture_design.raw_output (from string) is not a dictionary. Type: {type(parsed_output)}. Specs will be None.")
             except json.JSONDecodeError:
@@ -40,19 +35,27 @@ def run_code_implementation_workflow(architecture_design):
         else:
             print(f"Warning: architecture_design.raw_output is of unhandled type: {type(architecture_design.raw_output)}. Specs will be None.")
     elif hasattr(architecture_design, 'raw') and isinstance(architecture_design.raw, dict):
-        backend_spec = architecture_design.raw.get("backend_spec")
-        mobile_spec = architecture_design.raw.get("mobile_spec")
-        web_spec = architecture_design.raw.get("web_spec")
+        actual_design_dict = architecture_design.raw
     elif hasattr(architecture_design, 'pydantic_output') and isinstance(architecture_design.pydantic_output, dict):
-        backend_spec = architecture_design.pydantic_output.get("backend_spec")
-        mobile_spec = architecture_design.pydantic_output.get("mobile_spec")
-        web_spec = architecture_design.pydantic_output.get("web_spec")
-    elif hasattr(architecture_design, 'get') and callable(getattr(architecture_design, 'get')):
-        backend_spec = architecture_design.get("backend_spec")
-        mobile_spec = architecture_design.get("mobile_spec")
-        web_spec = architecture_design.get("web_spec")
+        actual_design_dict = architecture_design.pydantic_output
+    # Note: The generic 'get' attribute case is removed as it's too broad if 'architecture_design' is not a dict itself.
+    # If it has a 'get' method, it should ideally be caught by 'isinstance(architecture_design, dict)'.
+
+    if actual_design_dict:
+        backend_spec = actual_design_dict.get("backend_spec_content") or actual_design_dict.get("backend_spec")
+        mobile_spec = actual_design_dict.get("mobile_spec_content") or actual_design_dict.get("mobile_spec")
+        web_spec = actual_design_dict.get("web_spec_content") or actual_design_dict.get("web_spec")
+
+        # One more check: if the spec itself is a dictionary with a "content" key
+        if isinstance(backend_spec, dict) and "content" in backend_spec:
+            backend_spec = backend_spec.get("content")
+        if isinstance(mobile_spec, dict) and "content" in mobile_spec:
+            mobile_spec = mobile_spec.get("content")
+        if isinstance(web_spec, dict) and "content" in web_spec:
+            web_spec = web_spec.get("content")
+
     else:
-        print(f"Warning: architecture_design (type: {type(architecture_design)}) is not a dictionary and does not have a directly usable .get() method or common CrewAI output attributes. Specs will likely be None.")
+        print(f"Warning: Could not resolve architecture_design (type: {type(architecture_design)}) to a dictionary. Specs will likely be None.")
 
     results = []
 
