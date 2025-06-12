@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
-from crewai import Agent, Task
-from crewai_tools import tool # Added tool import
+from crewai import Agent, Task, tool
 from .tools import knowledge_base_tool_instance
 from ..llm_config import get_llm_for_agent
 from ..project_manager import get_or_create_project
