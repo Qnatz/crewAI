@@ -123,14 +123,39 @@ Ensure placeholder values like "{constraints}" and the output of 'task_interpret
 Example for 'ConstraintCheckerAgent's task_description: "Review the proposed solution: [output of task_interpret_idea] against the project_constraints_document: [content of {constraints}]. Identify any violations..."
 Example for 'StackAdvisorAgent's task_description: "Analyze the project_requirements: [output of task_interpret_idea] to propose an optimal technology stack. Consider team_skills: [extracted from {constraints}], budget_constraints: [extracted from {constraints}], and existing_architecture_details: None - new project. Provide justifications..."
 ''',
-        expected_output='''A JSON object containing a list under the key "sub_tasks_to_delegate". Each item in the list must be a dictionary with "task_description" (self-contained), "assigned_agent_role", and "successCriteria" for the sub-tasks intended for ConstraintCheckerAgent and StackAdvisorAgent.
+        expected_output='''Your entire response MUST BE a single, valid JSON object.
+This JSON object must have a top-level key named "sub_tasks_to_delegate".
+The value of "sub_tasks_to_delegate" MUST be a list of JSON objects (dictionaries).
+Each dictionary in this list represents a sub-task and MUST include the following keys:
+- "task_description": A string containing the fully self-contained, detailed description for the sub-agent.
+- "assigned_agent_role": A string indicating the role of the agent to delegate to (e.g., "ConstraintCheckerAgent", "StackAdvisorAgent").
+- "successCriteria": A list of strings defining the success criteria for the sub-task.
+- Optionally, you may include other relevant keys like "category" if applicable.
+
+IMPORTANT: Ensure correct JSON syntax. This means:
+- All keys and string values must be enclosed in double quotes.
+- Each key-value pair in an object must be followed by a comma if it is not the last pair in that object.
+- Each object in a list must be followed by a comma if it is not the last object in that list.
+
+Example of a single sub-task object within the "sub_tasks_to_delegate" list:
+{
+  "task_description": "Review the provided 'proposed_solution': [output of task_interpret_idea] against the 'project_constraints_document': {constraints}. Identify violations.",
+  "assigned_agent_role": "ConstraintCheckerAgent",
+  "successCriteria": ["violations identified", "compliance report generated"],
+  "category": "Constraints"
+}
+
+If there are multiple sub-task objects in the list, they should be comma-separated. For example:
+`[ { ...subtask1... }, { ...subtask2... } ]`
 
 Specific success criteria for this output include:
-- sub_tasks_to_delegate list provided
-- ConstraintCheckerAgent sub-task defined
-- StackAdvisorAgent sub-task defined
-- payloads for sub-tasks correctly structured
-- successCriteria for sub-tasks defined''',
+- Valid JSON object produced as the entire output.
+- "sub_tasks_to_delegate" key present with a list value.
+- Each item in the list is a dictionary containing "task_description", "assigned_agent_role", and "successCriteria".
+- Payloads for sub-tasks correctly structured and self-contained.
+- All string values and keys are in double quotes.
+- Commas are correctly placed between key-value pairs and list items.
+''',
         agent=tech_vetting_council_agent,
         context=[task_interpret_idea]
     )
