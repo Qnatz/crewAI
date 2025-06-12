@@ -58,6 +58,10 @@ class TaskMasterGeneralCoordinatorAgent(Agent): # Inherit from Agent
         print(f"Project progress saved to {project_checkpoint_file}")
 
     def orchestrate_project(self, user_request: str, project_deliverables_list: list = None):
+        print("DEBUG: TaskMasterGeneralCoordinatorAgent.orchestrate_project called.") # ADD THIS
+        print(f"DEBUG:   user_request: '{user_request}'") # ADD THIS
+        print(f"DEBUG:   project_deliverables_list: {project_deliverables_list}") # ADD THIS
+
         print(f"TaskMaster starting orchestration for: {user_request}")
 
         project_info = get_or_create_project(name=user_request)
