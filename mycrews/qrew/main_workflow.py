@@ -551,9 +551,15 @@ if __name__ == "__main__":
     print("\n\n########################")
     print("## Workflow Execution Result (from main_workflow.py direct run):")
     print("########################\n")
-    if final_result:
-        print("Final output from the Idea-to-Architecture crew:")
-        print(final_result.raw if hasattr(final_result, 'raw') else str(final_result))
+    if final_result and isinstance(final_result, dict):
+        print("Final output from the Idea-to-Architecture crew (dictionary):")
+        try:
+            print(json.dumps(final_result, indent=2))
+        except Exception as e:
+            print(f"Could not JSON dump final_result (dict), printing as is: {final_result}")
+    elif final_result: # It's not None and not a dict
+        print("Final output from the Idea-to-Architecture crew (unexpected type):")
+        print(str(final_result))
     else:
         print("Idea-to-Architecture Crew produced no output or an error occurred.")
 
