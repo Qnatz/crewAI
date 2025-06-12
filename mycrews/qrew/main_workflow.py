@@ -433,20 +433,20 @@ Project's technical vision: {architecture_synthesis_payload['technical_vision']}
 
 The JSON object you return MUST include the following top-level keys:
 - "type": Set this to the string "software".
-- "summary": A comprehensive textual summary of the entire architecture, including an overview, key decisions, security, cost, CI/CD, monitoring, and any risks or pending items. This should be similar to the detailed textual document previously generated.
+- "summary": Provide ONLY the comprehensive textual summary of the entire architecture itself. Do NOT include your thought process or plan for generating this summary in this string value. The summary should cover an overview, key decisions, security, cost, CI/CD, monitoring, and any risks or pending items.
 - "approved_technologies": A dictionary or list detailing core approved technologies (e.g., frontend, backend, database, infrastructure).
 - "pending_decisions": A list of critical decisions that are still unresolved (e.g., specific frameworks, compute services).
-- "security_plan_summary": A brief summary of the security implementation plan.
-- "cost_analysis_summary": A brief summary of the cost analysis and optimization strategies.
-- "ci_cd_pipeline_summary": A brief summary of the CI/CD automation pipeline design.
-- "monitoring_strategy_summary": A brief summary of the monitoring strategy.
-- "backend_spec": A string detailing backend architecture, technologies, APIs, and data models. If not fully detailed, provide a high-level overview and placeholders for further breakdown.
-- "frontend_spec": A string detailing frontend architecture (e.g., for web or a general placeholder if mobile is separate), technologies, and key UI components. If not fully detailed, provide a high-level overview.
-- "mobile_spec": A string detailing mobile architecture (if applicable, otherwise null or a note that it's not in scope), technologies, and key UI components. If not fully detailed, provide a high-level overview.
-- "data_model_summary": A brief overview of the data model design.
-- "api_guidelines_summary": A brief summary of API design guidelines.
-- "integration_points_summary": A brief summary of key integration points.
-- "non_functional_requirements_summary": A brief summary of how non-functional requirements are addressed.
+- "security_plan_summary": A brief summary of the security implementation plan. Provide ONLY the brief summary text.
+- "cost_analysis_summary": A brief summary of the cost analysis and optimization strategies. Provide ONLY the brief summary text.
+- "ci_cd_pipeline_summary": A brief summary of the CI/CD automation pipeline design. Provide ONLY the brief summary text.
+- "monitoring_strategy_summary": A brief summary of the monitoring strategy. Provide ONLY the brief summary text.
+- "backend_spec": A string detailing backend architecture, technologies, APIs, and data models. If not fully detailed, provide a high-level overview and placeholders for further breakdown. Provide ONLY the string detailing the backend architecture. Do not include your plan or thoughts for creating this spec in this value.
+- "frontend_spec": A string detailing frontend architecture (e.g., for web or a general placeholder if mobile is separate), technologies, and key UI components. If not fully detailed, provide a high-level overview. Provide ONLY the string detailing the frontend architecture. Do not include your plan or thoughts for creating this spec in this value.
+- "mobile_spec": A string detailing mobile architecture (if applicable, otherwise null or a note that it's not in scope), technologies, and key UI components. If not fully detailed, provide a high-level overview. Provide ONLY the string detailing the mobile architecture. Do not include your plan or thoughts for creating this spec in this value.
+- "data_model_summary": A brief overview of the data model design. Provide ONLY the brief overview text.
+- "api_guidelines_summary": A brief summary of API design guidelines. Provide ONLY the brief summary text.
+- "integration_points_summary": A brief summary of key integration points. Provide ONLY the brief summary text.
+- "non_functional_requirements_summary": A brief summary of how non-functional requirements are addressed. Provide ONLY the brief summary text.
 
 Ensure the output is a single, valid JSON string.
 Specific success criteria for this output include:
