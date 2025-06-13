@@ -293,20 +293,65 @@ You must define the sub-tasks to be delegated... Return a JSON object with a key
 
         try:
             architecture_sub_task_data = json.loads(actual_arch_json_str_for_planning)
-            if "sub_tasks_to_delegate" not in architecture_sub_task_data:
-                error_msg = "'sub_tasks_to_delegate' key missing in Architecture Planning JSON."
-                print(f"Error: {error_msg}. Received: {actual_arch_json_str_for_planning}")
+
+            # Ensure architecture_sub_task_data is a dictionary and has the key, otherwise default to empty list
+            sub_tasks_to_delegate_list = []
+            if isinstance(architecture_sub_task_data, dict):
+                sub_tasks_to_delegate_list = architecture_sub_task_data.get("sub_tasks_to_delegate", [])
+            elif isinstance(architecture_sub_task_data, list): # If the agent directly returns a list
+                sub_tasks_to_delegate_list = architecture_sub_task_data
+            else: # Not a dict or list, or sub_tasks_to_delegate is not a list
+                error_msg = f"'sub_tasks_to_delegate' key is missing or not a list in Architecture Planning JSON. Data: {architecture_sub_task_data}"
+                print(f"Error: {error_msg}")
                 state.fail_stage("architecture", error_msg)
                 raise ValueError(error_msg)
 
-            for sub_task_def in architecture_sub_task_data["sub_tasks_to_delegate"]:
-                # ... (delegation logic as before)
-                assigned_role = sub_task_def.get("assigned_agent_role")
-                actual_agent = agent_role_map.get(assigned_role, software_engineer_agent) # Default to SoftwareEngineerAgent
-                arch_sub_task = Task(description=sub_task_def["task_description"], expected_output=sub_task_def.get("expected_output", "Component design."), agent=actual_agent)
-                arch_sub_task_result = qrew_main_crew.delegate_task(task=arch_sub_task)
-                result_key = f"{assigned_role}_{sub_task_def.get('task_description', 'Unnamed_Arch_Sub_Task')[:30]}"
+
+            for i, sub_task_def in enumerate(sub_tasks_to_delegate_list):
+                if not isinstance(sub_task_def, dict):
+                    print(f"Warning: Sub-task definition item {i} is not a dictionary. Skipping: {sub_task_def}")
+                    state.fail_stage("architecture", f"Malformed sub-task definition (item {i}) from ProjectArchitectAgent: not a dictionary.")
+                    raise ValueError(f"Malformed sub-task definition (item {i}): {sub_task_def}")
+
+                task_description = sub_task_def.get("task_description")
+                assigned_agent_role = sub_task_def.get("assigned_agent_role")
+                success_criteria = sub_task_def.get("successCriteria", ["component design completed"]) # Default if missing
+
+                if not task_description:
+                    print(f"Warning: Sub-task definition {i} from ProjectArchitectAgent is missing 'task_description'. Sub-task content: {sub_task_def}")
+                    state.fail_stage("architecture", f"Malformed sub-task definition (item {i}) from ProjectArchitectAgent: missing 'task_description'.")
+                    raise ValueError(f"Sub-task definition {i} missing 'task_description': {sub_task_def}")
+
+                if not assigned_agent_role:
+                    print(f"Warning: Sub-task definition {i} from ProjectArchitectAgent is missing 'assigned_agent_role'. Sub-task content: {sub_task_def}")
+                    state.fail_stage("architecture", f"Malformed sub-task definition (item {i}) from ProjectArchitectAgent: missing 'assigned_agent_role'.")
+                    raise ValueError(f"Sub-task definition {i} missing 'assigned_agent_role': {sub_task_def}")
+
+                actual_agent = agent_role_map.get(assigned_agent_role)
+                if not actual_agent:
+                    print(f"Warning: Agent for role '{assigned_agent_role}' (sub-task {i}) not found in agent_role_map. Defaulting to SoftwareEngineerAgent.")
+                    actual_agent = software_engineer_agent # Ensure software_engineer_agent is in scope
+
+                arch_expected_output_str = sub_task_def.get("expected_output", "Detailed design for the architectural component.")
+                # Ensure success_criteria is a list and items are strings before joining
+                if isinstance(success_criteria, list) and all(isinstance(c, str) for c in success_criteria):
+                    arch_expected_output_str += "\n\nSpecific success criteria for this output include:\n" + "\n".join([f"- {c}" for c in success_criteria])
+                elif success_criteria: # If it exists but is not a list of strings
+                    print(f"Warning: successCriteria for sub-task {i} is not a list of strings: {success_criteria}. Using default expected output.")
+
+
+                new_arch_sub_task = Task(
+                    description=task_description,
+                    expected_output=arch_expected_output_str,
+                    agent=actual_agent
+                )
+
+                print(f"    Delegating architecture sub-task {i+1} ('{task_description[:30]}...') to {actual_agent.role} using qrew_main_crew...")
+                arch_sub_task_result = qrew_main_crew.delegate_task(task=new_arch_sub_task)
+                # Use a more unique key for results
+                result_key = f"{assigned_agent_role}_subtask_{i+1}_{task_description[:20].replace(' ', '_').replace('/', '_')}"
                 architecture_delegated_task_results[result_key] = str(arch_sub_task_result.raw if hasattr(arch_sub_task_result, 'raw') else arch_sub_task_result)
+                print(f"    Architecture sub-task {i+1} for '{assigned_agent_role}' completed.")
 
         except json.JSONDecodeError as e:
             error_msg = f"Error parsing JSON from Architecture Design Planning output: {e}. Received: '{actual_arch_json_str_for_planning}'. Original: '{architecture_planning_json_str}'"
