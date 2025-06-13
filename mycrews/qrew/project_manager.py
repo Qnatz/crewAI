@@ -77,8 +77,13 @@ class ProjectStateManager:
         }
 
     def save_state(self):
+        """Save current state to file"""
         self.state["error_summary"] = self.error_summary.to_dict()
         self.state["updated_at"] = datetime.utcnow().isoformat()
+
+        # Ensure the directory for the state file exists
+        self.state_file.parent.mkdir(parents=True, exist_ok=True) # Added line
+
         self.state_file.write_text(json.dumps(self.state, indent=2))
 
     def start_stage(self, stage_name):
