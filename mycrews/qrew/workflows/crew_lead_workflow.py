@@ -1,4 +1,3 @@
-```python
 from crewai import Crew, Process, Task
 from ..agents.crew_lead_agent import CrewLeadAgent
 
@@ -52,4 +51,3 @@ def run_crew_lead_workflow(inputs: dict):
         "mobile_plan": result[2],
         "deployment_plan": result[3]
     }
-```

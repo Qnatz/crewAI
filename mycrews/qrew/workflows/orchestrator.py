@@ -1,4 +1,3 @@
-```python
 from .idea_to_architecture_flow import run_idea_to_architecture_workflow
 from .crew_lead_workflow import run_crew_lead_workflow
 from .subagent_execution_workflow import run_subagent_execution_workflow
@@ -46,4 +45,3 @@ class WorkflowOrchestrator:
             "components": subagent_result,
             "final_output": final_result
         }
-```

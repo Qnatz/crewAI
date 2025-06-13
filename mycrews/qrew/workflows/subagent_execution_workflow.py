@@ -1,4 +1,3 @@
-```python
 from crewai import Crew, Process, Task
 from ..agents.backend import api_creator_agent, data_model_agent
 from ..agents.web import dynamic_page_builder_agent
@@ -110,4 +109,3 @@ def create_devops_tasks(plan):
                 )
             )
     return tasks
-```
