@@ -25,7 +25,7 @@ MODEL_BY_AGENT = {
     "tester_agent_devutils": "gemini/gemini-2.5-flash-preview-04-17",
 
     # DevOps Agent
-    "devops_agent": "gemini/gemini-2.5-flash-preview-04-17",
+    "devops_agent": "gemini/gemini-1.5-flash",
 
     # Mobile Agents (Android)
     "android_api_client_agent": "gemini/gemini-2.5-flash-preview-04-17",
