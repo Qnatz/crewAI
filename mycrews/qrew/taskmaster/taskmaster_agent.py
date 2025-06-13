@@ -1,7 +1,10 @@
 import json
 from pathlib import Path
-from crewai import Agent, Task, tool
-from .tools import knowledge_base_tool_instance
+from crewai import Agent, Task
+from typing import ClassVar
+from crewai.tools.base_tool import tool
+from ..tools.shell_tool import shell_tool
+from ..tools import knowledge_base_tool_instance
 from ..llm_config import get_llm_for_agent
 from ..project_manager import get_or_create_project
 
@@ -11,6 +14,10 @@ specific_llm = get_llm_for_agent(agent_identifier)
 PROJECT_CHECKPOINT_FILENAME = ".taskmaster_checkpoint.json"
 
 class TaskMasterGeneralCoordinatorAgent(Agent): # Inherit from Agent
+    orchestrate_project: ClassVar = tool("Orchestrate Project Tool")(
+        lambda user_request, project_deliverables_list=None: "Project orchestrated"
+    )
+
     def __init__(self, **kwargs): # Add __init__
         # The @tool decorator on an instance method makes that method directly usable as a tool.
         # self.orchestrate_project will be picked up by the Agent class if it's decorated with @tool
