@@ -74,7 +74,7 @@ MODEL_BY_AGENT = {
     "tech_vetting_council_agent": "gemini/gemini-2.5-flash-preview-04-17", # Main council agent
 
     # TaskMaster
-    "taskmaster_agent": "gemini/gemini-2.5-flash-preview-04-17", # High capability needed
+    "taskmaster_agent": "gemini/gemini-1.5-flash", # High capability needed
 
     # Tools (if a tool needed its own LLM, e.g., for summarization within the tool)
     "knowledge_base_tool_summarizer": "gemini/gemini-2.0-flash-001",
