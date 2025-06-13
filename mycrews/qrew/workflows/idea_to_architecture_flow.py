@@ -168,41 +168,47 @@ Example for 'StackAdvisorAgent's task_description: "Analyze the project_requirem
         }
         planning_crew_result_obj = idea_to_architecture_planning_crew.kickoff(inputs=planning_crew_inputs)
 
-        # ... (rest of the sub-task delegation logic for vetting, largely as before) ...
-        # Ensure that any .format() calls for task descriptions are robust and handle missing keys.
-        # For example, in task_design_architecture_planning's description formatting:
+        # --- Handling output of task_vet_requirements_planning ---
+        # Assume planning_crew_result_obj is the direct string output from the last task in the sequential crew
+        sub_task_definitions_json_str = str(planning_crew_result_obj)
 
-        sub_task_definitions_json_str = None
-        if hasattr(planning_crew_result_obj, 'raw'):
-            sub_task_definitions_json_str = planning_crew_result_obj.raw
-        elif hasattr(planning_crew_result_obj, 'tasks') and planning_crew_result_obj.tasks:
-            planning_task_output = next((t.output for t in planning_crew_result_obj.tasks if t.agent == tech_vetting_council_agent), None) # Find by agent if desc changes
-            if planning_task_output and hasattr(planning_task_output, 'raw_output'):
-                sub_task_definitions_json_str = planning_task_output.raw_output
-            elif planning_task_output:
-                 sub_task_definitions_json_str = str(planning_task_output)
-        else:
-            print("Warning: Could not extract raw output from planning_crew_result_obj. Falling back to string conversion.")
-            sub_task_definitions_json_str = str(planning_crew_result_obj)
-
-        if not sub_task_definitions_json_str:
-            print("Error: Vetting Requirements Planning task did not produce an output string.")
+        if not sub_task_definitions_json_str or not sub_task_definitions_json_str.strip():
+            print("Error: Vetting Requirements Planning task (task_vet_requirements_planning) did not produce a valid output string.")
+            state.fail_stage("architecture", "Vetting Requirements Planning task produced no output.")
             raise ValueError("Vetting Requirements Planning task failed to produce output.")
 
-        print("\nProcessing output of Vetting Requirements Planning...")
+        print("\nProcessing output of Vetting Requirements Planning (task_vet_requirements_planning)...")
         delegated_task_results = {}
-        actual_json_str_for_vetting_plan = "" # Define for use in except block
-        try:
-            json_start_index = sub_task_definitions_json_str.find('{')
-            json_end_index = sub_task_definitions_json_str.rfind('}') + 1
-            if json_start_index != -1 and json_end_index != -1:
-                actual_json_str_for_vetting_plan = sub_task_definitions_json_str[json_start_index:json_end_index]
-                sub_task_data = json.loads(actual_json_str_for_vetting_plan)
-            else:
-                raise json.JSONDecodeError("No JSON object found in Vetting Planning output", sub_task_definitions_json_str, 0)
 
+        # Define extract_json_from_llm_output if not already defined globally or imported
+        # For this fix, assuming it's defined as in the previous step's thought process
+        import re # Ensure re is imported
+        def extract_json_from_llm_output(output_str):
+            match = re.search(r"```json\s*(\{.*?\})\s*```", output_str, re.DOTALL)
+            if match:
+                return match.group(1)
+            match = re.search(r"```\s*(\{.*?\})\s*```", output_str, re.DOTALL)
+            if match:
+                return match.group(1)
+            first_brace = output_str.find('{')
+            last_brace = output_str.rfind('}')
+            if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+                return output_str[first_brace : last_brace + 1]
+            return None
+
+        actual_json_str_for_sub_tasks = extract_json_from_llm_output(sub_task_definitions_json_str)
+
+        if not actual_json_str_for_sub_tasks:
+            error_msg = f"Error: Could not extract JSON for sub-task definitions from Vetting Planning output: {sub_task_definitions_json_str}"
+            print(error_msg)
+            state.fail_stage("architecture", "Failed to parse sub-task definitions JSON from Vetting Planning output.")
+            raise ValueError(error_msg)
+
+        try:
+            sub_task_data = json.loads(actual_json_str_for_sub_tasks)
             if "sub_tasks_to_delegate" not in sub_task_data:
-                print("Error: 'sub_tasks_to_delegate' key missing in planning output JSON.")
+                print("Error: 'sub_tasks_to_delegate' key missing in Vetting Planning output JSON.")
+                state.fail_stage("architecture", "'sub_tasks_to_delegate' key missing in Vetting Planning JSON.")
                 raise ValueError("'sub_tasks_to_delegate' key missing in Vetting Planning JSON.")
 
             for sub_task_def in sub_task_data["sub_tasks_to_delegate"]:
@@ -216,13 +222,18 @@ Example for 'StackAdvisorAgent's task_description: "Analyze the project_requirem
                 delegated_task_results[assigned_role] = str(sub_task_result.raw if hasattr(sub_task_result, 'raw') else sub_task_result)
 
         except json.JSONDecodeError as e:
-            error_msg = f"Error parsing JSON from Vetting Requirements Planning output: {e}. Received: '{actual_json_str_for_vetting_plan}'. Original: '{sub_task_definitions_json_str}'"
+            error_msg = f"Error parsing JSON from Vetting Requirements Planning output: {e}. Received: '{actual_json_str_for_sub_tasks}'. Original: '{sub_task_definitions_json_str}'"
             print(error_msg)
-            raise ValueError(error_msg) # Re-raise as ValueError for consistent handling
+            state.fail_stage("architecture", error_msg)
+            raise ValueError(error_msg)
 
-        # ... (Vetting Requirements Synthesis task definition and execution as before) ...
-        idea_task_output_obj = next((t.output for t in planning_crew_result_obj.tasks if t.agent == idea_interpreter_agent), None)
-        idea_task_output_str = str(idea_task_output_obj.raw_output if idea_task_output_obj and hasattr(idea_task_output_obj, 'raw_output') else idea_task_output_obj)
+        # --- Simplified retrieval of idea_task_output_str ---
+        # This assumes the initial user_idea/request is sufficient for later stages if task_interpret_idea's direct output isn't captured.
+        # This is a simplification to avoid the AttributeError and may need refinement if the detailed output of task_interpret_idea is crucial
+        # and not just its availability as a prior step.
+        idea_task_output_str = str(workflow_inputs.get("user_idea",
+                                   workflow_inputs.get("user_request",
+                                   "Default user idea/request as task_interpret_idea output not directly captured.")))
 
         synthesis_payload_vetting = {
             "constraint_checker_report": delegated_task_results.get("ConstraintCheckerAgent", "Not available"),
@@ -271,18 +282,22 @@ You must define the sub-tasks to be delegated... Return a JSON object with a key
         # ... (Rest of architecture sub-task delegation and synthesis as before) ...
         # Ensure JSON parsing is robust and error handling is consistent.
         architecture_delegated_task_results = {}
-        actual_arch_json_str = "" # For use in except block
-        try:
-            json_start_index_arch = architecture_planning_json_str.find('{')
-            json_end_index_arch = architecture_planning_json_str.rfind('}') + 1
-            if json_start_index_arch != -1 and json_end_index_arch != -1:
-                actual_arch_json_str = architecture_planning_json_str[json_start_index_arch:json_end_index_arch]
-                architecture_sub_task_data = json.loads(actual_arch_json_str)
-            else:
-                raise json.JSONDecodeError("No JSON object found in Arch Design Planning output", architecture_planning_json_str, 0)
 
+        # Robust parsing for architecture_planning_json_str
+        actual_arch_json_str_for_planning = extract_json_from_llm_output(architecture_planning_json_str)
+        if not actual_arch_json_str_for_planning:
+            error_msg = f"Error: Could not extract JSON for architecture sub-task definitions from output: {architecture_planning_json_str}"
+            print(error_msg)
+            state.fail_stage("architecture", "Failed to parse architecture sub-task definitions JSON.")
+            raise ValueError(error_msg)
+
+        try:
+            architecture_sub_task_data = json.loads(actual_arch_json_str_for_planning)
             if "sub_tasks_to_delegate" not in architecture_sub_task_data:
-                raise ValueError("'sub_tasks_to_delegate' key missing in Architecture Planning JSON.")
+                error_msg = "'sub_tasks_to_delegate' key missing in Architecture Planning JSON."
+                print(f"Error: {error_msg}. Received: {actual_arch_json_str_for_planning}")
+                state.fail_stage("architecture", error_msg)
+                raise ValueError(error_msg)
 
             for sub_task_def in architecture_sub_task_data["sub_tasks_to_delegate"]:
                 # ... (delegation logic as before)
@@ -294,8 +309,9 @@ You must define the sub-tasks to be delegated... Return a JSON object with a key
                 architecture_delegated_task_results[result_key] = str(arch_sub_task_result.raw if hasattr(arch_sub_task_result, 'raw') else arch_sub_task_result)
 
         except json.JSONDecodeError as e:
-            error_msg = f"Error parsing JSON from Architecture Design Planning output: {e}. Received: '{actual_arch_json_str}'. Original: '{architecture_planning_json_str}'"
+            error_msg = f"Error parsing JSON from Architecture Design Planning output: {e}. Received: '{actual_arch_json_str_for_planning}'. Original: '{architecture_planning_json_str}'"
             print(error_msg)
+            state.fail_stage("architecture", error_msg)
             raise ValueError(error_msg)
 
         architecture_synthesis_payload = {
@@ -315,36 +331,27 @@ You must define the sub-tasks to be delegated... Return a JSON object with a key
         final_output_data = None
         content_to_parse_arch_final = "" # For use in except block
         try:
-            # Consolidate JSON extraction logic
-            def extract_json_from_llm_output(output_str):
-                # Try to find ```json ... ``` block first
-                match = re.search(r"```json\s*(\{.*?\})\s*```", output_str, re.DOTALL)
-                if match:
-                    return match.group(1)
-                # Try to find ``` ... ``` block then parse if it's JSON
-                match = re.search(r"```\s*(\{.*?\})\s*```", output_str, re.DOTALL)
-                if match:
-                    return match.group(1)
-                # Fallback to finding first '{' and last '}'
-                first_brace = output_str.find('{')
-                last_brace = output_str.rfind('}')
-                if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
-                    return output_str[first_brace : last_brace + 1]
-                return None # Or raise error if no JSON found
-
-            import re # Make sure re is imported
+            # Using the already defined extract_json_from_llm_output helper
             content_to_parse_arch_final = extract_json_from_llm_output(raw_json_string_arch_final)
-            if content_to_parse_arch_final:
-                final_output_data = json.loads(content_to_parse_arch_final)
-                print("Successfully parsed architecture synthesis JSON string.")
-            else:
-                raise json.JSONDecodeError("Could not isolate a JSON string from the raw architecture synthesis output.", raw_json_string_arch_final, 0)
+            if not content_to_parse_arch_final:
+                error_msg = f"Could not isolate a JSON string from the raw architecture synthesis output: {raw_json_string_arch_final}"
+                print(f"Error: {error_msg}")
+                # This error should be critical enough to fail the stage.
+                # The orchestrator will catch the ValueError from json.loads if content_to_parse_arch_final is None or invalid.
+                # However, explicitly failing here is also an option.
+                state.fail_stage("architecture", "Failed to parse final architecture JSON.")
+                raise json.JSONDecodeError(error_msg, raw_json_string_arch_final, 0)
+
+            final_output_data = json.loads(content_to_parse_arch_final)
+            print("Successfully parsed architecture synthesis JSON string.")
 
         except json.JSONDecodeError as e:
-            error_msg = f"Error: Failed to parse JSON from architecture synthesis result: {e}. Raw output: '''{raw_json_string_arch_final}'''"
+            error_msg = f"Error: Failed to parse JSON from architecture synthesis result: {e}. Raw output: '''{raw_json_string_arch_final}'''. Parsed content attempt: '''{content_to_parse_arch_final}'''"
             print(error_msg)
-            final_output_data = {"error": error_msg, "raw_content": raw_json_string_arch_final, "type": "error_parsing_architecture"}
-            # Do not raise here, allow orchestrator to handle returned error dict
+            # It's better to let the main exception handler call state.fail_stage by re-raising
+            # final_output_data = {"error": error_msg, "raw_content": raw_json_string_arch_final, "type": "error_parsing_architecture"}
+            # state.fail_stage("architecture", error_msg) # This would be redundant if we re-raise
+            raise ValueError(error_msg) # Re-raise to be caught by the main try-except
 
         print("\nIdea-to-Architecture (Full Workflow) complete.")
         return final_output_data

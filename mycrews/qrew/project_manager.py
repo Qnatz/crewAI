@@ -94,32 +94,18 @@ class ProjectStateManager:
                 self.state["artifacts"][stage_name] = {}
             self.state["artifacts"][stage_name].update(artifacts)
 
-        # Find if there was a "Stage started" record and update it, or add new
-        found_record = False
-        for record in self.error_summary.records: # Accessing .records directly for modification
-            if record["stage"] == stage_name and record["message"] == "Stage started":
-                record["success"] = True
-                record["message"] = "Completed successfully"
-                found_record = True
-                break
-        if not found_record:
-             self.error_summary.add(stage_name, True, "Completed successfully")
+        # Add a new log entry for completion, do not modify existing ones.
+        self.error_summary.add(stage_name, True, "Completed successfully")
 
         self.state["current_stage"] = None
         self.save_state()
 
     def fail_stage(self, stage_name: str, error_message: str):
         self.state["status"] = "failed"
-        # Find if there was a "Stage started" record and update it to failure
-        found_record = False
-        for record in self.error_summary.records: # Accessing .records directly
-            if record["stage"] == stage_name and record["message"] == "Stage started":
-                record["success"] = False
-                record["message"] = error_message
-                found_record = True
-                break
-        if not found_record: # If no "started" message, add a new failure message
-            self.error_summary.add(stage_name, False, error_message)
+
+        # Add a new log entry for failure, do not modify existing ones.
+        self.error_summary.add(stage_name, False, error_message)
+
         self.save_state()
 
     def get_artifacts(self, stage_name: str = None):

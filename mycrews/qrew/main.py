@@ -58,9 +58,9 @@ def run_qrew():
 
         # Define sample variables for the pipeline_inputs
         # These would typically come from a UI, database, or other external source
-        sample_user_request = "I need a new mobile app for tracking personal fitness goals. It should be fun and engaging, with social sharing features and personalized workout plans."
-        sample_project_goal = "Develop a market-leading mobile fitness tracking application that provides a highly engaging user experience and personalized fitness journeys."
-        sample_priority = "High"
+        sample_user_request = "I need a simple and engaging app where I can view, add, and manage interesting locations on a map — like cafes, nature spots, or local attractions — and control who can see them."
+        sample_project_goal = "Develop a modern multi-platform map-based application with backend support, allowing users to create, manage, and explore points of interest with high visual engagement and retention."
+        sample_priority = "Medium-High"
         sample_stakeholder_feedback = "User retention is key. Gamification is highly desired. Ensure mobile-first design principles are followed. We need to integrate with popular wearable devices."
         sample_market_research = "Market research indicates strong demand for apps with AI-driven personalization. Competitors X and Y lack robust social features. Emerging trend: mindfulness and mental well-being integration."
         sample_project_constraints = "The core team has strong Python (backend) and React Native (mobile) skills. Initial deployment target is AWS. Budget for external AI/ML services is moderate. Timeline: 6 months for MVP."
