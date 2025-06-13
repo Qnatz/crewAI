@@ -19,22 +19,22 @@ def run_crew_lead_workflow(inputs: dict):
         Task(
             description=f"Plan backend implementation for {inputs['project_name']}. "                         f"The overall project architecture summary is: {architecture_summary_str}",
             agent=backend_lead,
-            expected_output="Backend implementation plan with task assignments"
+            expected_output="A JSON object with a single key 'tasks'. The value of 'tasks' MUST be a list of strings, where each string is a detailed task description for backend development. Ensure the output is ONLY the JSON object itself, starting with { and ending with }."
         ),
         Task(
             description=f"Plan frontend implementation for {inputs['project_name']}. "                         f"The overall project architecture summary is: {architecture_summary_str}",
             agent=web_lead,
-            expected_output="Frontend implementation plan with task assignments"
+            expected_output="A JSON object with a single key 'tasks'. The value of 'tasks' MUST be a list of strings, where each string is a detailed task description for frontend implementation. Ensure the output is ONLY the JSON object itself, starting with { and ending with }."
         ),
         Task(
             description=f"Plan mobile implementation for {inputs['project_name']}. "                         f"The overall project architecture summary is: {architecture_summary_str}",
             agent=mobile_lead,
-            expected_output="Mobile implementation plan with task assignments"
+            expected_output="A JSON object with a single key 'tasks'. The value of 'tasks' MUST be a list of strings, where each string is a detailed task description for mobile implementation. Ensure the output is ONLY the JSON object itself, starting with { and ending with }."
         ),
         Task(
             description=f"Plan deployment for {inputs['project_name']}. "                         f"The overall project architecture summary is: {architecture_summary_str}",
             agent=devops_lead,
-            expected_output="Deployment plan with task assignments"
+            expected_output="A JSON object with a single key 'tasks'. The value of 'tasks' MUST be a list of strings, where each string is a detailed task description for the deployment plan. Ensure the output is ONLY the JSON object itself, starting with { and ending with }."
         )
     ]
 
@@ -50,14 +50,54 @@ def run_crew_lead_workflow(inputs: dict):
     # Ensure result.tasks_output is not empty and has enough elements.
     # A more robust way would be to map tasks to their outputs if order isn't guaranteed
     # or if the number of tasks could vary. For now, assuming fixed order and count.
-    backend_plan_output = result.tasks_output[0].raw if len(result.tasks_output) > 0 and hasattr(result.tasks_output[0], 'raw') else "Error: Backend task output not found or .raw attribute missing"
-    frontend_plan_output = result.tasks_output[1].raw if len(result.tasks_output) > 1 and hasattr(result.tasks_output[1], 'raw') else "Error: Frontend task output not found or .raw attribute missing"
-    mobile_plan_output = result.tasks_output[2].raw if len(result.tasks_output) > 2 and hasattr(result.tasks_output[2], 'raw') else "Error: Mobile task output not found or .raw attribute missing"
-    deployment_plan_output = result.tasks_output[3].raw if len(result.tasks_output) > 3 and hasattr(result.tasks_output[3], 'raw') else "Error: Deployment task output not found or .raw attribute missing"
+
+    parsed_outputs = []
+    default_error_plan = {"tasks": ["Error: Failed to parse plan from LLM output or previous error occurred."]}
+
+    if result and result.tasks_output:
+        for i in range(4): # Assuming 4 tasks corresponding to backend, frontend, mobile, devops
+            plan_name = ["Backend", "Frontend", "Mobile", "Deployment"][i]
+            if i < len(result.tasks_output) and hasattr(result.tasks_output[i], 'raw') and result.tasks_output[i].raw:
+                raw_output_str = result.tasks_output[i].raw
+                # Attempt to strip markdown fences if present, as LLMs sometimes add them
+                if raw_output_str.startswith("```json"):
+                    raw_output_str = raw_output_str[len("```json"):].strip()
+                    if raw_output_str.endswith("```"):
+                        raw_output_str = raw_output_str[:-len("```")].strip()
+                elif raw_output_str.startswith("```"):
+                     raw_output_str = raw_output_str[len("```"):].strip()
+                     if raw_output_str.endswith("```"):
+                        raw_output_str = raw_output_str[:-len("```")].strip()
+
+                # Ensure the string starts with { and ends with } after stripping
+                if not (raw_output_str.startswith('{') and raw_output_str.endswith('}')):
+                    print(f"Warning: Output for {plan_name} plan doesn't look like a JSON object after stripping fences: {raw_output_str[:100]}...") # Log a snippet
+                    parsed_outputs.append(default_error_plan)
+                    continue
+
+                try:
+                    parsed_plan = json.loads(raw_output_str)
+                    if not isinstance(parsed_plan, dict) or "tasks" not in parsed_plan or not isinstance(parsed_plan["tasks"], list):
+                        print(f"Warning: Parsed JSON for {plan_name} plan is not in the expected format (dict with 'tasks' list): {parsed_plan}")
+                        parsed_outputs.append(default_error_plan)
+                    else:
+                        parsed_outputs.append(parsed_plan)
+                except json.JSONDecodeError as e:
+                    print(f"Error parsing JSON for {plan_name} plan: {e}. Raw output: {raw_output_str}")
+                    parsed_outputs.append(default_error_plan)
+            else:
+                parsed_outputs.append({"tasks": [f"Error: {plan_name} task output not found, .raw attribute missing, or raw output is empty."]})
+    else: # Fill with error defaults if no tasks_output
+        for _ in range(4):
+            parsed_outputs.append(default_error_plan)
+
+    # Ensure we have 4 elements in parsed_outputs, even if they are error objects
+    while len(parsed_outputs) < 4:
+        parsed_outputs.append(default_error_plan)
 
     return {
-        "backend_plan": backend_plan_output,
-        "frontend_plan": frontend_plan_output,
-        "mobile_plan": mobile_plan_output,
-        "deployment_plan": deployment_plan_output
+        "backend_plan": parsed_outputs[0],
+        "frontend_plan": parsed_outputs[1],
+        "mobile_plan": parsed_outputs[2],
+        "deployment_plan": parsed_outputs[3]
     }
