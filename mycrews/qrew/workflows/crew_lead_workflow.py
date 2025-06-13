@@ -1,3 +1,4 @@
+import json
 from crewai import Crew, Process, Task
 from ..lead_agents.backend_project_coordinator_agent.agent import backend_project_coordinator_agent
 from ..lead_agents.web_project_coordinator_agent.agent import web_project_coordinator_agent
@@ -11,31 +12,29 @@ def run_crew_lead_workflow(inputs: dict):
     mobile_lead = mobile_project_coordinator_agent
     devops_lead = devops_and_integration_coordinator_agent
 
+    architecture_summary_str = json.dumps(inputs.get("architecture", {}), indent=2) # Added this line
+
     # Create tasks based on architecture
     tasks = [
         Task(
-            description=f"Plan backend implementation for {inputs['project_name']}",
+            description=f"Plan backend implementation for {inputs['project_name']}. "                         f"The overall project architecture summary is: {architecture_summary_str}",
             agent=backend_lead,
-            expected_output="Backend implementation plan with task assignments",
-            context=[inputs["architecture"]]
+            expected_output="Backend implementation plan with task assignments"
         ),
         Task(
-            description=f"Plan frontend implementation for {inputs['project_name']}",
+            description=f"Plan frontend implementation for {inputs['project_name']}. "                         f"The overall project architecture summary is: {architecture_summary_str}",
             agent=web_lead,
-            expected_output="Frontend implementation plan with task assignments",
-            context=[inputs["architecture"]]
+            expected_output="Frontend implementation plan with task assignments"
         ),
         Task(
-            description=f"Plan mobile implementation for {inputs['project_name']}",
+            description=f"Plan mobile implementation for {inputs['project_name']}. "                         f"The overall project architecture summary is: {architecture_summary_str}",
             agent=mobile_lead,
-            expected_output="Mobile implementation plan with task assignments",
-            context=[inputs["architecture"]]
+            expected_output="Mobile implementation plan with task assignments"
         ),
         Task(
-            description=f"Plan deployment for {inputs['project_name']}",
+            description=f"Plan deployment for {inputs['project_name']}. "                         f"The overall project architecture summary is: {architecture_summary_str}",
             agent=devops_lead,
-            expected_output="Deployment plan with task assignments",
-            context=[inputs["architecture"]]
+            expected_output="Deployment plan with task assignments"
         )
     ]
 
