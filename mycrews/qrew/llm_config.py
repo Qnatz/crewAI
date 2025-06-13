@@ -13,7 +13,7 @@ MODEL_BY_AGENT = {
     "api_creator_agent": "gemini/gemini-2.5-flash-preview-04-17",
     "auth_agent_backend": "gemini/gemini-2.5-flash-preview-04-17",
     "config_agent_backend": "gemini/gemini-2.5-flash-preview-04-17",
-    "data_model_agent_backend": "gemini/gemini-2.5-flash-preview-04-17",
+    "data_model_agent_backend": "gemini/gemini-1.5-flash",
     "queue_agent_backend": "gemini/gemini-2.0-flash-001",
     "storage_agent_backend": "gemini/gemini-2.0-flash-001",
     "sync_agent_backend": "gemini/gemini-2.5-flash-preview-04-17",
