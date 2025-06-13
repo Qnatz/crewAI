@@ -82,19 +82,40 @@ def run_qrew():
         )
 
         print("\nExecuting TaskMasterAgent for initial request processing...")
-        # Execute task directly instead of delegating
-        taskmaster_result_obj = taskmaster_initial_task.execute(agent=taskmaster_agent) # Pass agent explicitly to task's execute method.
+        # Assign the task to the crew and kickoff
+        taskmaster_crew.tasks = [taskmaster_initial_task]
+        task_execution_result = taskmaster_crew.kickoff()
 
-        # Extract the raw string output, similar to how it was handled before for taskmaster_result.raw
-        if hasattr(taskmaster_result_obj, 'raw_output') and taskmaster_result_obj.raw_output:
-            taskmaster_result = taskmaster_result_obj.raw_output
-        elif hasattr(taskmaster_result_obj, 'raw') and taskmaster_result_obj.raw: # Fallback for older/different TaskOutput structures
-            taskmaster_result = taskmaster_result_obj.raw
-        elif isinstance(taskmaster_result_obj, str):
-            taskmaster_result = taskmaster_result_obj
-        else:
-            taskmaster_result = str(taskmaster_result_obj) if taskmaster_result_obj is not None else ""
+        # Process the result from kickoff()
+        taskmaster_result_str = "" # Initialize to empty string
 
+        # kickoff() usually returns a final TaskOutput for a simple sequential crew with one task,
+        # or a list of TaskOutputs if there were multiple tasks or complex interactions.
+        # For a single task, it's often the direct TaskOutput.
+        final_task_output = None
+        if isinstance(task_execution_result, list) and len(task_execution_result) > 0:
+            # If kickoff returns a list, assume the last output is the most relevant for a sequential flow.
+            # Or, if it's known to be the first/only, access it directly.
+            # For a crew with a single task, the first item (if a list) is the one.
+            final_task_output = task_execution_result[0]
+        elif hasattr(task_execution_result, 'raw_output'): # Check if it's a TaskOutput-like object
+            final_task_output = task_execution_result
+        elif task_execution_result is not None: # If it's some other non-None result
+             taskmaster_result_str = str(task_execution_result)
+
+        # Extract string from the final_task_output if it was found
+        if final_task_output:
+            if hasattr(final_task_output, 'raw_output') and final_task_output.raw_output:
+                taskmaster_result_str = final_task_output.raw_output
+            elif hasattr(final_task_output, 'raw') and final_task_output.raw: # Fallback
+                taskmaster_result_str = final_task_output.raw
+            elif isinstance(final_task_output, str):
+                taskmaster_result_str = final_task_output
+            else:
+                taskmaster_result_str = str(final_task_output)
+
+        # Ensure the variable used by subsequent code is assigned
+        taskmaster_result = taskmaster_result_str
 
         print("\nTaskMasterAgent Processing Complete.")
         print("--------------------------------------")
