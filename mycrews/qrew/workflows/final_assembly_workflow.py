@@ -42,9 +42,12 @@ def run_final_assembly_workflow(inputs: dict):
     # The final output is from code_gen_task, which would be the last one.
     if result and result.tasks_output and len(result.tasks_output) == 3:
         # Assuming code_gen_task is the third task and its output is what we want.
-        final_code_output = result.tasks_output[2].raw_output
-        return final_code_output
-    elif result and result.tasks_output: # Fallback if unexpected number of task outputs
-        return result.tasks_output[-1].raw_output # Return output of the very last task
+        if hasattr(result.tasks_output[2], 'raw'):
+            final_code_output = result.tasks_output[2].raw
+            return final_code_output
+        else:
+            return "Error: Final task output missing .raw attribute."
+    elif result and result.tasks_output and hasattr(result.tasks_output[-1], 'raw'): # Fallback
+        return result.tasks_output[-1].raw # Return output of the very last task
     else:
-        return "Error: Final assembly workflow did not produce a recognizable output."
+        return "Error: Final assembly workflow did not produce a recognizable output or .raw attribute missing."

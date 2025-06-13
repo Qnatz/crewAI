@@ -43,7 +43,7 @@ def run_subagent_execution_workflow(inputs: dict):
 
     def extract_outputs(crew_output):
         if crew_output and crew_output.tasks_output:
-            return [task_out.raw_output for task_out in crew_output.tasks_output if task_out is not None and hasattr(task_out, 'raw_output')]
+            return [task_out.raw for task_out in crew_output.tasks_output if task_out is not None and hasattr(task_out, 'raw')]
         return ["Error: No output found for this crew segment."]
 
     return {
