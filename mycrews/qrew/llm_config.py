@@ -10,7 +10,7 @@ MODEL_BY_AGENT = {
     "otp_verifier_agent": "gemini/gemini-2.0-flash-001",
 
     # Backend Agents
-    "api_creator_agent": "gemini/gemini-2.5-flash-preview-04-17",
+    "api_creator_agent": "gemini/gemini-1.5-flash",
     "auth_agent_backend": "gemini/gemini-2.5-flash-preview-04-17",
     "config_agent_backend": "gemini/gemini-2.5-flash-preview-04-17",
     "data_model_agent_backend": "gemini/gemini-2.0-flash-001",
@@ -19,8 +19,8 @@ MODEL_BY_AGENT = {
     "sync_agent_backend": "gemini/gemini-2.5-flash-preview-04-17",
 
     # Dev Utilities Agents
-    "code_writer_agent": "gemini/gemini-2.5-flash-preview-04-17",
-    "debugger_agent": "gemini/gemini-2.5-flash-preview-04-17",
+    "code_writer_agent": "gemini/gemini-1.5-flash",
+    "debugger_agent": "gemini/gemini-1.5-flash",
     "logger_agent_devutils": "gemini/gemini-2.0-flash-001",
     "tester_agent_devutils": "gemini/gemini-2.5-flash-preview-04-17",
 
@@ -30,11 +30,11 @@ MODEL_BY_AGENT = {
     # Mobile Agents (Android)
     "android_api_client_agent": "gemini/gemini-2.5-flash-preview-04-17",
     "android_storage_agent": "gemini/gemini-2.0-flash-001",
-    "android_ui_agent": "gemini/gemini-2.5-flash-preview-04-17",
+    "android_ui_agent": "gemini/gemini-1.5-flash",
     # Mobile Agents (iOS)
     "ios_api_client_agent": "gemini/gemini-2.5-flash-preview-04-17",
     "ios_storage_agent": "gemini/gemini-2.0-flash-001",
-    "ios_ui_agent": "gemini/gemini-2.5-flash-preview-04-17",
+    "ios_ui_agent": "gemini/gemini-1.5-flash",
 
     # Offline Agents
     "local_storage_agent_offline": "gemini/gemini-2.0-flash-lite-001",
@@ -64,7 +64,7 @@ MODEL_BY_AGENT = {
 
     # Orchestrators
     "execution_manager_agent": "gemini/gemini-2.5-flash-preview-04-17",
-    "final_assembler_agent": "gemini/gemini-2.5-flash-preview-04-17",
+    "final_assembler_agent": "gemini/gemini-1.5-flash",
     "idea_interpreter_agent": "gemini/gemini-2.5-flash-preview-04-17", # High capability needed
     "project_architect_agent": "gemini/gemini-1.5-flash", # Changed for reliability, was gemini-2.5-flash-preview-04-17
     # Tech Stack Committee
