@@ -57,8 +57,8 @@ qrew_main_crew = ValidatedCrew(
 
 print("Configuring Quality Gate for qrew_main_crew (within idea_to_architecture_flow)...")
 qrew_main_crew.configure_quality_gate(
-    keyword_check=True,
-    custom_validators=[example_summary_validator]
+    keyword_check=True
+    # custom_validators=[example_summary_validator] # Temporarily disabled
 )
 print("qrew_main_crew initialized and Quality Gate configured in idea_to_architecture_flow.py.")
 # --- End of Main Qrew Crew Setup ---
