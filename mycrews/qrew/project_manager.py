@@ -1,55 +1,158 @@
-# mycrews/qrew/project_manager.py
 import os
 import json
 import hashlib
 from pathlib import Path
+from datetime import datetime
+from .utils import ErrorSummary
 
-print(f"DEBUG: project_manager.py __file__: {__file__}")
-# Paths are relative to this file's location, so projects_index.json
-# and the projects/ directory will be inside mycrews/qrew/
 PROJECTS_INDEX = Path(__file__).parent / "projects_index.json"
 PROJECTS_ROOT = Path(__file__).parent / "projects/"
-print(f"DEBUG: project_manager.py PROJECTS_ROOT: {PROJECTS_ROOT.resolve()}")
 
-def _load_index():
-    if PROJECTS_INDEX.exists():
-        try:
-            return json.loads(PROJECTS_INDEX.read_text())
-        except json.JSONDecodeError: # Handle empty or corrupted file
-            return {}
-    return {}
+class ProjectStateManager:
+    def __init__(self, project_name):
+        PROJECTS_ROOT.mkdir(parents=True, exist_ok=True)
+        self.project_info = self._get_or_create_project(project_name)
+        self.state_file = Path(self.project_info['path']) / "state.json"
+        self.error_summary = ErrorSummary()
+        self.load_state()
 
-def _save_index(index):
-    PROJECTS_INDEX.write_text(json.dumps(index, indent=2))
+    def _slugify(self, name: str) -> str:
+        safe = "".join(c if c.isalnum() else "_" for c in name).lower()
+        return safe[:50]
 
-def _slugify(name: str) -> str:
-    safe = "".join(c if c.isalnum() else "_" for c in name).lower()
-    return safe[:50]
+    def _load_index(self):
+        if PROJECTS_INDEX.exists():
+            try:
+                return json.loads(PROJECTS_INDEX.read_text())
+            except json.JSONDecodeError:
+                return {}
+        return {}
 
-def get_or_create_project(name: str) -> dict:
-    """
-    Look up an existing project by name (or similar hash),
-    or create a new folder under projects/<slug>_<shorthash>
-    within the mycrews/qrew/ directory.
-    Returns a dict with 'name', 'id', and 'path'.
-    """
-    index = _load_index()
-    name_hash = hashlib.sha1(name.encode()).hexdigest()[:8]
-    key = f"{_slugify(name)}_{name_hash}"
+    def _save_index(self, index):
+        PROJECTS_INDEX.write_text(json.dumps(index, indent=2))
 
-    if key in index:
-        proj = index[key]
-        proj_path = Path(proj["path"]) # Path stored is already relative to execution
-        status = "continuing"
-    else:
-        # Ensure PROJECTS_ROOT directory exists
-        PROJECTS_ROOT.mkdir(parents=True, exist_ok=True) # Ensures mycrews/qrew/projects/ exists
+    def _get_or_create_project(self, name: str) -> dict:
+        index = self._load_index()
+        name_hash = hashlib.sha1(name.encode()).hexdigest()[:8]
+        key = f"{self._slugify(name)}_{name_hash}"
 
-        proj_path = PROJECTS_ROOT / key
-        proj_path.mkdir(parents=True, exist_ok=True) # Ensures mycrews/qrew/projects/some_project/ exists
+        if key in index:
+            proj_details = index[key]
+            # Assumes path stored is absolute or correctly resolvable
+            proj_path = Path(proj_details["path"])
+            status = "continuing"
+        else:
+            proj_path = PROJECTS_ROOT / key
+            proj_path.mkdir(parents=True, exist_ok=True)
+            proj_details = {"name": name, "id": key, "path": str(proj_path.resolve())}
+            index[key] = proj_details
+            self._save_index(index)
+            status = "new"
+        return {"status": status, **proj_details}
 
-        proj = {"name": name, "id": key, "path": str(proj_path)}
-        index[key] = proj
-        _save_index(index)
-        status = "new"
-    return {"status": status, **proj}
+    def load_state(self):
+        if self.state_file.exists():
+            try:
+                loaded_state = json.loads(self.state_file.read_text())
+                self.state = loaded_state
+                # When loading state, rehydrate ErrorSummary from the loaded records
+                self.error_summary.records = []
+                for record in self.state.get("error_summary", []):
+                    # Ensure all components of the record are passed to add
+                    self.error_summary.add(record["stage"], record["success"], record["message"])
+            except json.JSONDecodeError:
+                self.state = self._initial_state()
+        else:
+            self.state = self._initial_state()
+
+    def _initial_state(self):
+        return {
+            "project_name": self.project_info["name"],
+            "created_at": datetime.utcnow().isoformat(),
+            "current_stage": "initialized",
+            "completed_stages": [],
+            "artifacts": {},
+            "error_summary": [], # Initial error summary is empty
+            "status": "in_progress"
+        }
+
+    def save_state(self):
+        self.state["error_summary"] = self.error_summary.to_dict()
+        self.state["updated_at"] = datetime.utcnow().isoformat()
+        self.state_file.write_text(json.dumps(self.state, indent=2))
+
+    def start_stage(self, stage_name):
+        self.state["current_stage"] = stage_name
+        # No direct error_summary.add here; stage start is not an event for summary
+        self.save_state()
+
+    def complete_stage(self, stage_name, artifacts=None):
+        if stage_name not in self.state["completed_stages"]:
+            self.state["completed_stages"].append(stage_name)
+
+        if artifacts:
+            try:
+                # Attempt to serialize to ensure artifacts are storable
+                json.dumps(artifacts)
+                self.state["artifacts"][stage_name] = artifacts
+            except TypeError as e:
+                # Log non-serializable artifacts issue
+                error_msg = f"Artifacts for stage {stage_name} are not JSON serializable: {e}"
+                print(f"Warning: {error_msg}")
+                self.state["artifacts"][stage_name] = {"error": "not_serializable", "details": str(artifacts)}
+                # Optionally, log this as a non-critical error/warning in summary
+                # self.error_summary.add(stage_name, True, f"Completed with non-serializable artifacts: {error_msg}")
+
+        self.error_summary.add(stage_name, True, "Completed successfully")
+        self.save_state()
+
+    def fail_stage(self, stage_name, error_message):
+        self.state["status"] = "failed" # Mark project status as failed
+        self.error_summary.add(stage_name, False, error_message)
+        self.save_state()
+
+    def get_artifacts(self, stage_name=None):
+        if stage_name:
+            return self.state["artifacts"].get(stage_name, {})
+        return self.state["artifacts"]
+
+    def is_completed(self, stage_name):
+        return stage_name in self.state["completed_stages"]
+
+    def resume_point(self):
+        # If project is marked completed, no resume point.
+        if self.state.get("status") == "completed":
+            return None
+
+        workflow_stages = [
+            "taskmaster",
+            "architecture",
+            "crew_assignment",
+            "subagent_execution",
+            "final_assembly"
+        ]
+
+        for stage in workflow_stages:
+            if not self.is_completed(stage):
+                return stage # Return the first incomplete stage
+
+        # If all defined workflow stages are complete, but project not finalized.
+        # This could mean it's ready for finalization or an edge case.
+        # For now, if all stages are done, we can consider it None (no next stage).
+        # Or, it might imply a final "project_finalization" stage if it's part of the workflow.
+        if all(self.is_completed(s) for s in workflow_stages):
+            # If project isn't 'completed' but all stages are, it implies it's ready for finalization
+            # or has finished the defined flow. Returning None is consistent.
+            return None
+
+        # Default to the first stage if no state indicates otherwise (should be handled by _initial_state)
+        return workflow_stages[0]
+
+    def finalize_project(self):
+        self.state["status"] = "completed"
+        self.state["completed_at"] = datetime.utcnow().isoformat()
+        self.error_summary.add("project_finalization", True, "Project finalized successfully.")
+        self.save_state()
+
+    def get_summary(self):
+        return self.error_summary

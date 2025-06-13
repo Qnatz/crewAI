@@ -1,0 +1,150 @@
+{
+  "project_name": "FitnessTrackerApp",
+  "created_at": "2025-06-13T22:43:43.450915",
+  "current_stage": "subagent_execution",
+  "completed_stages": [
+    "taskmaster",
+    "architecture",
+    "crew_assignment"
+  ],
+  "artifacts": {
+    "taskmaster": {
+      "initial_brief": "I need a new mobile app for tracking personal fitness goals. It should be fun and engaging."
+    },
+    "architecture": {
+      "architecture_doc": "Architecture document for FitnessTrackerApp based on user idea: I need a new mobile app for tracking personal fitness goals. It should be fun and engaging.\nIncorporating feedback: User retention is key. Gamification might be important. Mobile-first approach preferred.\nConsidering constraints: Team has strong Python and React skills. Initial deployment on AWS. Budget for external services is moderate.\nAligned with technical vision: A modular microservices architecture is preferred for scalability. Prioritize user data privacy.",
+      "technology_stack": [
+        "Python",
+        "FastAPI",
+        "React",
+        "PostgreSQL",
+        "Elasticsearch for search capabilities based on market research."
+      ],
+      "system_diagrams": {
+        "conceptual_diagram": "path/to/conceptual.png",
+        "component_diagram": "path/to/component.png"
+      },
+      "notes": "This is a simplified mock output from _perform_architecture_generation."
+    },
+    "crew_assignment": {
+      "backend_plan": {
+        "tasks": [
+          "Define and set up the backend project structure, including service boundaries for a microservices architecture.",
+          "Establish development environment standards and tooling (Python, FastAPI, PostgreSQL client, etc.).",
+          "Design the initial PostgreSQL database schema for user accounts, fitness activities, goals, and potentially gamification data.",
+          "Implement core user authentication and authorization services using FastAPI.",
+          "Develop RESTful APIs using FastAPI for user registration, login, and profile management.",
+          "Implement API endpoints for creating, reading, updating, and deleting (CRUD) fitness activities (e.g., runs, workouts).",
+          "Implement API endpoints for setting, tracking, and updating fitness goals.",
+          "Develop business logic for calculating progress towards goals and potentially basic fitness metrics.",
+          "Integrate with PostgreSQL for persistent data storage for all backend services.",
+          "Implement data validation and sanitization for all incoming API requests.",
+          "Implement basic security measures, including input validation, output encoding, and secure handling of credentials.",
+          "Write comprehensive unit tests for core backend logic and services.",
+          "Write integration tests for API endpoints and database interactions.",
+          "Begin planning for microservice deployment strategy on AWS, coordinating with DevOps.",
+          "Document API endpoints using tools like OpenAPI/Swagger.",
+          "Research and plan the integration of Elasticsearch for future search capabilities, based on detailed requirements (this task may be refined or deferred).",
+          "Ensure all backend development adheres to principles of data privacy and security, particularly regarding user fitness data."
+        ]
+      },
+      "frontend_plan": {
+        "tasks": [
+          "Set up the React project structure using create-react-app or similar, configuring necessary build tools and dependencies.",
+          "Establish frontend development environment standards and tooling (Node.js version, package manager, linting, formatting, etc.).",
+          "Implement the core application layout and navigation components (e.g., header, footer, navigation bar, main content area).",
+          "Design and implement UI components for user authentication (Login form, Registration form).",
+          "Integrate frontend authentication forms with the backend authentication and authorization APIs.",
+          "Implement frontend logic for handling user sessions, tokens, and protected routes.",
+          "Design and implement UI components for user profile management (viewing and editing profile information).",
+          "Integrate user profile UI with backend user management APIs (fetching and updating profile data).",
+          "Design and implement UI components for displaying fitness activities (list view).",
+          "Design and implement UI components for creating and editing fitness activities (forms).",
+          "Integrate activity display and form components with backend activity CRUD APIs.",
+          "Design and implement UI components for displaying fitness goals (list view).",
+          "Design and implement UI components for setting and editing fitness goals (forms).",
+          "Integrate goal display and form components with backend goal tracking APIs.",
+          "Implement frontend state management solution (e.g., React Context, Redux, Zustand) to manage application data and UI state.",
+          "Implement client-side routing using React Router or similar.",
+          "Implement form handling and client-side validation for user input.",
+          "Develop a centralized API client or service for interacting with backend RESTful APIs.",
+          "Implement error handling and display user-friendly feedback for API requests and application errors.",
+          "Implement responsive design principles to ensure the application is mobile-first and works across various screen sizes.",
+          "Plan and set up the frontend testing strategy (unit tests for components/logic, integration tests for API interactions, end-to-end tests).",
+          "Write unit tests for key React components and utility functions.",
+          "Write integration tests for frontend data fetching and state updates.",
+          "Plan and coordinate the frontend deployment process, including build steps and hosting configuration.",
+          "Begin implementing UI/UX elements related to gamification features as specified (if detailed design available, otherwise placeholder/planning).",
+          "Develop dashboard or summary views to display user progress, activities, and goals in an engaging way."
+        ]
+      },
+      "mobile_plan": {
+        "tasks": [
+          "Error: Failed to parse plan from LLM output or previous error occurred."
+        ]
+      },
+      "deployment_plan": {
+        "tasks": [
+          "Set up the React Native project structure using Expo CLI or React Native CLI, configuring necessary build tools and dependencies for both iOS and Android.",
+          "Establish mobile development environment standards and tooling (Node.js version, package manager, linting, formatting, etc.).",
+          "Implement core mobile application layout and navigation components using React Navigation or similar.",
+          "Design and implement mobile UI screens and components for user authentication (Login screen, Registration screen).",
+          "Integrate mobile authentication screens with the backend authentication and authorization APIs via HTTP client.",
+          "Implement mobile logic for handling user sessions, securely storing tokens, and managing protected routes.",
+          "Design and implement mobile UI screens and components for user profile management (viewing and editing profile information).",
+          "Integrate user profile UI with backend user management APIs (fetching and updating profile data).",
+          "Design and implement mobile UI screens and components for displaying a list of fitness activities.",
+          "Design and implement mobile UI screens and components for adding/editing fitness activities (forms with input validation).",
+          "Integrate activity display and form components with backend activity CRUD APIs.",
+          "Design and implement mobile UI screens and components for displaying fitness goals.",
+          "Design and implement mobile UI screens and components for setting/editing fitness goals (forms).",
+          "Integrate goal display and form components with backend goal tracking APIs.",
+          "Implement mobile state management solution (e.g., Redux Toolkit, Zustand, React Context with hooks) to manage application data and UI state.",
+          "Implement form handling and client-side validation for all user input fields.",
+          "Develop a centralized API client or service layer for interacting with backend RESTful APIs, including error handling and request retries.",
+          "Implement robust error handling and display user-friendly feedback messages for API requests, network issues, and application errors.",
+          "Implement responsive design principles and ensure UI/UX is optimized for various mobile screen sizes and orientations on both iOS and Android.",
+          "Begin implementing UI/UX elements related to gamification features (e.g., progress bars, badges, basic visualizations) based on initial design or placeholders.",
+          "Develop dashboard or summary screens to display user progress, recent activities, and goal status in an engaging and visually appealing manner.",
+          "Plan and set up the mobile testing strategy (unit tests for components/logic, integration tests for API interactions, end-to-end tests using tools like Appium or Detox).",
+          "Write unit tests for key React Native components, hooks, and utility functions.",
+          "Write integration tests for data fetching and state updates on mobile.",
+          "Research and implement basic platform-specific features if required (e.g., native share sheets, basic device permissions handling - *note: sensor integration for tracking might be a future phase*).",
+          "Plan and prepare the mobile build process for both iOS and Android platforms.",
+          "Configure build variants or schemes for different environments (development, staging, production).",
+          "Begin planning the App Store and Google Play Store submission processes, including required assets, metadata, and policies.",
+          "Coordinate with design team (if available) to ensure mobile UI/UX aligns with mockups and provides an engaging user experience.",
+          "Perform cross-platform testing on various devices and OS versions for both iOS and Android."
+        ]
+      }
+    }
+  },
+  "error_summary": [
+    {
+      "stage": "taskmaster",
+      "success": true,
+      "message": "Completed successfully",
+      "timestamp": "2025-06-13T22:45:05.559563"
+    },
+    {
+      "stage": "architecture",
+      "success": true,
+      "message": "Completed successfully",
+      "timestamp": "2025-06-13T22:45:05.559567"
+    },
+    {
+      "stage": "crew_assignment",
+      "success": true,
+      "message": "Completed successfully",
+      "timestamp": "2025-06-13T22:45:05.559570"
+    },
+    {
+      "stage": "subagent_execution",
+      "success": false,
+      "message": "Stage subagent_execution failed: 'crew_assignments'",
+      "timestamp": "2025-06-13T22:45:05.559572"
+    }
+  ],
+  "status": "failed",
+  "updated_at": "2025-06-13T22:45:05.559592"
+}

@@ -8,7 +8,7 @@ def run_subagent_execution_workflow(inputs: dict):
     # Backend implementation
     backend_crew = Crew(
         agents=[api_creator_agent, data_model_agent],
-        tasks=create_backend_tasks(inputs["crew_assignments"]["backend_plan"]),
+        tasks=create_backend_tasks(inputs["crew_assignment"]["backend_plan"]),
         process=Process.sequential,
         verbose=True
     )
@@ -17,7 +17,7 @@ def run_subagent_execution_workflow(inputs: dict):
     # Web implementation
     web_crew = Crew(
         agents=[dynamic_page_builder_agent],
-        tasks=create_web_tasks(inputs["crew_assignments"]["frontend_plan"]),
+        tasks=create_web_tasks(inputs["crew_assignment"]["frontend_plan"]),
         process=Process.sequential,
         verbose=True
     )
@@ -26,7 +26,7 @@ def run_subagent_execution_workflow(inputs: dict):
     # Mobile implementation
     mobile_crew = Crew(
         agents=[android_ui_agent, ios_ui_agent],
-        tasks=create_mobile_tasks(inputs["crew_assignments"]["mobile_plan"]),
+        tasks=create_mobile_tasks(inputs["crew_assignment"]["mobile_plan"]),
         process=Process.sequential,
         verbose=True
     )
@@ -35,7 +35,7 @@ def run_subagent_execution_workflow(inputs: dict):
     # DevOps implementation
     devops_crew = Crew(
         agents=[devops_agent],
-        tasks=create_devops_tasks(inputs["crew_assignments"]["deployment_plan"]),
+        tasks=create_devops_tasks(inputs["crew_assignment"]["deployment_plan"]),
         process=Process.sequential,
         verbose=True
     )
@@ -57,60 +57,72 @@ def create_backend_tasks(plan):
     # Convert plan into concrete tasks
     # This is a simplified example. In a real scenario,
     # you'd have a more robust way to create tasks from the plan.
-    tasks = []
-    if plan and "tasks" in plan and isinstance(plan["tasks"], list):
-        for task_desc in plan["tasks"]:
-            agent = api_creator_agent if "API" in task_desc else data_model_agent
-            tasks.append(
-                Task(
-                    description=task_desc,
-                    agent=agent,
-                    expected_output=f"Completed {task_desc}"
-                )
-            )
-    return tasks
+    # Return no tasks for testing timeout
+    return []
+    # tasks = []
+    # if plan and "tasks" in plan and isinstance(plan["tasks"], list):
+    #     # Process only the first task for testing
+    #     for task_desc in plan["tasks"][:1]:
+    #         agent = api_creator_agent if "API" in task_desc else data_model_agent
+    #         tasks.append(
+    #             Task(
+    #                 description=task_desc,
+    #                 agent=agent,
+    #                 expected_output=f"Completed {task_desc}"
+    #             )
+    #         )
+    # return tasks
 
 def create_web_tasks(plan):
     # Convert plan into concrete tasks
-    tasks = []
-    if plan and "tasks" in plan and isinstance(plan["tasks"], list):
-        for task_desc in plan["tasks"]:
-            tasks.append(
-                Task(
-                    description=task_desc,
-                    agent=dynamic_page_builder_agent,
-                    expected_output=f"Completed {task_desc}"
-                )
-            )
-    return tasks
+    # Return no tasks for testing timeout
+    return []
+    # tasks = []
+    # if plan and "tasks" in plan and isinstance(plan["tasks"], list):
+    #     # Process only the first task for testing
+    #     for task_desc in plan["tasks"][:1]:
+    #         tasks.append(
+    #             Task(
+    #                 description=task_desc,
+    #                 agent=dynamic_page_builder_agent,
+    #                 expected_output=f"Completed {task_desc}"
+    #             )
+    #         )
+    # return tasks
 
 def create_mobile_tasks(plan):
     # Convert plan into concrete tasks
-    tasks = []
-    if plan and "tasks" in plan and isinstance(plan["tasks"], list):
-        for task_desc in plan["tasks"]:
-            # This is a simplified agent assignment.
-            # You might need more sophisticated logic.
-            agent = android_ui_agent if "Android" in task_desc else ios_ui_agent
-            tasks.append(
-                Task(
-                    description=task_desc,
-                    agent=agent,
-                    expected_output=f"Completed {task_desc}"
-                )
-            )
-    return tasks
+    # Return no tasks for testing timeout
+    return []
+    # tasks = []
+    # if plan and "tasks" in plan and isinstance(plan["tasks"], list):
+    #     # Process only the first task for testing
+    #     for task_desc in plan["tasks"][:1]:
+    #         # This is a simplified agent assignment.
+    #         # You might need more sophisticated logic.
+    #         agent = android_ui_agent if "Android" in task_desc else ios_ui_agent
+    #         tasks.append(
+    #             Task(
+    #                 description=task_desc,
+    #                 agent=agent,
+    #                 expected_output=f"Completed {task_desc}"
+    #             )
+    #         )
+    # return tasks
 
 def create_devops_tasks(plan):
     # Convert plan into concrete tasks
-    tasks = []
-    if plan and "tasks" in plan and isinstance(plan["tasks"], list):
-        for task_desc in plan["tasks"]:
-            tasks.append(
-                Task(
-                    description=task_desc,
-                    agent=devops_agent,
-                    expected_output=f"Completed {task_desc}"
-                )
-            )
-    return tasks
+    # Return no tasks for testing timeout
+    return []
+    # tasks = []
+    # if plan and "tasks" in plan and isinstance(plan["tasks"], list):
+    #     # Process only the first task for testing
+    #     for task_desc in plan["tasks"][:1]:
+    #         tasks.append(
+    #             Task(
+    #                 description=task_desc,
+    #                 agent=devops_agent,
+    #                 expected_output=f"Completed {task_desc}"
+    #             )
+    #         )
+    # return tasks
