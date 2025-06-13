@@ -17,25 +17,25 @@ def run_crew_lead_workflow(inputs: dict):
             description=f"Plan backend implementation for {inputs['project_name']}",
             agent=backend_lead,
             expected_output="Backend implementation plan with task assignments",
-            context=inputs["architecture"]
+            context=[inputs["architecture"]]
         ),
         Task(
             description=f"Plan frontend implementation for {inputs['project_name']}",
             agent=web_lead,
             expected_output="Frontend implementation plan with task assignments",
-            context=inputs["architecture"]
+            context=[inputs["architecture"]]
         ),
         Task(
             description=f"Plan mobile implementation for {inputs['project_name']}",
             agent=mobile_lead,
             expected_output="Mobile implementation plan with task assignments",
-            context=inputs["architecture"]
+            context=[inputs["architecture"]]
         ),
         Task(
             description=f"Plan deployment for {inputs['project_name']}",
             agent=devops_lead,
             expected_output="Deployment plan with task assignments",
-            context=inputs["architecture"]
+            context=[inputs["architecture"]]
         )
     ]
 

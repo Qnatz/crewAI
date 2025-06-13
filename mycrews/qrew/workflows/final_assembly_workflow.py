@@ -9,7 +9,7 @@ def run_final_assembly_workflow(inputs: dict):
         description="Verify all components for integration readiness",
         agent=error_handler_agent,
         expected_output="Error report and readiness assessment",
-        context=inputs["components"]
+        context=[inputs["components"]]
     )
 
     # Integration planning
