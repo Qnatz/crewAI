@@ -260,142 +260,84 @@ Example for 'StackAdvisorAgent's task_description: "Analyze the project_requirem
         # Original task_design_architecture_planning from context, ensure its description is available
         # For safety, define it here if it's not guaranteed to be in scope from earlier.
         # Assuming task_design_architecture_planning was defined as before:
-        task_design_architecture_planning_template_desc = '''Your primary goal is to PLAN the detailed design of a software architecture.
+        # MODIFIED: The description still takes the same inputs for the ProjectArchitectAgent
+        task_design_architecture_direct_desc = '''Your primary goal is to design the detailed software architecture.
 Based on:
 1. Original Technical Requirements & Feature Breakdown (available as {user_idea_details_str}).
 2. The Vetting Report & Final Technical Guidelines (available as {vetting_report_and_guidelines_str}).
 3. Overall project constraints (available as {original_constraints_str}).
 4. Project's technical vision (available as {technical_vision_str}).
-You must define the sub-tasks to be delegated... Return a JSON object with a key "sub_tasks_to_delegate"...'''
 
-        executable_task_design_architecture_planning_desc = task_design_architecture_planning_template_desc.format(**architecture_planning_payload)
+You must produce the complete, final architecture document as a single JSON object.
+This JSON object should be comprehensive and adhere to the structure specified in the expected output section.
+'''
 
-        executable_task_design_architecture_planning = Task(
-            description=executable_task_design_architecture_planning_desc,
-            expected_output='A JSON object containing a list under "sub_tasks_to_delegate"...', # Keep original expected_output
+        # MODIFIED: The expected_output is now the one for the final architecture document
+        final_architecture_expected_output = '''IMPORTANT: Your entire response MUST be ONLY a single, valid JSON object. No other text, no explanations before or after the JSON. Start with '{' and end with '}'.
+
+CRITICAL INSTRUCTION: YOUR ENTIRE RESPONSE MUST BE A SINGLE, VALID JSON STRING. DO NOT OUTPUT ANY TEXT, CONVERSATION, MARKDOWN FENCES (unless the fence perfectly encloses ONLY the JSON object), OR EXPLANATIONS BEFORE OR AFTER THE JSON STRING. START YOUR RESPONSE IMMEDIATELY WITH '{' (the opening curly brace of the JSON object) OR WITH '```json\n{' (if using a markdown fence). THE JSON OBJECT MUST ADHERE TO THE STRUCTURE DESCRIBED BELOW.
+
+The JSON object you return MUST include the following top-level keys:
+- "type": Set this to the string "software".
+- "summary": Provide ONLY the comprehensive textual summary of the entire architecture itself. Do NOT include your thought process or plan for generating this summary in this string value. The summary should cover an overview, key decisions, security, cost, CI/CD, monitoring, and any risks or pending items.
+- "approved_technologies": A dictionary or list detailing core approved technologies (e.g., frontend, backend, database, infrastructure).
+- "pending_decisions": A list of critical decisions that are still unresolved (e.g., specific frameworks, compute services).
+- "security_plan_summary": A brief summary of the security implementation plan. Provide ONLY the brief summary text.
+- "cost_analysis_summary": A brief summary of the cost analysis and optimization strategies. Provide ONLY the brief summary text.
+- "ci_cd_pipeline_summary": A brief summary of the CI/CD automation pipeline design. Provide ONLY the brief summary text.
+- "monitoring_strategy_summary": A brief summary of the monitoring strategy. Provide ONLY the brief summary text.
+- "backend_spec": A string detailing backend architecture, technologies, APIs, and data models. If not fully detailed, provide a high-level overview and placeholders for further breakdown. Provide ONLY the string detailing the backend architecture. Do not include your plan or thoughts for creating this spec in this value.
+- "frontend_spec": A string detailing frontend architecture (e.g., for web or a general placeholder if mobile is separate), technologies, and key UI components. If not fully detailed, provide a high-level overview. Provide ONLY the string detailing the frontend architecture. Do not include your plan or thoughts for creating this spec in this value.
+- "mobile_spec": A string detailing mobile architecture (if applicable, otherwise null or a note that it's not in scope), technologies, and key UI components. If not fully detailed, provide a high-level overview. Provide ONLY the string detailing the mobile architecture. Do not include your plan or thoughts for creating this spec in this value.
+- "data_model_summary": A brief overview of the data model design. Provide ONLY the brief overview text.
+- "api_guidelines_summary": A brief summary of API design guidelines. Provide ONLY the brief summary text.
+- "integration_points_summary": A brief summary of key integration points. Provide ONLY the brief summary text.
+- "non_functional_requirements_summary": A brief summary of how non-functional requirements are addressed. Provide ONLY the brief summary text.
+
+Ensure the output is a single, valid JSON string.
+Specific success criteria for this output include:
+- Valid JSON string produced.
+- All specified top-level keys are present in the JSON object.
+- The "type" field is "software".
+- The "summary" field contains a comprehensive textual architectural overview.
+- Other fields contain relevant summaries or details as requested.
+'''
+
+        executable_task_design_architecture_desc_formatted = task_design_architecture_direct_desc.format(**architecture_planning_payload)
+
+        executable_task_design_architecture_final = Task(
+            description=executable_task_design_architecture_desc_formatted,
+            expected_output=final_architecture_expected_output,
             agent=project_architect_agent
         )
 
-        architecture_planning_result_obj = qrew_main_crew.delegate_task(task=executable_task_design_architecture_planning)
-        architecture_planning_json_str = str(architecture_planning_result_obj.raw if hasattr(architecture_planning_result_obj, 'raw') else architecture_planning_result_obj)
+        print("Executing Project Architect Agent for final architecture document...")
+        architecture_final_result_obj = qrew_main_crew.delegate_task(task=executable_task_design_architecture_final)
 
-        # ... (Rest of architecture sub-task delegation and synthesis as before) ...
-        # Ensure JSON parsing is robust and error handling is consistent.
-        architecture_delegated_task_results = {}
+        # The output of this task is now considered the final architecture document string.
+        raw_json_string_arch_final = str(architecture_final_result_obj.raw if hasattr(architecture_final_result_obj, 'raw') else architecture_final_result_obj)
 
-        # Robust parsing for architecture_planning_json_str
-        actual_arch_json_str_for_planning = extract_json_from_llm_output(architecture_planning_json_str)
-        if not actual_arch_json_str_for_planning:
-            error_msg = f"Error: Could not extract JSON for architecture sub-task definitions from output: {architecture_planning_json_str}"
-            print(error_msg)
-            state.fail_stage("architecture", "Failed to parse architecture sub-task definitions JSON.")
-            raise ValueError(error_msg)
+        # REMOVED: The entire block for parsing architecture_planning_json_str,
+        # and the loop for delegating new_arch_sub_task,
+        # and the definition and execution of task_design_architecture_synthesis.
 
-        try:
-            architecture_sub_task_data = json.loads(actual_arch_json_str_for_planning)
-
-            # Ensure architecture_sub_task_data is a dictionary and has the key, otherwise default to empty list
-            sub_tasks_to_delegate_list = []
-            if isinstance(architecture_sub_task_data, dict):
-                sub_tasks_to_delegate_list = architecture_sub_task_data.get("sub_tasks_to_delegate", [])
-            elif isinstance(architecture_sub_task_data, list): # If the agent directly returns a list
-                sub_tasks_to_delegate_list = architecture_sub_task_data
-            else: # Not a dict or list, or sub_tasks_to_delegate is not a list
-                error_msg = f"'sub_tasks_to_delegate' key is missing or not a list in Architecture Planning JSON. Data: {architecture_sub_task_data}"
-                print(f"Error: {error_msg}")
-                state.fail_stage("architecture", error_msg)
-                raise ValueError(error_msg)
-
-
-            for i, sub_task_def in enumerate(sub_tasks_to_delegate_list):
-                if not isinstance(sub_task_def, dict):
-                    print(f"Warning: Sub-task definition item {i} is not a dictionary. Skipping: {sub_task_def}")
-                    state.fail_stage("architecture", f"Malformed sub-task definition (item {i}) from ProjectArchitectAgent: not a dictionary.")
-                    raise ValueError(f"Malformed sub-task definition (item {i}): {sub_task_def}")
-
-                task_description = sub_task_def.get("task_description")
-                assigned_agent_role = sub_task_def.get("assigned_agent_role")
-                success_criteria = sub_task_def.get("successCriteria", ["component design completed"]) # Default if missing
-
-                if not task_description:
-                    print(f"Warning: Sub-task definition {i} from ProjectArchitectAgent is missing 'task_description'. Sub-task content: {sub_task_def}")
-                    state.fail_stage("architecture", f"Malformed sub-task definition (item {i}) from ProjectArchitectAgent: missing 'task_description'.")
-                    raise ValueError(f"Sub-task definition {i} missing 'task_description': {sub_task_def}")
-
-                if not assigned_agent_role:
-                    print(f"Warning: Sub-task definition {i} from ProjectArchitectAgent is missing 'assigned_agent_role'. Sub-task content: {sub_task_def}")
-                    state.fail_stage("architecture", f"Malformed sub-task definition (item {i}) from ProjectArchitectAgent: missing 'assigned_agent_role'.")
-                    raise ValueError(f"Sub-task definition {i} missing 'assigned_agent_role': {sub_task_def}")
-
-                actual_agent = agent_role_map.get(assigned_agent_role)
-                if not actual_agent:
-                    print(f"Warning: Agent for role '{assigned_agent_role}' (sub-task {i}) not found in agent_role_map. Defaulting to SoftwareEngineerAgent.")
-                    actual_agent = software_engineer_agent # Ensure software_engineer_agent is in scope
-
-                arch_expected_output_str = sub_task_def.get("expected_output", "Detailed design for the architectural component.")
-                # Ensure success_criteria is a list and items are strings before joining
-                if isinstance(success_criteria, list) and all(isinstance(c, str) for c in success_criteria):
-                    arch_expected_output_str += "\n\nSpecific success criteria for this output include:\n" + "\n".join([f"- {c}" for c in success_criteria])
-                elif success_criteria: # If it exists but is not a list of strings
-                    print(f"Warning: successCriteria for sub-task {i} is not a list of strings: {success_criteria}. Using default expected output.")
-
-
-                new_arch_sub_task = Task(
-                    description=task_description,
-                    expected_output=arch_expected_output_str,
-                    agent=actual_agent
-                )
-
-                print(f"    Delegating architecture sub-task {i+1} ('{task_description[:30]}...') to {actual_agent.role} using qrew_main_crew...")
-                arch_sub_task_result = qrew_main_crew.delegate_task(task=new_arch_sub_task)
-                # Use a more unique key for results
-                result_key = f"{assigned_agent_role}_subtask_{i+1}_{task_description[:20].replace(' ', '_').replace('/', '_')}"
-                architecture_delegated_task_results[result_key] = str(arch_sub_task_result.raw if hasattr(arch_sub_task_result, 'raw') else arch_sub_task_result)
-                print(f"    Architecture sub-task {i+1} for '{assigned_agent_role}' completed.")
-
-        except json.JSONDecodeError as e:
-            error_msg = f"Error parsing JSON from Architecture Design Planning output: {e}. Received: '{actual_arch_json_str_for_planning}'. Original: '{architecture_planning_json_str}'"
-            print(error_msg)
-            state.fail_stage("architecture", error_msg)
-            raise ValueError(error_msg)
-
-        architecture_synthesis_payload = {
-            "component_design_results": json.dumps(architecture_delegated_task_results),
-            "original_user_idea": idea_task_output_str,
-            "vetting_report_and_guidelines": vetting_report_and_guidelines_str,
-            "original_constraints": json.dumps(workflow_inputs.get("constraints", {})),
-            "technical_vision": workflow_inputs.get("technical_vision", "Not provided")
-        }
-        synthesis_desc_arch = f'''Synthesize all component design outputs... (using architecture_synthesis_payload items)''' # Keep original structure
-        task_design_architecture_synthesis = Task(description=synthesis_desc_arch, expected_output='''IMPORTANT: Your entire response MUST be ONLY a single, valid JSON object...''', agent=project_architect_agent)
-
-        architecture_synthesis_result_obj = qrew_main_crew.delegate_task(task=task_design_architecture_synthesis)
-
-        # ... (Final JSON parsing logic as before, ensure it's robust) ...
-        raw_json_string_arch_final = str(architecture_synthesis_result_obj.raw if hasattr(architecture_synthesis_result_obj, 'raw') else architecture_synthesis_result_obj)
         final_output_data = None
         content_to_parse_arch_final = "" # For use in except block
         try:
             # Using the already defined extract_json_from_llm_output helper
             content_to_parse_arch_final = extract_json_from_llm_output(raw_json_string_arch_final)
             if not content_to_parse_arch_final:
-                error_msg = f"Could not isolate a JSON string from the raw architecture synthesis output: {raw_json_string_arch_final}"
+                error_msg = f"Could not isolate a JSON string from the Project Architect Agent's final output: {raw_json_string_arch_final}"
                 print(f"Error: {error_msg}")
-                # This error should be critical enough to fail the stage.
-                # The orchestrator will catch the ValueError from json.loads if content_to_parse_arch_final is None or invalid.
-                # However, explicitly failing here is also an option.
-                state.fail_stage("architecture", "Failed to parse final architecture JSON.")
+                state.fail_stage("architecture", "Failed to parse final architecture JSON from Project Architect Agent.")
                 raise json.JSONDecodeError(error_msg, raw_json_string_arch_final, 0)
 
             final_output_data = json.loads(content_to_parse_arch_final)
-            print("Successfully parsed architecture synthesis JSON string.")
+            print("Successfully parsed final architecture JSON string from Project Architect Agent.")
 
         except json.JSONDecodeError as e:
-            error_msg = f"Error: Failed to parse JSON from architecture synthesis result: {e}. Raw output: '''{raw_json_string_arch_final}'''. Parsed content attempt: '''{content_to_parse_arch_final}'''"
+            error_msg = f"Error: Failed to parse final architecture JSON from Project Architect Agent: {e}. Raw output: '''{raw_json_string_arch_final}'''. Parsed content attempt: '''{content_to_parse_arch_final}'''"
             print(error_msg)
-            # It's better to let the main exception handler call state.fail_stage by re-raising
-            # final_output_data = {"error": error_msg, "raw_content": raw_json_string_arch_final, "type": "error_parsing_architecture"}
-            # state.fail_stage("architecture", error_msg) # This would be redundant if we re-raise
             raise ValueError(error_msg) # Re-raise to be caught by the main try-except
 
         print("\nIdea-to-Architecture (Full Workflow) complete.")
