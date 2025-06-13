@@ -451,7 +451,7 @@ Project's technical vision: {architecture_synthesis_payload['technical_vision']}
 
     task_design_architecture_synthesis = Task(
         description=synthesis_desc_arch,
-        expected_output='''CRITICAL INSTRUCTION: YOUR ENTIRE RESPONSE MUST BE A SINGLE, VALID JSON STRING. DO NOT OUTPUT ANY TEXT, CONVERSATION, MARKDOWN FENCES (unless the fence perfectly encloses ONLY the JSON object), OR EXPLANATIONS BEFORE OR AFTER THE JSON STRING. START YOUR RESPONSE IMMEDIATELY WITH '{' (the opening curly brace of the JSON object) OR WITH '```json\n{' (if using a markdown fence). THE JSON OBJECT MUST ADHERE TO THE STRUCTURE DESCRIBED BELOW.
+        expected_output='''IMPORTANT: Your entire response MUST be ONLY a single, valid JSON object. No other text, no explanations before or after the JSON. Start with '{' and end with '}'.\n\nCRITICAL INSTRUCTION: YOUR ENTIRE RESPONSE MUST BE A SINGLE, VALID JSON STRING. DO NOT OUTPUT ANY TEXT, CONVERSATION, MARKDOWN FENCES (unless the fence perfectly encloses ONLY the JSON object), OR EXPLANATIONS BEFORE OR AFTER THE JSON STRING. START YOUR RESPONSE IMMEDIATELY WITH '{' (the opening curly brace of the JSON object) OR WITH '```json\n{' (if using a markdown fence). THE JSON OBJECT MUST ADHERE TO THE STRUCTURE DESCRIBED BELOW.
 
 The JSON object you return MUST include the following top-level keys:
 - "type": Set this to the string "software".

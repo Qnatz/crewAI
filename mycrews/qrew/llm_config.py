@@ -66,7 +66,7 @@ MODEL_BY_AGENT = {
     "execution_manager_agent": "gemini/gemini-2.5-flash-preview-04-17",
     "final_assembler_agent": "gemini/gemini-2.5-flash-preview-04-17",
     "idea_interpreter_agent": "gemini/gemini-2.5-flash-preview-04-17", # High capability needed
-    "project_architect_agent": "gemini/gemini-2.5-flash-preview-04-17", # High capability needed
+    "project_architect_agent": "gemini/gemini-1.5-flash", # Changed for reliability, was gemini-2.5-flash-preview-04-17
     # Tech Stack Committee
     "constraint_checker_agent_tech_committee": "gemini/gemini-2.0-flash-001",
     "documentation_writer_agent_tech_committee": "gemini/gemini-2.0-flash-001",
