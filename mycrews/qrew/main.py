@@ -25,8 +25,6 @@ os.environ["LITELLM_DEBUG"] = "1"
 # The default_llm imported here is passed to the Crew instance.
 
 from crewai import Task, Crew, Process # type: ignore
-from .workflows.idea_to_architecture_flow import run_idea_to_architecture_workflow
-from .workflows.code_implementation_workflow import run_code_implementation_workflow
 from .workflows.orchestrator import WorkflowOrchestrator
 
 def run_qrew():
@@ -127,63 +125,44 @@ def run_qrew():
         if taskmaster_result and taskmaster_result.strip():
             print("\nProceeding to development pipeline...")
 
-            orchestrator = WorkflowOrchestrator()
-
-            pipeline = [
-                {"name": "idea_to_architecture"},
-                {"name": "code_implementation"}
-            ]
-
             # Define sample variables needed for the main_workflow inputs
             sample_stakeholder_feedback = "User retention is key. Gamification might be important. Mobile-first approach preferred."
             sample_market_research = "Competitors X and Y lack real-time interaction. Users want personalized training plans."
             sample_project_constraints = "Team has strong Python and React skills. Initial deployment on AWS. Budget for external services is moderate."
             sample_technical_vision = "A modular microservices architecture is preferred for scalability. Prioritize user data privacy."
 
-            initial_inputs = {
-                "user_idea": taskmaster_result, # Use the string result from taskmaster
+            pipeline_inputs = {
+                "user_idea": taskmaster_result, # This comes from the TaskMasterAgent
+                "project_name": "FitnessTrackerApp", # Example from issue
                 "stakeholder_feedback": sample_stakeholder_feedback,
                 "market_research_data": sample_market_research,
                 "constraints": sample_project_constraints,
                 "technical_vision": sample_technical_vision
             }
 
-            results = orchestrator.execute_pipeline(pipeline, initial_inputs)
+            orchestrator = WorkflowOrchestrator()
+            results = orchestrator.execute_pipeline(pipeline_inputs)
 
             print("\nPipeline Execution Complete")
             print("===========================")
-            # Store results for easier access
-            architecture_output = results.get("idea_to_architecture")
-            code_impl_output = results.get("code_implementation")
+            print("Final Output:", results["final_output"])
 
-            print("Architecture Result (from orchestrator):")
-            if isinstance(architecture_output, dict):
-                print(json.dumps(architecture_output, indent=2))
+            # Save artifacts
+            with open("architecture.json", "w") as f:
+                json.dump(results["architecture"], f, indent=2)
+
+            with open("crew_assignments.json", "w") as f:
+                json.dump(results["crew_assignments"], f, indent=2)
+
+            print("\nArchitecture Design:")
+            print(json.dumps(results["architecture"], indent=2))
+            print("\nCrew Assignments:")
+            print(json.dumps(results["crew_assignments"], indent=2))
+            print("\nDeveloped Components:")
+            if isinstance(results["components"], (dict, list)):
+                 print(json.dumps(results["components"], indent=2))
             else:
-                print(architecture_output)
-
-            print("\nImplementation Result (from orchestrator):")
-            if isinstance(code_impl_output, list):
-                for idx, item in enumerate(code_impl_output):
-                    print(f"--- Item {idx + 1} ---")
-                    output_to_print = None
-                    if hasattr(item, 'raw_output') and item.raw_output: output_to_print = item.raw_output
-                    elif hasattr(item, 'raw') and item.raw: output_to_print = item.raw
-                    elif isinstance(item, str): output_to_print = item
-                    else: output_to_print = str(item)
-
-                    if isinstance(output_to_print, str):
-                        try:
-                            parsed_json = json.loads(output_to_print)
-                            print(json.dumps(parsed_json, indent=2))
-                        except json.JSONDecodeError:
-                            print(output_to_print)
-                    else:
-                        print(output_to_print)
-            elif code_impl_output: # If it's not a list but some other truthy value
-                print(code_impl_output)
-            else:
-                print("Code implementation did not produce a direct displayable result or was None.")
+                print(results["components"])
 
         else:
             print("\nTaskMasterAgent did not produce a valid output. Skipping development pipeline.")
