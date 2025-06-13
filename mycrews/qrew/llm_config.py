@@ -42,7 +42,7 @@ MODEL_BY_AGENT = {
 
     # Web Agents
     "asset_manager_agent_web": "gemini/gemini-2.0-flash-001", # Adjusted as asset management might be less complex
-    "dynamic_page_builder_agent_web": "gemini/gemini-2.5-flash-preview-04-17",
+    "dynamic_page_builder_agent_web": "gemini/gemini-1.5-flash",
     "static_page_builder_agent_web": "gemini/gemini-2.0-flash-001",
 
     # Crews (using generic keys for crew-level LLM if needed, can be same as lead agents)
