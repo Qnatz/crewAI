@@ -1,12 +1,15 @@
 from crewai import Crew, Process, Task
-from ..agents.crew_lead_agent import CrewLeadAgent
+from ..lead_agents.backend_project_coordinator_agent.agent import backend_project_coordinator_agent
+from ..lead_agents.web_project_coordinator_agent.agent import web_project_coordinator_agent
+from ..lead_agents.mobile_project_coordinator_agent.agent import mobile_project_coordinator_agent
+from ..lead_agents.devops_and_integration_coordinator_agent.agent import devops_and_integration_coordinator_agent
 
 def run_crew_lead_workflow(inputs: dict):
     # Initialize crew leads for each domain
-    backend_lead = CrewLeadAgent("BackendDevelopmentCrew")
-    web_lead = CrewLeadAgent("WebDevelopmentCrew")
-    mobile_lead = CrewLeadAgent("MobileDevelopmentCrew")
-    devops_lead = CrewLeadAgent("DevOpsCrew")
+    backend_lead = backend_project_coordinator_agent
+    web_lead = web_project_coordinator_agent
+    mobile_lead = mobile_project_coordinator_agent
+    devops_lead = devops_and_integration_coordinator_agent
 
     # Create tasks based on architecture
     tasks = [

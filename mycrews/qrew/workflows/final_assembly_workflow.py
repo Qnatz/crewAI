@@ -1,7 +1,7 @@
 from crewai import Crew, Process, Task
-from ..agents.final_assembler_agent import final_assembler_agent
-from ..agents.error_handler_agent import error_handler_agent
-from ..agents.code_writer_agent import code_writer_agent
+from ..orchestrators.final_assembler_agent.agent import final_assembler_agent
+from ..agents.dev_utilities import code_writer_agent
+from ..agents.dev_utilities import debugger_agent as error_handler_agent
 
 def run_final_assembly_workflow(inputs: dict):
     # Error checking phase
