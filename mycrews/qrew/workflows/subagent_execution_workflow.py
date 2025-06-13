@@ -41,11 +41,16 @@ def run_subagent_execution_workflow(inputs: dict):
     )
     devops_result = devops_crew.kickoff()
 
+    def extract_outputs(crew_output):
+        if crew_output and crew_output.tasks_output:
+            return [task_out.raw_output for task_out in crew_output.tasks_output if task_out is not None and hasattr(task_out, 'raw_output')]
+        return ["Error: No output found for this crew segment."]
+
     return {
-        "backend": backend_result,
-        "web": web_result,
-        "mobile": mobile_result,
-        "devops": devops_result
+        "backend": extract_outputs(backend_result),
+        "web": extract_outputs(web_result),
+        "mobile": extract_outputs(mobile_result),
+        "devops": extract_outputs(devops_result)
     }
 
 def create_backend_tasks(plan):

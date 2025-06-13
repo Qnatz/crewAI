@@ -47,9 +47,17 @@ def run_crew_lead_workflow(inputs: dict):
     )
 
     result = crew.kickoff()
+    # Ensure result.tasks_output is not empty and has enough elements.
+    # A more robust way would be to map tasks to their outputs if order isn't guaranteed
+    # or if the number of tasks could vary. For now, assuming fixed order and count.
+    backend_plan_output = result.tasks_output[0].raw_output if len(result.tasks_output) > 0 else "Error: Backend task output not found"
+    frontend_plan_output = result.tasks_output[1].raw_output if len(result.tasks_output) > 1 else "Error: Frontend task output not found"
+    mobile_plan_output = result.tasks_output[2].raw_output if len(result.tasks_output) > 2 else "Error: Mobile task output not found"
+    deployment_plan_output = result.tasks_output[3].raw_output if len(result.tasks_output) > 3 else "Error: Deployment task output not found"
+
     return {
-        "backend_plan": result[0],
-        "frontend_plan": result[1],
-        "mobile_plan": result[2],
-        "deployment_plan": result[3]
+        "backend_plan": backend_plan_output,
+        "frontend_plan": frontend_plan_output,
+        "mobile_plan": mobile_plan_output,
+        "deployment_plan": deployment_plan_output
     }
