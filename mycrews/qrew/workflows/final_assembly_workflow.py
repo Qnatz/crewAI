@@ -128,9 +128,9 @@ def run_final_assembly_workflow(inputs: dict):
 
     # Code generation
     code_gen_task = Task(
-        description=f"Generate final integrated codebase. "                     f"The overall project architecture is: {architecture_summary_str}. "                     f"The components to use for generation are: {components_summary_str}",
+        description=f"Generate final integrated codebase. The overall project architecture is: {architecture_summary_str}. The components to use for generation are: {components_summary_str}. CRUCIAL: You MUST generate all necessary code for all specified components and files as detailed in the integration plan and architecture. Do NOT omit, truncate, or summarize any code, functions, classes, or files due to perceived space or length constraints. Produce the entire, complete codebase. If a file's code is extensive, you must still provide the full code for that file.",
         agent=code_writer_agent,
-        expected_output="Complete, runnable codebase",
+        expected_output="The complete, runnable, and integrated codebase for ALL components, files, and features described in the integration plan and component specifications. This includes all necessary source files (e.g., .py, .java, .kt, .swift, .xml, .html, .css, .js), configuration files (e.g., Dockerfile, JSON, YAML configs), and any other required scripts. No part of any file's code should be omitted, summarized, or truncated with explanations like 'due to space constraints' or 'for brevity'. Each file should be presented in its entirety, ready for saving and execution.",
         max_retries=1,
         # TODO: Implement a more robust (LLM-assisted or functional) guardrail to validate code structure and completeness.
         guardrail="Ensure the output consists of a complete codebase based on the integration plan and component specifications. It should contain actual code structures, not just descriptive text."
