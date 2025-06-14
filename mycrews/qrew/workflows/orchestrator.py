@@ -1,6 +1,7 @@
 import json
-from typing import Any, Optional # Added Any, ensured Optional
+from typing import Any, Optional
 from crewai import Crew, Task
+from crewai.tasks.task_output import TaskOutput # Added
 from ..taskmaster.taskmaster_agent import taskmaster_agent
 from .idea_to_architecture_flow import run_idea_to_architecture_workflow
 from .crew_lead_workflow import run_crew_lead_workflow
@@ -9,9 +10,12 @@ from .final_assembly_workflow import run_final_assembly_workflow
 from ..project_manager import ProjectStateManager # Adjusted import path
 
 # Guardrail function for Taskmaster output
-def validate_taskmaster_output(output: str) -> tuple[bool, Any]: # Corrected to Any
+def validate_taskmaster_output(task_output: TaskOutput) -> tuple[bool, Any]: # Changed signature
+    if not hasattr(task_output, 'raw') or not isinstance(task_output.raw, str):
+        return False, "Guardrail input (task_output.raw) must be a string and present."
+    output_str = task_output.raw # Added
     try:
-        data = json.loads(output)
+        data = json.loads(output_str) # Changed to output_str
         if not isinstance(data, dict):
             return False, "Output must be a JSON dictionary."
         required_keys = ["project_name", "refined_brief", "is_new_project"]
@@ -26,7 +30,7 @@ def validate_taskmaster_output(output: str) -> tuple[bool, Any]: # Corrected to 
             return False, "is_new_project must be a boolean."
         return True, data # Return parsed data on success
     except json.JSONDecodeError:
-        return False, "Output must be valid JSON."
+        return False, "Output must be valid JSON." # output_str is not directly visible here, but implied
     except Exception as e:
         return False, f"Validation error: {str(e)}"
 
