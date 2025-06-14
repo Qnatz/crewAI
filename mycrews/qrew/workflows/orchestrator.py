@@ -3,7 +3,7 @@ from typing import Any, Optional
 from crewai import Crew, Task
 from crewai.tasks.task_output import TaskOutput
 from ..taskmaster.taskmaster_agent import taskmaster_agent
-from ..orchestrators.idea_interpreter_agent.agent import idea_interpreter_agent # Added
+# from ..orchestrators.idea_interpreter_agent.agent import idea_interpreter_agent # Removed
 from .idea_to_architecture_flow import run_idea_to_architecture_workflow
 from .crew_lead_workflow import run_crew_lead_workflow
 from .subagent_execution_workflow import run_subagent_execution_workflow
@@ -48,70 +48,15 @@ class WorkflowOrchestrator:
         # specific to their internal steps, or check if they can be skipped.
         self.workflows = {
             "taskmaster": self.run_taskmaster_workflow,
-            "idea_interpretation": self.run_idea_interpretation_workflow, # Added
+            # "idea_interpretation": self.run_idea_interpretation_workflow, # Removed
             "architecture": run_idea_to_architecture_workflow,
             "crew_assignment": run_crew_lead_workflow,
             "subagent_execution": run_subagent_execution_workflow,
             "final_assembly": run_final_assembly_workflow
         }
 
-    def run_idea_interpretation_workflow(self, inputs: dict) -> dict:
-        print("Executing Idea Interpretation workflow...")
-        taskmaster_artifacts = inputs.get("taskmaster", {})
-        refined_brief = taskmaster_artifacts.get("refined_brief", "")
-        project_name = taskmaster_artifacts.get("project_name", "Unknown Project")
-
-        if not refined_brief:
-            print("Error: No refined_brief provided from Taskmaster to Idea Interpretation workflow.")
-            return {
-                "interpreted_concept": "Error: Idea Interpretation failed - No refined_brief was provided.",
-                "interpretation_error": "No refined_brief provided"
-            }
-
-        interpretation_task = Task(
-            description=f"Project Name: '{project_name}'\n"
-                        f"Refined Brief from Taskmaster: '{refined_brief}'\n\n"
-                        f"Your goal is to thoroughly interpret this project idea. "
-                        f"Elaborate on core functionalities, define potential user stories or personas, "
-                        f"and elicit detailed requirements. Identify any ambiguities or areas needing "
-                        f"further clarification. Use your knowledge base tool if relevant to find "
-                        f"similar concepts or requirement patterns to ensure comprehensive coverage. "
-                        f"The output should be a well-structured document.",
-            agent=idea_interpreter_agent,
-            expected_output="A comprehensive document (Markdown format preferred) detailing the "
-                            "interpreted project concept. This document should include: "
-                            "1. Elaborated Core Functionalities. "
-                            "2. Key User Stories or Personas. "
-                            "3. Detailed Requirements (functional and non-functional if applicable). "
-                            "4. Any Identified Ambiguities or Questions for clarification. "
-                            "This document will serve as the primary input for the architecture design phase.",
-            guardrail="Ensure the output is a detailed interpretation and not just a repeat of the input brief. It should contain elaborated functionalities and detailed requirements. Output should be a substantial text document.",
-            max_retries=1
-        )
-
-        idea_crew = Crew(
-            agents=[idea_interpreter_agent],
-            tasks=[interpretation_task],
-            verbose=True
-        )
-
-        result = idea_crew.kickoff()
-
-        if result and hasattr(result, 'raw') and result.raw and len(result.raw.strip()) > 0:
-            # Check if the result is an error message from the agent itself (heuristic)
-            if "error" in result.raw.lower() and len(result.raw.strip()) < 150: # Short error messages
-                 print(f"Idea Interpretation task seems to have produced an error: {result.raw}")
-                 return {
-                    "interpreted_concept": f"Error during idea interpretation: {result.raw}",
-                    "interpretation_error": "Agent returned an error message"
-                }
-            return {"interpreted_concept": result.raw}
-        else:
-            print("Idea Interpretation task failed to produce substantial output or failed execution.")
-            return {
-                "interpreted_concept": "Error: Idea Interpretation failed to produce substantial output.",
-                "interpretation_error": "Task execution failed or no substantial output"
-            }
+    # run_idea_interpretation_workflow method will be deleted by removing all its lines.
+    # The diff will show this as a deletion of the block.
 
     def run_taskmaster_workflow(self, inputs: dict):
         print("Executing Taskmaster workflow...")
@@ -193,7 +138,7 @@ class WorkflowOrchestrator:
         current_artifacts = {}
         start_index = 0
         stages = [
-            "taskmaster", "idea_interpretation", "architecture", # Added "idea_interpretation"
+            "taskmaster", "architecture", # Removed "idea_interpretation"
             "crew_assignment", "subagent_execution", "final_assembly"
         ]
 
@@ -219,8 +164,8 @@ class WorkflowOrchestrator:
             # Update initial_inputs with the determined project name for subsequent stages
             initial_inputs["project_name"] = actual_project_name
 
-            # Taskmaster stage is done, so next stage is idea_interpretation
-            start_index = stages.index("idea_interpretation")
+            # Taskmaster stage is done, so next stage is architecture
+            start_index = stages.index("architecture")
         else:
             # State was initialized, meaning project_name was provided (resuming or specific project run)
             # Add project_name to initial_inputs if not already present from the state

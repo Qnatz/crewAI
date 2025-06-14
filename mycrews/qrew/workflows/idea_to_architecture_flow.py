@@ -1,129 +1,126 @@
 import json
-import logging
-# Removed direct crewai imports like Process, Task, ValidatedCrew if they are not used directly
-# by this simplified flow. The agents it might use would be pre-configured.
+# import logging # logging import removed as it's not used in the new version
+from crewai import Crew, Task
+from ..orchestrators.idea_interpreter_agent.agent import idea_interpreter_agent
+from ..orchestrators.project_architect_agent.agent import project_architect_agent
+from ..project_manager import ProjectStateManager
 
-# Assuming agents are imported if this flow directly uses them for its internal logic.
-# For this refactoring, we'll assume the "existing architecture workflow logic"
-# is a black box that produces the artifacts.
-# If that black box itself uses agents and tasks, those would remain.
 
-from ..project_manager import ProjectStateManager # Added
-
-# Placeholder for the actual core logic of generating architecture.
-# This function would contain the "existing architecture workflow logic".
 def _perform_architecture_generation(inputs: dict):
-    # This is where the original complex logic of idea_to_architecture_flow would go.
-    # For example, running internal crews, calling agents, etc.
-    # It should return a dictionary of artifacts like:
-    # {
-    #     "architecture_doc": "...",
-    #     "technology_stack": ["...", "..."],
-    #     "system_diagrams": {"diag1_url": "...", "diag2_url": "..."}
-    # }
-    print("Performing internal architecture generation logic...")
-    # Simulate artifact creation based on inputs
-    project_name_for_sim = inputs.get('project_name', 'Unknown Project')
+    print("Performing architecture generation using Idea Interpreter and Project Architect agents...")
 
-    idea_interpretation_artifacts = inputs.get("idea_interpretation", {})
-    interpreted_concept = idea_interpretation_artifacts.get("interpreted_concept", "")
-
+    # Step A: Idea Interpretation Task
     taskmaster_artifacts = inputs.get("taskmaster", {})
-    # Check both 'initial_brief' (older key) and 'refined_brief' (newer key) from taskmaster output
-    refined_brief_from_taskmaster = taskmaster_artifacts.get("refined_brief", taskmaster_artifacts.get("initial_brief", ""))
+    refined_brief = taskmaster_artifacts.get("refined_brief", taskmaster_artifacts.get("initial_brief", "")) # Check both keys
+    project_name = inputs.get("project_name", taskmaster_artifacts.get("project_name", "Unknown Project"))
+    stakeholder_feedback = inputs.get("stakeholder_feedback", "")
+    market_research_data = inputs.get("market_research_data", "")
 
+    if not refined_brief:
+        print("Error in Idea-to-Architecture: No refined_brief from Taskmaster.")
+        return {"error": "Missing refined_brief from Taskmaster for idea interpretation.", "requirements_document_markdown": None, "architecture_document_markdown": None}
 
-    user_idea_for_architecture = interpreted_concept # Prioritize interpreted concept
+    idea_interpretation_task_desc = (
+        f"Project Name: '{project_name}'\n"
+        f"Refined Brief from Taskmaster: '{refined_brief}'\n"
+        f"Stakeholder Feedback (if any): '{stakeholder_feedback}'\n"
+        f"Market Research Data (if any): '{market_research_data}'\n\n"
+        f"Your primary goal is to analyze this information and translate it into a comprehensive "
+        f"technical requirements specification document. This document should include detailed user stories "
+        f"with acceptance criteria, clear functional requirements, important non-functional requirements "
+        f"(e.g., performance, security), data requirements, a glossary if new terms are introduced, "
+        f"and list any ambiguities. Consult your knowledge base if needed for similar patterns or requirements."
+    )
+    idea_interpretation_expected_output = (
+        "A comprehensive technical requirements specification document in Markdown format. This document should clearly outline: "
+        "1. Detailed User Stories (with acceptance criteria). "
+        "2. Functional Requirements. "
+        "3. Non-Functional Requirements. "
+        "4. Data Requirements (input/output, formats). "
+        "5. Glossary of Terms (if applicable). "
+        "6. Identified Ambiguities/Questions."
+    )
+    idea_task = Task(
+        description=idea_interpretation_task_desc,
+        agent=idea_interpreter_agent,
+        expected_output=idea_interpretation_expected_output,
+        guardrail="Ensure the output is a detailed technical requirements specification document in Markdown. It must not be empty and should cover user stories, functional, and non-functional requirements.",
+        max_retries=1
+    )
 
-    if not user_idea_for_architecture:
-        print("Warning: 'interpreted_concept' from Idea Interpretation stage was empty. Falling back to Taskmaster's refined_brief.")
-        user_idea_for_architecture = refined_brief_from_taskmaster
+    print("Running Idea Interpretation sub-task...")
+    idea_crew = Crew(agents=[idea_interpreter_agent], tasks=[idea_task], verbose=False) # verbose can be True for debugging
+    idea_result = idea_crew.kickoff()
 
-    if not user_idea_for_architecture:
-        print("Warning: Both 'interpreted_concept' and Taskmaster's 'refined_brief' are empty. Using default 'No user idea provided'.")
-        user_idea_for_architecture = "No user idea provided for architecture generation."
+    if not idea_result or not hasattr(idea_result, 'raw') or not idea_result.raw or len(idea_result.raw.strip()) == 0:
+        print("Error: Idea Interpretation task failed to produce output.")
+        return {"error": "Idea Interpretation failed or produced no output.", "requirements_document_markdown": None, "architecture_document_markdown": None}
 
-    architecture_doc = [
-        {
-            "name": "UserManagementService",
-            "description": f"Handles user registration, login, profile management for {project_name_for_sim}. Based on interpreted concept: {user_idea_for_architecture}",
-            "responsibilities": ["User authentication via JWT", "User data storage and retrieval", "Password hashing and recovery"],
-            "api_endpoints": [
-                {"path": "/auth/register", "method": "POST", "description": "Register a new user.", "request_schema": {"username": "string", "email": "string", "password": "string"}, "response_schema": {"user_id": "uuid", "message": "string"}},
-                {"path": "/auth/login", "method": "POST", "description": "Authenticate a user and return a token.", "request_schema": {"email": "string", "password": "string"}, "response_schema": {"access_token": "string", "token_type": "bearer"}},
-                {"path": "/users/me", "method": "GET", "description": "Get current user's profile.", "request_schema": {}, "response_schema": {"user_id": "uuid", "username": "string", "email": "string", "created_at": "timestamp"}}
-            ],
-            "data_models_used": ["User", "UserProfile"]
-        },
-        {
-            "name": "ItemCatalogService",
-            "description": "Manages items or products available in the system.",
-            "responsibilities": ["CRUD operations for items", "Item categorization and search", "Inventory tracking (basic)"],
-            "api_endpoints": [
-                {"path": "/items", "method": "POST", "description": "Create a new item.", "request_schema": {"name": "string", "description": "string", "price": "float", "category_id": "uuid"}, "response_schema": {"item_id": "uuid", "name": "string"}},
-                {"path": "/items/{item_id}", "method": "GET", "description": "Get details for a specific item.", "request_schema": {}, "response_schema": {"item_id": "uuid", "name": "string", "description": "string", "price": "float"}},
-                {"path": "/items", "method": "GET", "description": "List all items with filtering options.", "request_schema": {"category_id": "uuid, optional", "min_price": "float, optional"}, "response_schema": [{"item_id": "uuid", "name": "string"}]}
-            ],
-            "data_models_used": ["Item", "Category", "InventoryLog"]
-        }
-    ]
+    # Heuristic check for error message in output
+    if "error" in idea_result.raw.lower() and len(idea_result.raw.strip()) < 200:
+        print(f"Error from Idea Interpretation task: {idea_result.raw}")
+        return {"error": f"Idea Interpretation agent returned an error: {idea_result.raw}", "requirements_document_markdown": None, "architecture_document_markdown": None}
 
-    database_schema = {
-        "Users": [
-            {"name": "user_id", "type": "UUID", "constraints": "PRIMARY KEY DEFAULT gen_random_uuid()"},
-            {"name": "username", "type": "VARCHAR(100)", "constraints": "NOT NULL UNIQUE"},
-            {"name": "email", "type": "VARCHAR(255)", "constraints": "NOT NULL UNIQUE"},
-            {"name": "password_hash", "type": "VARCHAR(255)", "constraints": "NOT NULL"},
-            {"name": "created_at", "type": "TIMESTAMP WITH TIME ZONE", "constraints": "DEFAULT CURRENT_TIMESTAMP"}
-        ],
-        "UserProfiles": [
-            {"name": "profile_id", "type": "UUID", "constraints": "PRIMARY KEY DEFAULT gen_random_uuid()"},
-            {"name": "user_id", "type": "UUID", "constraints": "REFERENCES Users(user_id) ON DELETE CASCADE"},
-            {"name": "full_name", "type": "VARCHAR(255)"},
-            {"name": "bio", "type": "TEXT"},
-            {"name": "updated_at", "type": "TIMESTAMP WITH TIME ZONE", "constraints": "DEFAULT CURRENT_TIMESTAMP"}
-        ],
-        "Items": [
-            {"name": "item_id", "type": "UUID", "constraints": "PRIMARY KEY DEFAULT gen_random_uuid()"},
-            {"name": "name", "type": "VARCHAR(255)", "constraints": "NOT NULL"},
-            {"name": "description", "type": "TEXT"},
-            {"name": "price", "type": "DECIMAL(10, 2)", "constraints": "NOT NULL CHECK (price >= 0)"},
-            {"name": "category_id", "type": "UUID", "constraints": "REFERENCES Categories(category_id) NULL"}, # Assuming Categories table
-            {"name": "created_at", "type": "TIMESTAMP WITH TIME ZONE", "constraints": "DEFAULT CURRENT_TIMESTAMP"}
-        ],
-        "Categories": [ # Added example Categories table
-            {"name": "category_id", "type": "UUID", "constraints": "PRIMARY KEY DEFAULT gen_random_uuid()"},
-            {"name": "category_name", "type": "VARCHAR(100)", "constraints": "NOT NULL UNIQUE"}
-        ],
-        "InventoryLogs": [ # Added example InventoryLogs table
-             {"name": "log_id", "type": "UUID", "constraints": "PRIMARY KEY DEFAULT gen_random_uuid()"},
-             {"name": "item_id", "type": "UUID", "constraints": "REFERENCES Items(item_id)"},
-             {"name": "change_amount", "type": "INTEGER", "constraints": "NOT NULL"},
-             {"name": "reason", "type": "VARCHAR(255)"},
-             {"name": "logged_at", "type": "TIMESTAMP WITH TIME ZONE", "constraints": "DEFAULT CURRENT_TIMESTAMP"}
-        ]
-    }
+    requirements_doc_markdown = idea_result.raw
+    print("Idea Interpretation sub-task completed.")
 
-    tech_stack = ["Python (FastAPI)", "React (Next.js)", "PostgreSQL", "Docker", "AWS (S3, ECR, ECS)"]
-    diagrams = {"conceptual_overview": "simulated_path/to/conceptual.svg", "component_interaction": "simulated_path/to/components.svg", "db_schema_diagram": "simulated_path/to/db_schema.png"}
+    # Step B: Project Architecture Task
+    constraints = inputs.get("constraints", "")
+    technical_vision = inputs.get("technical_vision", "")
 
-    # Simulate some processing based on other inputs to show they are still considered
-    if inputs.get("stakeholder_feedback"):
-        architecture_doc[0]["description"] += f" --- Incorporating feedback: {inputs['stakeholder_feedback']}"
-    if inputs.get("market_research_data"):
-        tech_stack.append("Redis for caching based on market research.")
-    if inputs.get("constraints"):
-         architecture_doc[1]["description"] += f" --- Considering constraints: {inputs['constraints']}"
-    if inputs.get("technical_vision"):
-         tech_stack.append(f"Aligned with technical vision: {inputs['technical_vision']}")
+    project_architecture_task_desc = (
+        f"Project Name: '{project_name}'\n"
+        f"Technical Requirements Specification:\n{requirements_doc_markdown}\n\n"
+        f"Project Constraints (if any): '{constraints}'\n"
+        f"Technical Vision (if any): '{technical_vision}'\n\n"
+        f"Your goal is to design a robust and scalable software architecture based on the provided technical requirements, "
+        f"constraints, and technical vision. The architecture should align with best practices."
+    )
+    project_architecture_expected_output = (
+        "A detailed software architecture document in Markdown format. This document MUST include: "
+        "1. High-level system diagrams descriptions (e.g., component diagram, deployment diagram). "
+        "2. Technology stack recommendations for each major component. "
+        "3. Data model design overview (key entities, relationships). "
+        "4. API design guidelines and key endpoint definitions (e.g., paths, methods, brief request/response structure). "
+        "5. Integration points with any external services. "
+        "6. Considerations for non-functional requirements (e.g., security plan, scalability strategy, performance)."
+    )
+    architecture_task = Task(
+        description=project_architecture_task_desc,
+        agent=project_architect_agent,
+        expected_output=project_architecture_expected_output,
+        guardrail="Ensure the output is a detailed software architecture document in Markdown. It must cover system diagrams, tech stack, data model, and API design guidelines.",
+        max_retries=1
+    )
 
+    print("Running Project Architecture sub-task...")
+    architecture_crew = Crew(agents=[project_architect_agent], tasks=[architecture_task], verbose=False)
+    architecture_result = architecture_crew.kickoff()
 
+    if not architecture_result or not hasattr(architecture_result, 'raw') or not architecture_result.raw or len(architecture_result.raw.strip()) == 0:
+        print("Error: Project Architecture task failed to produce output.")
+        return {"error": "Project Architecture failed or produced no output.", "requirements_document_markdown": requirements_doc_markdown, "architecture_document_markdown": None}
+
+    if "error" in architecture_result.raw.lower() and len(architecture_result.raw.strip()) < 200:
+        print(f"Error from Project Architecture task: {architecture_result.raw}")
+        return {"error": f"Project Architecture agent returned an error: {architecture_result.raw}", "requirements_document_markdown": requirements_doc_markdown, "architecture_document_markdown": None}
+
+    architecture_document_markdown = architecture_result.raw
+    print("Project Architecture sub-task completed.")
+
+    # Step C: Return Formatted Artifacts
+    # TODO: Implement parsing of architecture_document_markdown into more structured
+    #       components (list/dict), database_schema (dict), technology_stack (list)
+    #       as was previously simulated, to be more directly usable by downstream stages.
     return {
-        "architecture_doc": architecture_doc,
-        "database_schema": database_schema,
-        "technology_stack": tech_stack,
-        "system_diagrams": diagrams,
-        "notes": "This is a detailed mock output from _perform_architecture_generation, including component-based architecture and DB schema."
+        "requirements_document_markdown": requirements_doc_markdown, # Adding this for completeness
+        "architecture_document_markdown": architecture_document_markdown,
+        "notes": "Architecture generated. Further parsing of the Markdown into structured components, DB schema, etc., is a future enhancement."
+        # Keep technology_stack and system_diagrams if they are meant to be separate,
+        # otherwise, they should be part of the architecture_document_markdown.
+        # For now, let's assume they are part of the markdown.
+        # "technology_stack": ["Placeholder: To be extracted from Markdown"],
+        # "system_diagrams": {"placeholder_diagram": "To be extracted or linked from Markdown"}
     }
 
 def run_idea_to_architecture_workflow(inputs: dict):
