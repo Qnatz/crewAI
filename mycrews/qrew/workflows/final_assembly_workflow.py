@@ -87,22 +87,124 @@ def validate_integration_plan_output(task_output: TaskOutput) -> tuple[bool, Any
     # Heuristic: Substantial length suggests more than just a simple refusal.
     is_substantial = len(output_str) > 150 # Arbitrary length, tune if needed
 
+    # --- Manifest Validation ---
+    manifest_heading = "File Manifest for Code Generation".lower()
+    manifest_start_index = cleaned_output_lower.find(manifest_heading)
+
+    if manifest_start_index == -1:
+        print("GUARDRAIL_INTEGRATION_PLAN: 'File Manifest for Code Generation' section is missing.")
+        return False, "The 'File Manifest for Code Generation' section is missing from the integration plan."
+
+    json_block_pattern = re.compile(r"```json\s*\n(.*?)\n```", re.DOTALL | re.IGNORECASE)
+    search_area_for_manifest = output_str[manifest_start_index + len(manifest_heading):]
+    manifest_match = json_block_pattern.search(search_area_for_manifest)
+
+    if not manifest_match:
+        print("GUARDRAIL_INTEGRATION_PLAN: Could not find a JSON code block for the File Manifest.")
+        return False, "File Manifest section found, but it does not contain a ```json ... ``` block for the list of files."
+
+    manifest_json_str = manifest_match.group(1).strip()
+    try:
+        file_manifest = json.loads(manifest_json_str)
+        if not isinstance(file_manifest, list):
+            print("GUARDRAIL_INTEGRATION_PLAN: File Manifest JSON is not a list.")
+            return False, "File Manifest must be a JSON list."
+        if not file_manifest: # Empty list is not acceptable
+            print("GUARDRAIL_INTEGRATION_PLAN: File Manifest list is empty.")
+            return False, "File Manifest list cannot be empty."
+        for item in file_manifest:
+            if not isinstance(item, dict) or \
+               not isinstance(item.get('file_path'), str) or \
+               not item['file_path'].strip() or \
+               not isinstance(item.get('description'), str) or \
+               not item['description'].strip():
+                print(f"GUARDRAIL_INTEGRATION_PLAN: Invalid item in File Manifest: {item}")
+                return False, "Each item in File Manifest must be a dictionary with non-empty 'file_path' and 'description' strings."
+
+        print("GUARDRAIL_INTEGRATION_PLAN: File Manifest appears structurally valid.")
+        # If manifest validation passes, this specific check is considered OK.
+        # The overall decision depends on other factors like plan content and substantiality.
+    except json.JSONDecodeError:
+        print(f"GUARDRAIL_INTEGRATION_PLAN: File Manifest JSON is malformed: {manifest_json_str[:100]}")
+        return False, "File Manifest section contains malformed JSON."
+    # --- End of Manifest Validation ---
+
     # Condition for passing:
     # 1. Must have planning content.
     # 2. Must be of substantial length.
-    # (It's okay if it also discusses issues/blockers).
-    if has_plan_content and is_substantial:
-        print("GUARDRAIL_INTEGRATION_PLAN: Output appears to be a substantive integration plan.")
+    # 3. Manifest (if present and checked by reaching here) must be structurally valid.
+    if has_plan_content and is_substantial: # Manifest validation passed if we reached here
+        print("GUARDRAIL_INTEGRATION_PLAN: Output appears to be a substantive integration plan and manifest (if present and checked) is structurally valid.")
         return True, task_output.raw # Return original raw output
 
     # If it mentions issues but has no plan content or isn't substantial
+    # This condition might be hit if manifest was OK but other parts failed.
     if has_issue_discussion and not has_plan_content and not is_substantial:
         print("GUARDRAIL_INTEGRATION_PLAN: Output primarily discusses issues without sufficient planning content or detail.")
         return False, "Output focuses on issues without providing a sufficient integration plan for available components or clear steps to resolve."
 
-    # If it has neither, or is too short.
-    print("GUARDRAIL_INTEGRATION_PLAN: Output lacks clear planning content or sufficient detail.")
-    return False, "Output does not contain sufficient elements of an integration plan or is too brief."
+    # Fallback error messages if conditions not met
+    if not has_plan_content:
+         print("GUARDRAIL_INTEGRATION_PLAN: Output lacks clear planning content despite potentially valid manifest.")
+         return False, "Output lacks clear planning content for integration."
+    if not is_substantial:
+        print("GUARDRAIL_INTEGRATION_PLAN: Output has planning content but is not substantial enough, despite potentially valid manifest.")
+        return False, "Integration plan is too brief."
+
+    # Default catch-all if logic is complex (should ideally be covered by above)
+    print("GUARDRAIL_INTEGRATION_PLAN: Default failure - Output did not meet all criteria (plan content, substantiality, valid manifest).")
+    return False, "Output does not meet all criteria for a valid integration plan including a file manifest."
+
+# Copied from subagent_execution_workflow.py for now
+def validate_and_extract_code_output(task_output: TaskOutput) -> tuple[bool, Any]:
+    try:
+        if not hasattr(task_output, 'raw') or not isinstance(task_output.raw, str):
+            print("GUARDRAIL_CODE_EXTRACT: Input task_output.raw is not a string or not present.")
+            return False, "Guardrail input (task_output.raw) must be a string and present."
+
+        output_str = task_output.raw.strip()
+        print(f"GUARDRAIL_CODE_EXTRACT: Original output (first 300 chars): '{output_str[:300]}'")
+
+        extracted_code_blocks = []
+
+        # Regex to find common fenced code blocks (non-greedy)
+        fence_patterns = [
+            re.compile(r"```(?:[a-zA-Z0-9_]+)?\s*\n(.*?)\n```", re.DOTALL),
+            re.compile(r"```(.*?)```", re.DOTALL)
+        ]
+
+        temp_output_str = output_str
+        for pattern in fence_patterns:
+            matches = pattern.findall(temp_output_str)
+            if matches:
+                for match in matches:
+                    extracted_code_blocks.append(match.strip())
+                temp_output_str = pattern.sub("", temp_output_str).strip()
+
+        final_extracted_code = ""
+        if extracted_code_blocks:
+            final_extracted_code = "\n\n".join(extracted_code_blocks).strip()
+            print(f"GUARDRAIL_CODE_EXTRACT: Extracted code using fences (first 300 chars): '{final_extracted_code[:300]}'")
+        else:
+            if len(output_str.split()) > 50 and len(re.findall(r'[;,=\{\}\[\]\(\)<>]', output_str)) < 5:
+                 print(f"GUARDRAIL_CODE_EXTRACT: No fences found, and output looks more like text than code. Length: {len(output_str.split())} words.")
+                 return False, "Output appears to be mainly explanatory text without clear code blocks, or code is not properly fenced."
+            final_extracted_code = output_str
+            print(f"GUARDRAIL_CODE_EXTRACT: No fences found. Assuming entire content might be code/config (first 300 chars): '{final_extracted_code[:300]}'")
+
+        if not final_extracted_code:
+            print("GUARDRAIL_CODE_EXTRACT: No code content could be extracted.")
+            return False, "No code/configuration content could be extracted from the output."
+
+        if len(final_extracted_code) < 10 and not ("def" in final_extracted_code or "class" in final_extracted_code or "{" in final_extracted_code or "<" in final_extracted_code):
+             print(f"GUARDRAIL_CODE_EXTRACT: Extracted content is very short and doesn't resemble typical code structures: '{final_extracted_code}'")
+             return False, f"Extracted content is too short or doesn't resemble code: '{final_extracted_code}'"
+
+        print(f"GUARDRAIL_CODE_EXTRACT: Successfully extracted code/configuration. Length: {len(final_extracted_code)}")
+        return True, final_extracted_code
+    except Exception as e:
+        print(f"GUARDRAIL_CODE_EXTRACT: Error during code extraction: {str(e)}")
+        return False, f"Error during guardrail code extraction: {str(e)}"
 
 def run_final_assembly_workflow(inputs: dict):
     components_summary_str = json.dumps(inputs.get("subagent_execution", {}), indent=2) # Corrected key
@@ -121,56 +223,122 @@ def run_final_assembly_workflow(inputs: dict):
     integration_task = Task(
         description=f"Create a detailed integration plan based on the available components summarized as: {components_summary_str}. The overall project architecture is: {architecture_summary_str}. Your goal is to outline how these components should be combined into a functional system. IMPORTANT: If the component summary or architecture indicates some components are non-functional, incomplete, or if crucial information is missing, your integration plan MUST still be as complete as possible for the *available and functional* parts. Clearly identify any non-functional components or missing information as 'Blockers' or 'Prerequisites for Full Integration' within a dedicated section of your plan. Also, outline steps or strategies to address these blockers. Do NOT simply state you cannot create a plan. Provide a plan for what is possible now and what is needed to make the rest possible.",
         agent=final_assembler_agent,
-        expected_output="A detailed integration plan (Markdown format preferred). The plan MUST include: 1. An explicit 'Integration Sequence' for available/functional components. 2. Details on 'Component Interactions & Data Flow'. 3. 'Configuration Management' notes for integration. 4. A dedicated section: 'Blockers & Prerequisites for Full Integration', which lists non-functional components or missing info and proposes steps/strategies to resolve them. 5. A 'Testing Strategy' for the integrated parts. 6. 'Deployment Considerations' for the integrated system. The plan should be actionable even if some parts are blocked, by clearly separating what can be done from what needs fixing.",
+        expected_output="A detailed integration plan (Markdown format preferred). The plan MUST include: 1. An explicit 'Integration Sequence' for available/functional components. 2. Details on 'Component Interactions & Data Flow'. 3. 'Configuration Management' notes for integration. 4. A dedicated section: 'Blockers & Prerequisites for Full Integration', which lists non-functional components or missing info and proposes steps/strategies to resolve them. 5. A 'Testing Strategy' for the integrated parts. 6. 'Deployment Considerations' for the integrated system. The plan should be actionable even if some parts are blocked, by clearly separating what can be done from what needs fixing." \
+                        " Crucially, the plan MUST also include a specific section titled 'File Manifest for Code Generation'. This section must be a list of dictionaries, where each dictionary represents a file to be generated and contains at least 'file_path' (string, e.g., 'src/models/user.py') and 'description' (string, a brief explanation of what code or class/functions this file should contain, based on the integration plan and architecture). Example of manifest format: [{'file_path': 'src/main.py', 'description': 'Main application entry point, sets up routes.'}, {'file_path': 'src/models/user.py', 'description': 'User data model including fields like id, username, email.'}]. This manifest must be comprehensive for all components and functionalities discussed in the integration plan.",
         max_retries=1,
         guardrail=validate_integration_plan_output
     )
 
-    # Code generation
-    code_gen_task = Task(
-        description=f"Generate final integrated codebase. The overall project architecture is: {architecture_summary_str}. The components to use for generation are: {components_summary_str}. CRUCIAL: You MUST generate all necessary code for all specified components and files as detailed in the integration plan and architecture. Do NOT omit, truncate, or summarize any code, functions, classes, or files due to perceived space or length constraints. Produce the entire, complete codebase. If a file's code is extensive, you must still provide the full code for that file.",
-        agent=code_writer_agent,
-        expected_output="The complete, runnable, and integrated codebase for ALL components, files, and features described in the integration plan and component specifications. This includes all necessary source files (e.g., .py, .java, .kt, .swift, .xml, .html, .css, .js), configuration files (e.g., Dockerfile, JSON, YAML configs), and any other required scripts. No part of any file's code should be omitted, summarized, or truncated with explanations like 'due to space constraints' or 'for brevity'. Each file should be presented in its entirety, ready for saving and execution.",
-        max_retries=1,
-        # TODO: Implement a more robust (LLM-assisted or functional) guardrail to validate code structure and completeness.
-        guardrail="Ensure the output consists of a complete codebase based on the integration plan and component specifications. It should contain actual code structures, not just descriptive text."
-    )
-
-    # Execute final assembly
-    crew = Crew(
-        agents=[error_handler_agent, final_assembler_agent, code_writer_agent],
-        tasks=[error_check_task, integration_task, code_gen_task],
+    # Initial crew for error checking and integration planning
+    initial_crew = Crew(
+        agents=[error_handler_agent, final_assembler_agent],
+        tasks=[error_check_task, integration_task],
         process=Process.sequential,
         verbose=True
     )
 
-    result = crew.kickoff()
+    initial_result = initial_crew.kickoff()
 
-    if not result or not result.tasks_output or len(result.tasks_output) != 3:
-        return "Error: Final assembly workflow did not produce the expected number of task outputs."
+    if not initial_result or not initial_result.tasks_output or len(initial_result.tasks_output) != 2:
+        return "Error: Final assembly's initial phase (error check, integration plan) did not produce the expected number of task outputs."
 
-    error_check_output_obj = result.tasks_output[0]
-    integration_output_obj = result.tasks_output[1]
-    code_gen_output_obj = result.tasks_output[2]
+    error_check_output_obj = initial_result.tasks_output[0]
+    integration_output_obj = initial_result.tasks_output[1]
 
-    # Simplified check: if .raw is missing or empty, it's a failure post-retries.
-    # A more robust check would use a specific status field from crewAI if available.
     error_check_raw = getattr(error_check_output_obj, 'raw', None)
     integration_raw = getattr(integration_output_obj, 'raw', None)
-    code_gen_raw = getattr(code_gen_output_obj, 'raw', None)
 
-    if not error_check_raw: # Check for empty string as well, as .raw might exist but be empty.
+    if not error_check_raw:
         return f"Error: Error check task failed in final_assembly_workflow. No output or empty output."
-    if not integration_raw:
-        return f"Error: Integration task failed in final_assembly_workflow. No output or empty output. Error check output: {error_check_raw}"
-    if not code_gen_raw:
-        return f"Error: Code generation task failed in final_assembly_workflow. No output or empty output. Integration plan: {integration_raw}"
+    if not integration_raw: # This implies the guardrail on integration_task passed, so 'integration_raw' is the plan.
+        # However, the guardrail might have returned False, and crewAI might pass along the last failing output.
+        # A more robust check for task success might be needed if crewAI provides it.
+        # For now, if integration_raw is empty, we assume failure.
+        return f"Error: Integration task failed or produced no valid output. Error check output: {error_check_raw}"
 
-    # If all tasks seem to have produced raw output
-    final_code_output = code_gen_raw
-    # Potentially add a check here if final_code_output itself is an error message passed through the guardrail
-    # This is a simple heuristic: if the output is short and contains "error", it might be an error message.
-    if ("error" in final_code_output.lower() or "failed" in final_code_output.lower()) and len(final_code_output) < 250:
-         return f"Error: Code generation task may have produced an error message: '{final_code_output}'. Integration plan: {integration_raw}"
+    # Extract File Manifest from the validated integration_raw
+    file_manifest = []
+    try:
+        temp_cleaned_lower = integration_raw.lower()
+        manifest_heading = "File Manifest for Code Generation".lower()
+        manifest_heading_idx = temp_cleaned_lower.find(manifest_heading)
+        if manifest_heading_idx != -1:
+            search_json_block_in = integration_raw[manifest_heading_idx + len(manifest_heading):]
+            json_block_match = re.search(r"```json\s*\n(.*?)\n```", search_json_block_in, re.DOTALL | re.IGNORECASE)
+            if json_block_match:
+                manifest_json_str = json_block_match.group(1).strip()
+                parsed_manifest = json.loads(manifest_json_str)
+                if isinstance(parsed_manifest, list) and all(
+                    isinstance(item, dict) and
+                    'file_path' in item and isinstance(item['file_path'], str) and item['file_path'].strip() and
+                    'description' in item and isinstance(item['description'], str) and item['description'].strip()
+                    for item in parsed_manifest
+                ):
+                    file_manifest = parsed_manifest
+                    print(f"Successfully extracted file manifest with {len(file_manifest)} items.")
+                else:
+                    print("Error: Extracted file manifest is not in the expected list-of-dicts format.")
+            else:
+                print("Error: Could not find ```json block for file manifest after heading in integration plan.")
+        else:
+            print("Error: 'File Manifest for Code Generation' heading not found in integration plan.")
+    except Exception as e:
+        print(f"Error parsing file manifest from integration plan: {e}")
 
-    return final_code_output
+    if not file_manifest:
+        return f"Error: Failed to extract a valid or non-empty File Manifest from the integration plan. Integration plan (first 500 chars): {integration_raw[:500]}"
+
+    # Iterative Code Generation Loop
+    generated_code_files = {}
+    print(f"\nStarting iterative code generation for {len(file_manifest)} files...")
+    for i, file_spec in enumerate(file_manifest):
+        file_path = file_spec.get('file_path', f'unknown_file_{i+1}.txt')
+        file_description = file_spec.get('description', 'No specific description provided.')
+
+        print(f"Generating file {i+1}/{len(file_manifest)}: {file_path} - {file_description[:100]}...")
+
+        integration_context = integration_raw[:1500]
+        architecture_context = architecture_summary_str[:1500]
+
+        code_generation_sub_task_desc = (
+            f"Generate the complete and runnable code for the specific file: '{file_path}'.\n"
+            f"Purpose of this file: '{file_description}'.\n"
+            f"This file is part of a larger project. Ensure it aligns with the overall project architecture and integration plan.\n"
+            f"Key architectural considerations (summary): '{architecture_context}'.\n"
+            f"Overall integration context (summary): '{integration_context}'.\n"
+            f"Focus solely on generating the full code for '{file_path}'. All necessary imports, class/function definitions, "
+            f"and logic for this single file must be included and correct."
+        )
+        code_generation_sub_task_expected_output = (
+            f"CRITICAL: Your entire response MUST be ONLY the raw, complete code for the specified file: '{file_path}'. "
+            f"NO other text, explanations, apologies, markdown code fences, or conversational filler. "
+            f"ONLY the code for this single file, from the first line to the last."
+        )
+
+        individual_code_task = Task(
+            description=code_generation_sub_task_desc,
+            agent=code_writer_agent,
+            expected_output=code_generation_sub_task_expected_output,
+            guardrail=validate_and_extract_code_output,
+            max_retries=1
+        )
+
+        code_writing_crew = Crew(agents=[code_writer_agent], tasks=[individual_code_task], verbose=False)
+        sub_task_result = code_writing_crew.kickoff()
+
+        if sub_task_result and hasattr(sub_task_result, 'raw') and sub_task_result.raw:
+            generated_code_files[file_path] = sub_task_result.raw
+            print(f"Successfully generated code for {file_path} (length: {len(sub_task_result.raw)}).")
+        else:
+            error_detail = getattr(sub_task_result, 'raw', "No raw output from task.") if sub_task_result else "Task execution returned None."
+            print(f"Error: Failed to generate code for file: {file_path}. Details: {error_detail}")
+            generated_code_files[file_path] = f"Error: Failed to generate code for this file. Details: {error_detail}"
+
+    print("Iterative code generation completed.")
+
+    all_successful = all(not val.startswith("Error:") for val in generated_code_files.values())
+    if not all_successful:
+         print("Warning: Some files failed during code generation.")
+         return {"status": "partial_success_code_generation", "generated_files": generated_code_files, "message": "Some files failed generation."}
+
+    return {"status": "success_code_generation", "generated_files": generated_code_files}
