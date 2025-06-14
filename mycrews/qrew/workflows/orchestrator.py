@@ -169,7 +169,7 @@ class WorkflowOrchestrator:
                 "taskmaster_error": "Task execution failed or no output"
             }
 
-    def execute_pipeline(self, initial_inputs: dict):
+    def execute_pipeline(self, initial_inputs: dict, mock_taskmaster_output: Optional[dict] = None):
         current_artifacts = {}
 
         # Define the full sequence of possible stages
@@ -185,8 +185,33 @@ class WorkflowOrchestrator:
         stages_to_run = []
         next_stage_index = 0
 
-        if self.state is None: # Project name to be determined by Taskmaster (New Project)
-            print("Orchestrator state not initialized, running Taskmaster first...")
+        if mock_taskmaster_output and self.state is None:
+            print("DEBUG: Using MOCKED Taskmaster output.")
+            taskmaster_output = mock_taskmaster_output
+            current_artifacts["taskmaster"] = taskmaster_output
+            # Initialize self.state here using project_name from mock_taskmaster_output
+            actual_project_name = taskmaster_output.get("project_name")
+            if not actual_project_name or not isinstance(actual_project_name, str):
+                print("ERROR: Mocked Taskmaster output missing or invalid 'project_name'. Cannot proceed.")
+                # Return an error structure or raise an exception
+                return {"error": "Mocked Taskmaster output missing or invalid project_name"}
+            self.state = ProjectStateManager(actual_project_name)
+            self.state.start_stage("taskmaster") # Mark as started
+            self.state.complete_stage("taskmaster", artifacts=taskmaster_output) # Mark as completed with mock data
+            initial_inputs["project_name"] = actual_project_name # Update initial_inputs for subsequent stages
+            # Determine stages_to_run based on mock_taskmaster_output
+            recommended_next = taskmaster_output.get("recommended_next_stage", "architecture")
+            stages_to_run.append("taskmaster") # Mocked taskmaster is considered 'done'
+            if recommended_next == "tech_vetting":
+              stages_to_run.extend(["tech_vetting", "architecture", "crew_assignment", "subagent_execution", "final_assembly"])
+            elif recommended_next == "architecture":
+              stages_to_run.extend(["architecture", "crew_assignment", "subagent_execution", "final_assembly"])
+            else:
+              print(f"Warning: Unknown recommended next stage '{recommended_next}' in mock. Defaulting to architecture flow.")
+              stages_to_run.extend(["architecture", "crew_assignment", "subagent_execution", "final_assembly"])
+            next_stage_index = 0 # Start iterating from the beginning of stages_to_run (it will skip 'taskmaster')
+        elif self.state is None: # Original block for when state is None (New Project) and no mock
+            print("Orchestrator state not initialized, running actual Taskmaster workflow...")
             taskmaster_output = self.run_taskmaster_workflow(initial_inputs)
             current_artifacts["taskmaster"] = taskmaster_output
 

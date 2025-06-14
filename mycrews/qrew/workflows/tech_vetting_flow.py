@@ -11,6 +11,7 @@ from ..orchestrators.tech_stack_committee.crews.tech_vetting_council_crew import
 
 
 def run_tech_vetting_workflow(inputs: dict) -> dict:
+    print(f"DEBUG: Entering run_tech_vetting_workflow with inputs: {inputs.get('project_name', 'N/A')} scope: {inputs.get('taskmaster', {}).get('project_scope', 'N/A')}")
     """
     Orchestrates the tech vetting process using the TechVettingCouncilCrew.
     """
@@ -166,6 +167,7 @@ def run_tech_vetting_workflow(inputs: dict) -> dict:
 
 
     print("Tech Vetting Workflow completed.")
+    print(f"DEBUG: Exiting run_tech_vetting_workflow")
     return {
         "status": "success",
         "message": "Tech vetting completed successfully.",

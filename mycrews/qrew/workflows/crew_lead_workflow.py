@@ -95,6 +95,7 @@ def validate_json_plan_output(task_output: TaskOutput) -> tuple[bool, Any]:
 
 
 def run_crew_lead_workflow(inputs: dict):
+    print(f"DEBUG: Entering run_crew_lead_workflow with inputs: {inputs.get('project_name', 'N/A')} scope: {inputs.get('taskmaster', {}).get('project_scope', 'N/A')}")
     project_name = inputs.get("project_name", "UnnamedProject")
     project_scope = inputs.get("taskmaster", {}).get("project_scope", "unknown")
     architecture_summary_str = json.dumps(inputs.get("architecture", {}), indent=2)
@@ -168,10 +169,10 @@ def run_crew_lead_workflow(inputs: dict):
         active_tasks.append(Task(**backend_task_details))
     elif project_scope == "documentation-only":
         pass # No planning tasks for these leads
-    else: # "unknown" or any other scope, might default to full or a defined minimal set
-        print(f"Warning: Project scope '{project_scope}' is 'unknown' or not specifically handled for task generation. Defaulting to full-stack planning for safety.")
-        active_agents.extend([backend_project_coordinator_agent, web_project_coordinator_agent, mobile_project_coordinator_agent])
-        active_tasks.extend([Task(**backend_task_details), Task(**web_task_details), Task(**mobile_task_details)])
+    else: # "unknown" or any other scope
+        print(f"Warning: Project scope '{project_scope}' is 'unknown' or not specifically handled. Defaulting to web and backend planning only.")
+        active_agents.extend([backend_project_coordinator_agent, web_project_coordinator_agent])
+        active_tasks.extend([Task(**backend_task_details), Task(**web_task_details)])
 
     # DevOps is typically always needed if any other development is happening
     if active_tasks:
@@ -252,5 +253,5 @@ def run_crew_lead_workflow(inputs: dict):
             if key != "notes" and not output_plans[key]["tasks"]:
                  output_plans[key] = {"tasks": [default_error_plan_text + f" (No crew output for {key.replace('_plan','').capitalize()})"]}
 
-
+    print(f"DEBUG: Exiting run_crew_lead_workflow")
     return output_plans

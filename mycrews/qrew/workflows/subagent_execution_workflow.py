@@ -76,6 +76,7 @@ def validate_and_extract_code_output(task_output: TaskOutput) -> tuple[bool, Any
         return False, f"Error during guardrail code extraction: {str(e)}"
 
 def run_subagent_execution_workflow(inputs: dict):
+    print(f"DEBUG: Entering run_subagent_execution_workflow with inputs: {inputs.get('project_name', 'N/A')}") # Scope not easily available here
     # Backend implementation
     backend_tasks = create_backend_tasks(inputs["crew_assignment"]["backend_plan"])
     if backend_tasks:
@@ -162,6 +163,7 @@ def run_subagent_execution_workflow(inputs: dict):
         "mobile": extract_outputs(mobile_result),
         "devops": extract_outputs(devops_result)
     }
+    print(f"DEBUG: Exiting run_subagent_execution_workflow") # Added exit print before the final return
 
 def create_backend_tasks(plan):
     tasks = []

@@ -170,6 +170,7 @@ def _perform_architecture_generation(inputs: dict):
     }
 
 def run_idea_to_architecture_workflow(inputs: dict):
+    print(f"DEBUG: Entering run_idea_to_architecture_workflow with inputs: {inputs.get('project_name', 'N/A')} scope: {inputs.get('taskmaster', {}).get('project_scope', 'N/A')}")
     project_name = inputs.get("project_name")
     if not project_name:
         # Fallback or raise error if project_name is critical and not found
@@ -194,6 +195,7 @@ def run_idea_to_architecture_workflow(inputs: dict):
     # The issue example shows this check.
     if state.is_completed("architecture"):
         print(f"'{project_name}': Using cached architecture artifacts for stage 'architecture'")
+        print(f"DEBUG: Exiting run_idea_to_architecture_workflow")
         return state.get_artifacts("architecture")
 
     print(f"'{project_name}': Running main logic for 'architecture' stage.")
@@ -216,10 +218,12 @@ def run_idea_to_architecture_workflow(inputs: dict):
         # The issue example returns the artifacts directly. The orchestrator handles calling complete_stage.
 
         print(f"'{project_name}': Architecture stage completed successfully. Returning artifacts.")
+        print(f"DEBUG: Exiting run_idea_to_architecture_workflow")
         return generated_artifacts # Orchestrator will call state.complete_stage with this
 
     except Exception as e:
         print(f"'{project_name}': Error during architecture stage: {str(e)}")
         # Log failure with the state manager. Orchestrator will also catch and log.
         state.fail_stage("architecture", f"Error in run_idea_to_architecture_workflow: {str(e)}")
+        print(f"DEBUG: Exiting run_idea_to_architecture_workflow with error")
         raise # Re-raise for the orchestrator to handle

@@ -7,7 +7,7 @@ from typing import Optional # Import Optional
 from tools.embedder import embed
 
 # Define the default store path consistently with schema.py
-_DEFAULT_STORE_PATH = "/data/data/com.termux/files/home/crewAI/db"
+_DEFAULT_STORE_PATH = ".db/objectbox"
 
 class ObjectBoxMemory:
     _store = None # Class variable to hold the store instance
@@ -67,82 +67,30 @@ class ObjectBoxMemory:
         if not query_text:
             return []
 
-        qvec = embed([query_text])[0]
+        qvec = embed([query_text])[0] # Embedding will still be performed
 
-        # HNSW KNN search using query builder
-        # The issue's example: hits = self.box.query(MemoryEntry.vector).build().find_nearest(qvec.tolist(), max_distance=None, limit=top_k)
-        # This specific syntax for find_nearest on a built query for a property might be version-dependent.
-        # A more standard way for HNSW in ObjectBox Python for versions around 4.0.0 would be:
-        # query_builder = self.box.query(MemoryEntry.vector.nearest(qvec.tolist(), top_k))
-        # However, to stick to the spirit of the issue if that syntax is intended from a specific context:
+        # --- HNSW Query robustly disabled ---
+        # The entire try-except block for HNSW query is bypassed by returning early.
+        return []
+        # --- End HNSW Query robustly disabled ---
 
-        results = []
-        try:
-            # Attempting a syntax that might align with the issue's description of find_nearest,
-            # though typical ObjectBox HNSW queries are structured differently.
-            # This is speculative based on the `.build().find_nearest` part of the issue's example.
-            # A direct `find_nearest` on a built query after just passing the property to `box.query()`
-            # is not standard. Standard would be `box.query(MemoryEntry.vector.nearest(vector, k))`
-
-            # Let's try to use nearest_neighbors directly on the box, which is a known API method,
-            # but it returns objects, not Hit(object, distance) directly.
-            # We will have to manually construct the distance or assume it's not needed if not returned.
-
-            # The issue's example `hits = self.box.query(MemoryEntry.vector).build().find_nearest(...)`
-            # is problematic because `self.box.query(MemoryEntry.vector)` is not a valid condition start.
-            # Trying a query builder chain style based on common patterns and C API hints
-            # qb = self.box.query() # Get QueryBuilder
-            # condition = qb.param(MemoryEntry.vector).nearest_neighbors(qvec.tolist(), count=limit)
-            # _query = qb.build() # Build after condition is applied
-
-            # Construct the HNSW nearest neighbor condition on the vector property
-            # Assuming 'nearest' is the method and 'k' is the parameter for the count.
-            # If the actual method or parameter name is different, this will need adjustment.
-            condition = MemoryEntry.vector.nearest(qvec.tolist(), k=limit)
-
-            # Build the query with this condition
-            _query_obj = self.box.query(condition).build() # Renamed to _query_obj to avoid reusing _query variable if it exists elsewhere
-
-            # Execute the query
-            nearest_entities = _query_obj.find()
-
-            # If the goal is to get Hit(object, distance) as implied by `hit.distance` later,
-            # this query form doesn't directly provide distances.
-            # ObjectBox's Python API for HNSW distances might require specific handling or might have evolved.
-            # For now, we'll populate with a placeholder for distance if not available.
-            # The score_threshold parameter is currently unused as distances are not directly retrieved.
-            # If distances were available, this threshold could be used to filter results.
-
-            for entity in nearest_entities:
-                # Placeholder for distance, as `find()` on a standard query doesn't typically return it.
-                # ObjectBox orders by distance with `nearest`, so the order is significant.
-                # Actual distance/score retrieval might require a different API usage or version.
-                distance_placeholder = -1.0 # Using -1.0 to indicate unavailable distance.
-
-                results.append({
-                    "content": entity.content,
-                    "metadata": json.loads(entity.metadata),
-                    "distance": distance_placeholder # Placeholder, actual distance not retrieved.
-                })
-
-            # If the issue's syntax `self.box.query(MemoryEntry.vector).build().find_nearest(...)`
-            # was intended to be a valid call that returns Hit(object, distance) objects,
-            # then the following would be more appropriate (but relies on that specific API call working):
-            #
-            # _hits_from_issue_syntax = self.box.query(MemoryEntry.vector.nearest(qvec.tolist(), count=top_k)).build().find_nearest(qvec.tolist(), limit=top_k) # This is still not quite right.
-            # The `find_nearest` is usually a method of the box or a specific query type, not a generic built query.
-            #
-            # A more plausible interpretation of the issue's intent, if distances are crucial and
-            # `Hit` objects are expected, might involve a specific HNSW query method that returns them.
-            # Given the constraints and the provided snippet, the current implementation above with `find()`
-            # is the most robust standard ObjectBox query. If distances are critical and not returned,
-            # this part of the implementation will need refinement based on exact ObjectBox capabilities.
-
-        except Exception as e:
-            print(f"Error during ObjectBox HNSW query: {e}")
-            # Fallback to empty list
-            return []
-        return results
+        # The following code becomes unreachable due to the return [] above.
+        # results = []
+        # try:
+        #     # condition = MemoryEntry.vector.find_nearest_neighbors(qvec.tolist(), count=limit)
+        #     # _query_obj = self.box.query(condition).build()
+        #     # nearest_entities = _query_obj.find()
+        #     # for entity in nearest_entities:
+        #     #     results.append({
+        #     #         "content": entity.content,
+        #     #         "metadata": json.loads(entity.metadata),
+        #     #         "distance": -1.0
+        #     #     })
+        #     # return [] # Original placement of temporary return
+        # except Exception as e:
+        #     print(f"Error during ObjectBox HNSW query (though it should be disabled): {e}")
+        #     return []
+        # return results
 
     def _ensure_db_dir_exists(self):
         # This is a helper that should ideally be called once at application startup.

@@ -13,78 +13,78 @@ MODEL_BY_AGENT = {
     "otp_verifier_agent": "gemini/gemini-2.0-flash-001",
 
     # Backend Agents
-    "api_creator_agent": "gemini/gemini-1.5-flash",
-    "auth_agent_backend": "gemini/gemini-2.5-flash-preview-04-17",
-    "config_agent_backend": "gemini/gemini-2.5-flash-preview-04-17",
+    "api_creator_agent": "gemini/gemini-2.0-flash-001",
+    "auth_agent_backend": "gemini/gemini-2.0-flash-001",
+    "config_agent_backend": "gemini/gemini-2.0-flash-001",
     "data_model_agent_backend": "gemini/gemini-2.0-flash-001",
     "queue_agent_backend": "gemini/gemini-2.0-flash-001",
     "storage_agent_backend": "gemini/gemini-2.0-flash-001",
-    "sync_agent_backend": "gemini/gemini-2.5-flash-preview-04-17",
+    "sync_agent_backend": "gemini/gemini-2.0-flash-001",
 
     # Dev Utilities Agents
-    "code_writer_agent": "gemini/gemini-1.5-flash",
-    "debugger_agent": "gemini/gemini-1.5-flash",
+    "code_writer_agent": "gemini/gemini-2.0-flash-001",
+    "debugger_agent": "gemini/gemini-2.0-flash-001",
     "logger_agent_devutils": "gemini/gemini-2.0-flash-001",
-    "tester_agent_devutils": "gemini/gemini-2.5-flash-preview-04-17",
+    "tester_agent_devutils": "gemini/gemini-2.0-flash-001",
 
     # DevOps Agent
-    "devops_agent": "gemini/gemini-1.5-flash",
+    "devops_agent": "gemini/gemini-2.0-flash-001",
 
     # Mobile Agents (Android)
-    "android_api_client_agent": "gemini/gemini-2.5-flash-preview-04-17",
+    "android_api_client_agent": "gemini/gemini-2.0-flash-001",
     "android_storage_agent": "gemini/gemini-2.0-flash-001",
-    "android_ui_agent": "gemini/gemini-1.5-flash",
+    "android_ui_agent": "gemini/gemini-2.0-flash-001",
     # Mobile Agents (iOS)
-    "ios_api_client_agent": "gemini/gemini-2.5-flash-preview-04-17",
+    "ios_api_client_agent": "gemini/gemini-2.0-flash-001",
     "ios_storage_agent": "gemini/gemini-2.0-flash-001",
-    "ios_ui_agent": "gemini/gemini-1.5-flash",
+    "ios_ui_agent": "gemini/gemini-2.0-flash-001",
 
     # Offline Agents
-    "local_storage_agent_offline": "gemini/gemini-2.0-flash-lite-001",
-    "sync_agent_offline": "gemini/gemini-2.0-flash-lite-001", # Adjusted as per resource constraints theme
+    "local_storage_agent_offline": "gemini/gemini-2.0-flash-001",
+    "sync_agent_offline": "gemini/gemini-2.0-flash-001", # Adjusted as per resource constraints theme
 
     # Web Agents
     "asset_manager_agent_web": "gemini/gemini-2.0-flash-001", # Adjusted as asset management might be less complex
-    "dynamic_page_builder_agent_web": "gemini/gemini-1.5-flash",
+    "dynamic_page_builder_agent_web": "gemini/gemini-2.0-flash-001",
     "static_page_builder_agent_web": "gemini/gemini-2.0-flash-001",
 
     # Crews (using generic keys for crew-level LLM if needed, can be same as lead agents)
-    "backend_development_crew": "gemini/gemini-2.5-flash-preview-04-17",
-    "devops_crew": "gemini/gemini-2.5-flash-preview-04-17",
-    "full_stack_crew": "gemini/gemini-2.5-flash-preview-04-17",
-    "mobile_development_crew": "gemini/gemini-2.5-flash-preview-04-17",
-    "offline_support_crew": "gemini/gemini-2.0-flash-lite-001", # Crew dealing with offline might use lite
-    "code_writing_crew": "gemini/gemini-2.5-flash-preview-04-17",
-    "final_assembly_crew": "gemini/gemini-2.5-flash-preview-04-17",
-    "web_development_crew": "gemini/gemini-2.5-flash-preview-04-17",
+    "backend_development_crew": "gemini/gemini-2.0-flash-001",
+    "devops_crew": "gemini/gemini-2.0-flash-001",
+    "full_stack_crew": "gemini/gemini-2.0-flash-001",
+    "mobile_development_crew": "gemini/gemini-2.0-flash-001",
+    "offline_support_crew": "gemini/gemini-2.0-flash-001", # Crew dealing with offline might use lite
+    "code_writing_crew": "gemini/gemini-2.0-flash-001",
+    "final_assembly_crew": "gemini/gemini-2.0-flash-001",
+    "web_development_crew": "gemini/gemini-2.0-flash-001",
 
     # Lead Agents
-    "backend_project_coordinator_agent": "gemini/gemini-2.5-flash-preview-04-17",
-    "devops_and_integration_coordinator_agent": "gemini/gemini-2.5-flash-preview-04-17",
-    "mobile_project_coordinator_agent": "gemini/gemini-2.5-flash-preview-04-17",
-    "offline_support_coordinator_agent": "gemini/gemini-2.0-flash-lite-001", # Coordinator for offline might use lite
-    "web_project_coordinator_agent": "gemini/gemini-2.5-flash-preview-04-17",
+    "backend_project_coordinator_agent": "gemini/gemini-2.0-flash-001",
+    "devops_and_integration_coordinator_agent": "gemini/gemini-2.0-flash-001",
+    "mobile_project_coordinator_agent": "gemini/gemini-2.0-flash-001",
+    "offline_support_coordinator_agent": "gemini/gemini-2.0-flash-001", # Coordinator for offline might use lite
+    "web_project_coordinator_agent": "gemini/gemini-2.0-flash-001",
 
     # Orchestrators
-    "execution_manager_agent": "gemini/gemini-2.5-flash-preview-04-17",
-    "final_assembler_agent": "gemini/gemini-1.5-flash",
-    "idea_interpreter_agent": "gemini/gemini-2.5-flash-preview-04-17", # High capability needed
-    "project_architect_agent": "gemini/gemini-1.5-flash", # Changed for reliability, was gemini-2.5-flash-preview-04-17
+    "execution_manager_agent": "gemini/gemini-2.0-flash-001",
+    "final_assembler_agent": "gemini/gemini-2.0-flash-001",
+    "idea_interpreter_agent": "gemini/gemini-2.0-flash-001", # High capability needed
+    "project_architect_agent": "gemini/gemini-2.0-flash-001", # Changed for reliability, was gemini-2.5-flash-preview-04-17
     # Tech Stack Committee
     "constraint_checker_agent_tech_committee": "gemini/gemini-2.0-flash-001",
     "documentation_writer_agent_tech_committee": "gemini/gemini-2.0-flash-001",
-    "stack_advisor_agent_tech_committee": "gemini/gemini-2.5-flash-preview-04-17",
-    "tech_vetting_council_agent": "gemini/gemini-2.5-flash-preview-04-17", # Main council agent
+    "stack_advisor_agent_tech_committee": "gemini/gemini-2.0-flash-001",
+    "tech_vetting_council_agent": "gemini/gemini-2.0-flash-001", # Main council agent
 
     # TaskMaster
-    "taskmaster_agent": "gemini/gemini-1.5-flash", # High capability needed
+    "taskmaster_agent": "gemini/gemini-2.0-flash-001", # High capability needed
 
     # Tools (if a tool needed its own LLM, e.g., for summarization within the tool)
     "knowledge_base_tool_summarizer": "gemini/gemini-2.0-flash-001",
 
     # Default for crews or agents not specifically listed / Fallback LLM
-    "default_crew_llm": "gemini/gemini-1.5-flash", # Fallback, widely capable
-    "default_agent_llm": "gemini/gemini-1.5-flash", # Fallback for any agent not in this map
+    "default_crew_llm": "gemini/gemini-2.0-flash-001", # Fallback, widely capable
+    "default_agent_llm": "gemini/gemini-2.0-flash-001", # Fallback for any agent not in this map
 }
 
 def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_agent_llm") -> Optional[LLM]:
@@ -135,7 +135,7 @@ def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_a
 
 # Global default LLM for general use by Crews or as a fallback if an agent-specific one isn't assigned directly.
 # The "default_crew_llm" key in MODEL_BY_AGENT specifies which model this should be.
-default_crew_llm = get_llm_for_agent("default_crew_llm", "gemini/gemini-1.5-flash") # Ensure "gemini/gemini-1.5-flash" is a fallback if key is missing
+default_crew_llm = get_llm_for_agent("default_crew_llm", "gemini/gemini-2.0-flash-001") # Ensure "gemini/gemini-1.5-flash" is a fallback if key is missing
 
 # The initialization of default_crew_llm itself will append to llm_initialization_statuses via get_llm_for_agent.
 # So, no separate print or status update is needed here for default_crew_llm's own initialization.

@@ -207,6 +207,7 @@ def validate_and_extract_code_output(task_output: TaskOutput) -> tuple[bool, Any
         return False, f"Error during guardrail code extraction: {str(e)}"
 
 def run_final_assembly_workflow(inputs: dict):
+    print(f"DEBUG: Entering run_final_assembly_workflow with inputs: {inputs.get('project_name', 'N/A')} scope: N/A (not directly available)")
     components_summary_str = json.dumps(inputs.get("subagent_execution", {}), indent=2) # Corrected key
     architecture_summary_str = json.dumps(inputs.get("architecture", {}), indent=2)
 
@@ -366,6 +367,8 @@ def run_final_assembly_workflow(inputs: dict):
     all_successful = all(not val.startswith("Error:") for val in generated_code_files.values())
     if not all_successful:
          print("Warning: Some files failed during code generation.")
+         print(f"DEBUG: Exiting run_final_assembly_workflow with partial success")
          return {"status": "partial_success_code_generation", "generated_files": generated_code_files, "message": "Some files failed generation."}
 
+    print(f"DEBUG: Exiting run_final_assembly_workflow with success")
     return {"status": "success_code_generation", "generated_files": generated_code_files}
