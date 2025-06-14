@@ -1,6 +1,7 @@
-import json # Added
-from crewai import Crew, Task # Added
-from ..taskmaster.taskmaster_agent import taskmaster_agent # Added
+import json
+from typing import Any, Optional # Added Any, ensured Optional
+from crewai import Crew, Task
+from ..taskmaster.taskmaster_agent import taskmaster_agent
 from .idea_to_architecture_flow import run_idea_to_architecture_workflow
 from .crew_lead_workflow import run_crew_lead_workflow
 from .subagent_execution_workflow import run_subagent_execution_workflow
@@ -8,7 +9,7 @@ from .final_assembly_workflow import run_final_assembly_workflow
 from ..project_manager import ProjectStateManager # Adjusted import path
 
 # Guardrail function for Taskmaster output
-def validate_taskmaster_output(output: str) -> tuple[bool, any]: # Changed 'any' to 'str' for error message, any for data
+def validate_taskmaster_output(output: str) -> tuple[bool, Any]: # Corrected to Any
     try:
         data = json.loads(output)
         if not isinstance(data, dict):

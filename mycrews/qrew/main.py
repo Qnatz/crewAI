@@ -126,7 +126,7 @@ def run_qrew():
         import traceback
         traceback.print_exc()
         # Print error summary from orchestrator if available
-        if 'orchestrator' in locals() and hasattr(orchestrator, 'state'):
+        if 'orchestrator' in locals() and hasattr(orchestrator, 'state') and orchestrator.state is not None:
             print("\nPartial Workflow Summary (on error):")
             orchestrator.state.get_summary().print()
 
