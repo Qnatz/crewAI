@@ -1,6 +1,10 @@
 import sys
 import os
 import json
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
+from rich.prompt import Prompt
 # Add the project root (/app) to sys.path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 if project_root not in sys.path:
@@ -15,6 +19,9 @@ if project_src_path not in sys.path:
 from .llm_config import default_llm, llm_initialization_statuses # Adjusted import
 from . import config as crew_config
 
+# Initialize Rich Console
+console = Console()
+
 # TaskMasterAgent import is removed as it's handled by the orchestrator's "taskmaster" stage
 # from .taskmaster import taskmaster_agent
 
@@ -24,27 +31,37 @@ from .workflows.orchestrator import WorkflowOrchestrator
 from .project_manager import ProjectStateManager # Added import
 
 def display_model_initialization_status(title: str, statuses: list[tuple[str, bool]]):
-    """Displays the initialization status of models in a formatted box."""
-    print(f"\n{title}")
+    """Displays the initialization status of models in a Rich Panel."""
     if not statuses:
-        print("No models to display status for in this category.")
+        content = Text("No models to display status for in this category.", style="italic yellow")
     else:
-        for model_name, status in statuses:
-            icon = "✔️" if status else "❌"
-            print(f"{model_name}: {icon}")
-    print("-" * (len(title) if len(title) > 20 else 20)) # Adjust width based on title or min width
+        status_texts = []
+        for name, status_bool in statuses:
+            model_text = Text(f"{name}: ")
+            if status_bool:
+                model_text.append("✔️", style="green")
+            else:
+                model_text.append("❌", style="red")
+            status_texts.append(model_text)
+        content = Text("\n").join(status_texts)
+
+    panel = Panel(content, title=title, border_style="blue", expand=False, padding=(1, 2))
+    console.print(panel)
 
 def run_qrew():
-    # Display LLM initialization status first
-    # Note: llm_initialization_statuses is populated when llm_config.py is imported
-    display_model_initialization_status("--- LLM Initialization ---", llm_initialization_statuses)
+    # Display LLM initialization status first using Rich
+    display_model_initialization_status("[bold cyan]--- LLM Initialization ---[/bold cyan]", llm_initialization_statuses)
 
-    # Placeholder for TFLite and other models as per requirements
-    display_model_initialization_status("--- TFLite Model Initialization ---", [])
+    # Placeholder for TFLite and other models as per requirements, also using Rich
+    display_model_initialization_status("[bold cyan]--- TFLite Model Initialization ---[/bold cyan]", [])
     # Example with placeholder models:
-    # display_model_initialization_status("--- Other Model Initialization ---", [("Embedding Model", True), ("Another Model", False)])
+    # display_model_initialization_status("[bold cyan]--- Other Model Initialization ---[/bold cyan]", [("Embedding Model", True), ("Another Model", False)])
 
-    print("\nInitializing Qrew System...") # Original print statement
+    # The old "Initializing Qrew System..." print might be redundant or can be styled too.
+    # For now, let's keep it or use console.print for consistency if desired.
+    # console.print("\n[bold]Initializing Qrew System...[/bold]")
+    # Keeping the original print for now, as the focus is on the status boxes.
+    print("\nInitializing Qrew System...")
 
     # --- Helper function to list projects ---
     def list_available_projects():
@@ -73,58 +90,67 @@ def run_qrew():
         return project_folders
 
     # --- Taskmaster Initialization / User Input ---
-    print("\n--- Taskmaster Initialization ---")
-
     user_request = ""
-    project_name_for_orchestrator = None # Will be passed to orchestrator if a project is selected
+    project_name_for_orchestrator = None
     pipeline_inputs = {}
+    selected_project_state = None
 
     available_projects = list_available_projects()
+
+    taskmaster_content_texts = []
     if available_projects:
-        print("Available Projects:")
+        taskmaster_content_texts.append(Text("Available Projects:", style="bold green"))
         for i, name in enumerate(available_projects):
-            print(f"{i + 1}. {name}")
-        print("-" * 30) # Separator
+            taskmaster_content_texts.append(Text(f"  {i+1}. {name}"))
+    else:
+        taskmaster_content_texts.append(Text("No existing projects found.", style="italic yellow"))
 
-    prompt_message = "Write your new idea or select an existing project number (e.g., '1'): "
-    user_input_str = input(prompt_message)
+    taskmaster_content_texts.append(Text("\nWrite your new idea or select an existing project number:", style="cyan"))
 
-    selected_project_state = None # To store loaded state for existing projects
+    combined_content = Text("\n").join(taskmaster_content_texts)
+
+    taskmaster_panel = Panel(
+        combined_content,
+        title="[bold magenta]Taskmaster Initialization[/bold magenta]",
+        border_style="magenta",
+        padding=(1, 2)
+    )
+    console.print(taskmaster_panel)
+
+    # Use Prompt.ask for input, placed after the panel displaying options and prompt instructions.
+    user_input_str = Prompt.ask(Text("Your choice", style="bold default"))
 
     try:
         selected_index = int(user_input_str) - 1
         if 0 <= selected_index < len(available_projects):
             project_name_for_orchestrator = available_projects[selected_index]
-            print(f"Selected existing project: {project_name_for_orchestrator}")
+            console.print(Text(f"Selected existing project: '{project_name_for_orchestrator}'", style="bold blue"))
 
-            # Attempt to load state for the selected project
             temp_state_manager = ProjectStateManager(project_name_for_orchestrator)
-            selected_project_state = temp_state_manager.state # state is loaded in ProjectStateManager's __init__
+            selected_project_state = temp_state_manager.state
 
             if selected_project_state.get("status") == "completed":
-                print(f"Project '{project_name_for_orchestrator}' is already marked as completed.")
-                print("If you want to re-run or start a new version, please provide a new idea or modify the project name.")
-                # Optionally, exit or loop back to input prompt
-                return # Exit run_qrew if project is completed.
+                console.print(Panel(Text(f"Project '{project_name_for_orchestrator}' is already marked as completed.\nIf you want to re-run or start a new version, please provide a new idea or modify the project name.", style="yellow"), title="[bold red]Project Completed[/bold red]", border_style="red", expand=False))
+                return
 
             user_request = selected_project_state.get("artifacts", {}).get("taskmaster", {}).get("refined_brief", "")
-            if not user_request: # Fallback if refined_brief is not found
-                user_request = selected_project_state.get("user_request", f"Continuing project: {project_name_for_orchestrator}") # Original user_request if available
+            if not user_request:
+                user_request = selected_project_state.get("user_request", f"Continuing project: {project_name_for_orchestrator}") # Fallback
 
             pipeline_inputs["project_name"] = project_name_for_orchestrator
         else:
-            print("Invalid project number. Treating input as a new idea.")
-            project_name_for_orchestrator = None # Ensure it's None for new ideas
-            user_request = user_input_str
+            # Invalid number
+            console.print(Text(f"Invalid selection '{user_input_str}'. Treating input as a new idea.", style="yellow"))
+            project_name_for_orchestrator = None
+            user_request = user_input_str # The full input string is the new idea
     except ValueError:
         # Input is not a number, so it's a new idea
-        print("Input treated as a new idea.")
-        project_name_for_orchestrator = None # Ensure it's None for new ideas
+        console.print(Text(f"Input '{user_input_str}' treated as a new idea.", style="italic"))
+        project_name_for_orchestrator = None
         user_request = user_input_str
 
-    # --- Conditional Inputs Preparation ---
-    if project_name_for_orchestrator is None: # New Project
-        print("Processing as a new project idea.")
+    if project_name_for_orchestrator is None:
+        console.print(Text(f"\nProcessing as a new project idea: '{user_request}'", style="bold"))
         pipeline_inputs.update({
             "user_request": user_request,
             "project_goal": "To be defined by Taskmaster based on user request.",
@@ -133,42 +159,29 @@ def run_qrew():
             "market_research_data": "To be gathered or assumed standard.",
             "constraints": "Standard web technologies, static site unless specified otherwise.",
             "technical_vision": "Clean, maintainable code. Scalable architecture."
-            # project_name is NOT set here for new projects
         })
-    else: # Existing Project Selected
-        print(f"Preparing to resume project: {project_name_for_orchestrator}")
-        # Use loaded state if available, otherwise use placeholders
+    else:
+        console.print(Text(f"Preparing to resume project: {project_name_for_orchestrator}", style="bold"))
         taskmaster_artifacts = selected_project_state.get("artifacts", {}).get("taskmaster", {})
 
         pipeline_inputs.update({
-            "user_request": user_request, # Already set from state or as placeholder
-            "project_name": project_name_for_orchestrator, # Already set
+            "user_request": user_request,
+            "project_name": project_name_for_orchestrator,
             "project_goal": selected_project_state.get("project_goal", taskmaster_artifacts.get("project_goal", "Resume existing project goals.")),
             "priority": selected_project_state.get("priority", "As per existing project state."),
             "stakeholder_feedback": selected_project_state.get("stakeholder_feedback", taskmaster_artifacts.get("stakeholder_feedback", "N/A - Resuming project")),
             "market_research_data": selected_project_state.get("market_research_data", taskmaster_artifacts.get("market_research_data", "N/A - Resuming project")),
             "constraints": selected_project_state.get("constraints", taskmaster_artifacts.get("constraints", "As per existing project state.")),
             "technical_vision": selected_project_state.get("technical_vision", taskmaster_artifacts.get("technical_vision", "As per existing project state.")),
-            # Include other artifacts if they are needed by early stages when resuming
-            "refined_brief": taskmaster_artifacts.get("refined_brief", user_request), # refined_brief is often key
-            "is_new_project": False # Explicitly false for existing projects
+            "refined_brief": taskmaster_artifacts.get("refined_brief", user_request),
+            "is_new_project": False
         })
-        # Add other top-level state items or specific artifacts if needed by orchestrator/stages
-        # For example, if 'architecture' stage needs 'user_idea' (which might be refined_brief)
         if "refined_brief" in pipeline_inputs:
              pipeline_inputs["user_idea"] = pipeline_inputs["refined_brief"]
 
-
-    # --- Old Inputs Preparation (Commented Out) ---
-
-    # --- Old Inputs Preparation (Commented Out) ---
-    # sample_user_request = "Create a simple, modern, single-page responsive website for a personal portfolio..."
-    # sample_project_goal = "Develop a clean, professional, single-page personal portfolio website..."
-    # ... (other sample variables) ...
-    # pipeline_inputs = { ... }
-
-    print(f"\nInitiating data pipeline. Project hint: {project_name_for_orchestrator if project_name_for_orchestrator else 'New Project'}")
-    print(f"User request for pipeline: {pipeline_inputs.get('user_request')}")
+    # console.print(f"\nInitiating data pipeline. Project hint: {project_name_for_orchestrator if project_name_for_orchestrator else 'New Project'}")
+    # console.print(f"User request for pipeline: {pipeline_inputs.get('user_request')}")
+    # The above can be made richer later if needed.
 
 
     # --- Execute Pipeline ---

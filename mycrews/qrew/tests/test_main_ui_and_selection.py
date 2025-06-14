@@ -15,43 +15,67 @@ if project_root_for_test not in sys.path:
 from mycrews.qrew import main as qrew_main
 from mycrews.qrew.project_manager import ProjectStateManager # Needed for mocking its instances
 from mycrews.qrew.workflows.orchestrator import WorkflowOrchestrator # Needed for mocking
+from rich.panel import Panel
+from rich.text import Text
 
 
 class TestDisplayModelStatus(unittest.TestCase):
-    @patch('builtins.print')
-    def test_display_model_initialization_status_empty(self, mock_print):
-        qrew_main.display_model_initialization_status("--- Test Empty ---", [])
-        calls = mock_print.call_args_list
-        self.assertIn("--- Test Empty ---", calls[0][0][0])
-        self.assertIn("No models to display status for in this category.", calls[1][0][0])
-        self.assertIn("--------------------", calls[2][0][0]) # Default width
+    @patch('mycrews.qrew.main.console.print')
+    def test_display_model_initialization_status_empty(self, mock_console_print):
+        title = "[bold cyan]--- Test Empty ---[/bold cyan]"
+        qrew_main.display_model_initialization_status(title, [])
 
-    @patch('builtins.print')
-    def test_display_model_initialization_status_single_success(self, mock_print):
-        qrew_main.display_model_initialization_status("--- Test Success ---", [("ModelA", True)])
-        calls = mock_print.call_args_list
-        self.assertIn("--- Test Success ---", calls[0][0][0])
-        self.assertIn("ModelA: ✔️", calls[1][0][0])
-        self.assertIn("------------------", calls[2][0][0]) # Width of title
+        mock_console_print.assert_called_once()
+        args, _ = mock_console_print.call_args
+        self.assertIsInstance(args[0], Panel)
+        panel_instance = args[0]
+        # For Rich titles, the Text object itself is the title, not a plain string.
+        self.assertIsInstance(panel_instance.title, Text)
+        self.assertEqual(panel_instance.title.plain, "--- Test Empty ---") # Check plain text of title
+        self.assertIsInstance(panel_instance.renderable, Text)
+        self.assertEqual(panel_instance.renderable.plain, "No models to display status for in this category.")
+        self.assertTrue(any(span.style == "italic yellow" for span in panel_instance.renderable.spans))
 
-    @patch('builtins.print')
-    def test_display_model_initialization_status_single_failure(self, mock_print):
-        qrew_main.display_model_initialization_status("--- Test Failure ---", [("ModelB", False)])
-        calls = mock_print.call_args_list
-        self.assertIn("--- Test Failure ---", calls[0][0][0])
-        self.assertIn("ModelB: ❌", calls[1][0][0])
-        self.assertIn("--------------------", calls[2][0][0]) # Width of title, adjusted if shorter than 20
+    @patch('mycrews.qrew.main.console.print')
+    def test_display_model_initialization_status_single_success(self, mock_console_print):
+        title_text = "[bold cyan]--- Test Success ---[/bold cyan]"
+        qrew_main.display_model_initialization_status(title_text, [("ModelA", True)])
 
-    @patch('builtins.print')
-    def test_display_model_initialization_status_multiple(self, mock_print):
+        mock_console_print.assert_called_once()
+        panel_instance = mock_console_print.call_args[0][0]
+        self.assertEqual(panel_instance.title.plain, "--- Test Success ---")
+        self.assertIsInstance(panel_instance.renderable, Text)
+        self.assertEqual(panel_instance.renderable.plain, "ModelA: ✔️")
+        self.assertTrue(any(span.style == "green" for span in panel_instance.renderable.spans if panel_instance.renderable.plain[span.start:span.end] == "✔️"))
+
+    @patch('mycrews.qrew.main.console.print')
+    def test_display_model_initialization_status_single_failure(self, mock_console_print):
+        title_text = "[bold cyan]--- Test Failure ---[/bold cyan]"
+        qrew_main.display_model_initialization_status(title_text, [("ModelB", False)])
+
+        mock_console_print.assert_called_once()
+        panel_instance = mock_console_print.call_args[0][0]
+        self.assertEqual(panel_instance.title.plain, "--- Test Failure ---")
+        self.assertIsInstance(panel_instance.renderable, Text)
+        self.assertEqual(panel_instance.renderable.plain, "ModelB: ❌")
+        self.assertTrue(any(span.style == "red" for span in panel_instance.renderable.spans if panel_instance.renderable.plain[span.start:span.end] == "❌"))
+
+    @patch('mycrews.qrew.main.console.print')
+    def test_display_model_initialization_status_multiple(self, mock_console_print):
+        title_text = "[bold cyan]--- Test Multiple ---[/bold cyan]"
         statuses = [("ModelX", True), ("ModelY", False), ("ModelZ", True)]
-        qrew_main.display_model_initialization_status("--- Test Multiple ---", statuses)
-        calls = mock_print.call_args_list
-        self.assertIn("--- Test Multiple ---", calls[0][0][0])
-        self.assertIn("ModelX: ✔️", calls[1][0][0])
-        self.assertIn("ModelY: ❌", calls[2][0][0])
-        self.assertIn("ModelZ: ✔️", calls[3][0][0])
-        self.assertIn("-------------------", calls[4][0][0])
+        qrew_main.display_model_initialization_status(title_text, statuses)
+
+        mock_console_print.assert_called_once()
+        panel_instance = mock_console_print.call_args[0][0]
+        self.assertEqual(panel_instance.title.plain, "--- Test Multiple ---")
+        self.assertIsInstance(panel_instance.renderable, Text)
+
+        expected_plain_text = "ModelX: ✔️\nModelY: ❌\nModelZ: ✔️"
+        self.assertEqual(panel_instance.renderable.plain, expected_plain_text)
+
+        self.assertTrue(any(span.style == "green" for span in panel_instance.renderable.spans if "✔️" in panel_instance.renderable.plain[span.start:span.end]))
+        self.assertTrue(any(span.style == "red" for span in panel_instance.renderable.spans if "❌" in panel_instance.renderable.plain[span.start:span.end]))
 
 
 class TestListAvailableProjects(unittest.TestCase):
@@ -144,14 +168,14 @@ class TestRunQrewInteraction(unittest.TestCase):
         # unittest.mock.patch.stopall() # Stops all patchers started with start()
         pass
 
-    @patch('builtins.print') # To verify output messages
-    @patch('builtins.input')
+    @patch('mycrews.qrew.main.console.print') # Patched for Rich
+    @patch('rich.prompt.Prompt.ask') # Patched for Rich
     @patch('mycrews.qrew.main.list_available_projects')
-    @patch('mycrews.qrew.main.WorkflowOrchestrator') # Patching the class
-    @patch('mycrews.qrew.main.ProjectStateManager') # Patching the class
-    def test_run_qrew_new_idea_input(self, MockProjectStateManager, MockWorkflowOrchestrator, mock_list_projects, mock_input, mock_print):
-        mock_list_projects.return_value = [] # No existing projects
-        mock_input.return_value = "Create a new amazing app"
+    @patch('mycrews.qrew.main.WorkflowOrchestrator')
+    @patch('mycrews.qrew.main.ProjectStateManager')
+    def test_run_qrew_new_idea_input(self, MockProjectStateManager, MockWorkflowOrchestrator, mock_list_projects, mock_prompt_ask, mock_console_print):
+        mock_list_projects.return_value = []
+        mock_prompt_ask.return_value = "Create a new amazing app"
 
         # Mock the orchestrator instance and its execute_pipeline method
         mock_orchestrator_instance = MockWorkflowOrchestrator.return_value
@@ -161,29 +185,40 @@ class TestRunQrewInteraction(unittest.TestCase):
         with patch.dict(qrew_main.sys.modules, {'mycrews.qrew.llm_config': MagicMock(llm_initialization_statuses=[])}):
              qrew_main.run_qrew()
 
-        # Assert ProjectStateManager was NOT called before orchestrator (as it's a new project)
         MockProjectStateManager.assert_not_called()
 
-        # Assert WorkflowOrchestrator was initialized with project_name=None
         MockWorkflowOrchestrator.assert_called_once_with(project_name=None)
 
-        # Assert execute_pipeline was called and capture its `pipeline_inputs`
-        call_args = mock_orchestrator_instance.execute_pipeline.call_args
-        self.assertIsNotNone(call_args)
-        pipeline_inputs_received = call_args[0][0]
-
+        pipeline_inputs_received = mock_orchestrator_instance.execute_pipeline.call_args[0][0]
         self.assertEqual(pipeline_inputs_received.get("user_request"), "Create a new amazing app")
-        self.assertIsNone(pipeline_inputs_received.get("project_name")) # Key for new project
-        self.assertIn("project_goal", pipeline_inputs_received) # Check some default fields
+        self.assertIsNone(pipeline_inputs_received.get("project_name"))
+        self.assertIn("project_goal", pipeline_inputs_received)
 
-    @patch('builtins.print')
-    @patch('builtins.input')
+        # Check that the Taskmaster panel was printed
+        taskmaster_panel_printed = False
+        new_idea_message_printed = False
+        for call in mock_console_print.call_args_list:
+            args = call[0]
+            if args and isinstance(args[0], Panel):
+                if "Taskmaster Initialization" in args[0].title.plain:
+                    taskmaster_panel_printed = True
+                    self.assertIn("No existing projects found.", args[0].renderable.plain)
+            elif args and isinstance(args[0], Text):
+                if "Processing as a new project idea: 'Create a new amazing app'" in args[0].plain:
+                    new_idea_message_printed = True
+
+        self.assertTrue(taskmaster_panel_printed, "Taskmaster initialization panel was not printed.")
+        self.assertTrue(new_idea_message_printed, "New idea processing message was not printed.")
+
+
+    @patch('mycrews.qrew.main.console.print') # Patched for Rich
+    @patch('rich.prompt.Prompt.ask') # Patched for Rich
     @patch('mycrews.qrew.main.list_available_projects')
     @patch('mycrews.qrew.main.WorkflowOrchestrator')
     @patch('mycrews.qrew.main.ProjectStateManager')
-    def test_run_qrew_existing_project_selection(self, MockProjectStateManager, MockWorkflowOrchestrator, mock_list_projects, mock_input, mock_print):
+    def test_run_qrew_existing_project_selection(self, MockProjectStateManager, MockWorkflowOrchestrator, mock_list_projects, mock_prompt_ask, mock_console_print):
         mock_list_projects.return_value = ['project_alpha', 'project_beta']
-        mock_input.return_value = "1" # Select 'project_alpha'
+        mock_prompt_ask.return_value = "1"
 
         # Configure the mock ProjectStateManager instance
         mock_state_manager_instance = MockProjectStateManager.return_value
@@ -202,10 +237,7 @@ class TestRunQrewInteraction(unittest.TestCase):
         with patch.dict(qrew_main.sys.modules, {'mycrews.qrew.llm_config': MagicMock(llm_initialization_statuses=[])}):
             qrew_main.run_qrew()
 
-        # Assert ProjectStateManager was called with 'project_alpha' by main.py
         MockProjectStateManager.assert_called_once_with('project_alpha')
-
-        # Assert WorkflowOrchestrator was initialized with project_name='project_alpha'
         MockWorkflowOrchestrator.assert_called_once_with(project_name='project_alpha')
 
         pipeline_inputs_received = mock_orchestrator_instance.execute_pipeline.call_args[0][0]
@@ -214,14 +246,25 @@ class TestRunQrewInteraction(unittest.TestCase):
         self.assertEqual(pipeline_inputs_received.get("project_goal"), "Goal for alpha")
         self.assertEqual(pipeline_inputs_received.get("is_new_project"), False)
 
-    @patch('builtins.print')
-    @patch('builtins.input')
+        # Check Rich output for selecting project
+        selected_project_message_printed = False
+        for call in mock_console_print.call_args_list:
+            args = call[0]
+            if args and isinstance(args[0], Text):
+                if "Selected existing project: 'project_alpha'" in args[0].plain:
+                    selected_project_message_printed = True
+                    break
+        self.assertTrue(selected_project_message_printed, "Selected project message not found or not Text.")
+
+
+    @patch('mycrews.qrew.main.console.print') # Patched for Rich
+    @patch('rich.prompt.Prompt.ask') # Patched for Rich
     @patch('mycrews.qrew.main.list_available_projects')
     @patch('mycrews.qrew.main.WorkflowOrchestrator')
     @patch('mycrews.qrew.main.ProjectStateManager')
-    def test_run_qrew_select_completed_project(self, MockProjectStateManager, MockWorkflowOrchestrator, mock_list_projects, mock_input, mock_print):
+    def test_run_qrew_select_completed_project(self, MockProjectStateManager, MockWorkflowOrchestrator, mock_list_projects, mock_prompt_ask, mock_console_print):
         mock_list_projects.return_value = ['completed_project']
-        mock_input.return_value = "1"
+        mock_prompt_ask.return_value = "1"
 
         mock_state_manager_instance = MockProjectStateManager.return_value
         mock_state_manager_instance.state = {
@@ -236,26 +279,29 @@ class TestRunQrewInteraction(unittest.TestCase):
 
         MockProjectStateManager.assert_called_once_with('completed_project')
 
-        # Assert that a message about completion was printed
-        printed_output = "".join(call[0][0] for call in mock_print.call_args_list if call[0]) # Handle empty calls if any
-        self.assertIn("Project 'completed_project' is already marked as completed.", printed_output)
+        # Assert that a Panel about completion was printed
+        completion_panel_printed = False
+        for call in mock_console_print.call_args_list:
+            args = call[0]
+            if args and isinstance(args[0], Panel):
+                if "Project Completed" in args[0].title.plain and \
+                   "Project 'completed_project' is already marked as completed" in args[0].renderable.plain:
+                    completion_panel_printed = True
+                    break
+        self.assertTrue(completion_panel_printed, "Completion panel was not printed as expected.")
 
-        # Assert WorkflowOrchestrator was NOT called to execute pipeline
         mock_orchestrator_instance.execute_pipeline.assert_not_called()
-        # Also check if WorkflowOrchestrator constructor was called or not.
-        # Based on current main.py, orchestrator is initialized before the completed check leads to return.
-        # So, the constructor *would* be called. The important part is execute_pipeline is not.
         MockWorkflowOrchestrator.assert_called_once_with(project_name='completed_project')
 
 
-    @patch('builtins.print')
-    @patch('builtins.input')
+    @patch('mycrews.qrew.main.console.print') # Patched for Rich
+    @patch('rich.prompt.Prompt.ask') # Patched for Rich
     @patch('mycrews.qrew.main.list_available_projects')
     @patch('mycrews.qrew.main.WorkflowOrchestrator')
     @patch('mycrews.qrew.main.ProjectStateManager')
-    def test_run_qrew_invalid_project_number_treats_as_new(self, MockProjectStateManager, MockWorkflowOrchestrator, mock_list_projects, mock_input, mock_print):
+    def test_run_qrew_invalid_project_number_treats_as_new(self, MockProjectStateManager, MockWorkflowOrchestrator, mock_list_projects, mock_prompt_ask, mock_console_print):
         mock_list_projects.return_value = ['project_one']
-        mock_input.return_value = "99" # Invalid selection number
+        mock_prompt_ask.return_value = "99"
 
         mock_orchestrator_instance = MockWorkflowOrchestrator.return_value
         mock_orchestrator_instance.execute_pipeline.return_value = {"status": "simulated_run_complete"}
@@ -263,18 +309,23 @@ class TestRunQrewInteraction(unittest.TestCase):
         with patch.dict(qrew_main.sys.modules, {'mycrews.qrew.llm_config': MagicMock(llm_initialization_statuses=[])}):
             qrew_main.run_qrew()
 
-        # Should not have tried to load a project with ProjectStateManager via main.py's selection logic
-        # (Orchestrator might still call it if it gets a project name, but not from main.py's direct selection path)
-        # In this case, project_name_for_orchestrator will be None, so PSM won't be called by main.py.
-        calls_to_psm_by_main = [call for call in MockProjectStateManager.mock_calls if call[0] == '()'] # Check constructor calls
-        # This assertion is tricky because orchestrator itself might call PSM.
-        # Focus on what WorkflowOrchestrator was initialized with.
+        MockProjectStateManager.assert_not_called()
 
-        MockWorkflowOrchestrator.assert_called_once_with(project_name=None) # Treated as new
+        MockWorkflowOrchestrator.assert_called_once_with(project_name=None)
 
         pipeline_inputs_received = mock_orchestrator_instance.execute_pipeline.call_args[0][0]
-        self.assertEqual(pipeline_inputs_received.get("user_request"), "99") # Input becomes user_request
+        self.assertEqual(pipeline_inputs_received.get("user_request"), "99")
         self.assertIsNone(pipeline_inputs_received.get("project_name"))
+
+        # Check for "Invalid selection" message
+        invalid_selection_message_printed = False
+        for call in mock_console_print.call_args_list:
+            args = call[0]
+            if args and isinstance(args[0], Text):
+                if "Invalid selection '99'. Treating input as a new idea." in args[0].plain:
+                    invalid_selection_message_printed = True
+                    break
+        self.assertTrue(invalid_selection_message_printed, "Invalid selection message not printed.")
 
 
 if __name__ == '__main__':
