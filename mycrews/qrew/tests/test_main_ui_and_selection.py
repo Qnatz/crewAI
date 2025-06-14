@@ -46,9 +46,9 @@ class TestDisplayModelStatus(unittest.TestCase):
         panel_instance = mock_console_print.call_args[0][0]
         self.assertEqual(panel_instance.title.plain, "--- Test Success ---")
         self.assertIsInstance(panel_instance.renderable, Text)
-        self.assertEqual(panel_instance.renderable.plain, "gemini/gemini-1.0-pro: ✔️")
+        self.assertEqual(panel_instance.renderable.plain, "gemini/gemini-1.0-pro: ✅") # Changed to ✅
         # Check for bright_green style
-        self.assertTrue(any(span.style == "bright_green" for span in panel_instance.renderable.spans if panel_instance.renderable.plain[span.start:span.end] == "✔️"))
+        self.assertTrue(any(span.style == "bright_green" for span in panel_instance.renderable.spans if panel_instance.renderable.plain[span.start:span.end] == "✅")) # Changed to ✅
 
     @patch('mycrews.qrew.main.console.print')
     def test_display_model_initialization_status_single_failure(self, mock_console_print):
@@ -76,10 +76,10 @@ class TestDisplayModelStatus(unittest.TestCase):
         self.assertIsInstance(panel_instance.renderable, Text)
 
         # Output is sorted by model key
-        expected_plain_text = "anthropic/claude-2: ✔️\ngemini/gemini-1.5-flash: ✔️\nollama/mistral: ❌"
+        expected_plain_text = "anthropic/claude-2: ✅\ngemini/gemini-1.5-flash: ✅\nollama/mistral: ❌" # Changed to ✅
         self.assertEqual(panel_instance.renderable.plain, expected_plain_text)
 
-        self.assertTrue(any(span.style == "bright_green" for span in panel_instance.renderable.spans if "✔️" in panel_instance.renderable.plain[span.start:span.end]))
+        self.assertTrue(any(span.style == "bright_green" for span in panel_instance.renderable.spans if "✅" in panel_instance.renderable.plain[span.start:span.end])) # Changed to ✅
         self.assertTrue(any(span.style == "bright_red" for span in panel_instance.renderable.spans if "❌" in panel_instance.renderable.plain[span.start:span.end]))
 
     @patch('mycrews.qrew.main.console.print')
@@ -92,8 +92,8 @@ class TestDisplayModelStatus(unittest.TestCase):
         ]
         qrew_main.display_model_initialization_status(title_text, statuses)
         panel_instance = mock_console_print.call_args[0][0]
-        self.assertEqual(panel_instance.renderable.plain, "gemini/gemini-1.5-pro: ✔️")
-        self.assertTrue(any(span.style == "bright_green" for span in panel_instance.renderable.spans if "✔️" in panel_instance.renderable.plain[span.start:span.end]))
+        self.assertEqual(panel_instance.renderable.plain, "gemini/gemini-1.5-pro: ✅") # Changed to ✅
+        self.assertTrue(any(span.style == "bright_green" for span in panel_instance.renderable.spans if "✅" in panel_instance.renderable.plain[span.start:span.end])) # Changed to ✅
 
     @patch('mycrews.qrew.main.console.print')
     def test_display_model_aggregation_all_failures(self, mock_console_print):
@@ -116,13 +116,13 @@ class TestDisplayModelStatus(unittest.TestCase):
         # Output is sorted, "N/A" comes after "gemini/gemini-valid" if None is stringified late,
         # or before if None is handled as "N/A" early and then sorted.
         # The current implementation stringifies None to "N/A" within the loop before sorting.
-        expected_text_parts = ["N/A: ❌", "gemini/gemini-valid: ✔️"]
+        expected_text_parts = ["N/A: ❌", "gemini/gemini-valid: ✅"] # Changed to ✅
         # Check if both parts are present, order might vary based on how None is sorted against strings
         self.assertIn(expected_text_parts[0], panel_instance.renderable.plain)
         self.assertIn(expected_text_parts[1], panel_instance.renderable.plain)
 
         self.assertTrue(any(span.style == "bright_red" for span in panel_instance.renderable.spans if "❌" in panel_instance.renderable.plain[span.start:span.end]))
-        self.assertTrue(any(span.style == "bright_green" for span in panel_instance.renderable.spans if "✔️" in panel_instance.renderable.plain[span.start:span.end]))
+        self.assertTrue(any(span.style == "bright_green" for span in panel_instance.renderable.spans if "✅" in panel_instance.renderable.plain[span.start:span.end])) # Changed to ✅
 
     @patch('mycrews.qrew.main.console.print')
     def test_display_model_initialization_status_mixed_keys_and_aggregation(self, mock_console_print):
@@ -142,14 +142,14 @@ class TestDisplayModelStatus(unittest.TestCase):
         self.assertIsInstance(panel_instance.renderable, Text)
 
         # Expected output is sorted by model key
-        expected_plain_text = "gemini/gemini-flash: ✔️\nollama/mistral: ❌\nollama/zephyr: ✔️"
+        expected_plain_text = "gemini/gemini-flash: ✅\nollama/mistral: ❌\nollama/zephyr: ✅" # Changed to ✅
         self.assertEqual(panel_instance.renderable.plain, expected_plain_text)
 
         # Verify styles
         text_renderable = panel_instance.renderable
-        flash_span = next(s for s in text_renderable.spans if text_renderable.plain[s.start:s.end] == "✔️" and "gemini/gemini-flash" in text_renderable.plain[0:s.start])
+        flash_span = next(s for s in text_renderable.spans if text_renderable.plain[s.start:s.end] == "✅" and "gemini/gemini-flash" in text_renderable.plain[0:s.start]) # Changed to ✅
         mistral_span = next(s for s in text_renderable.spans if text_renderable.plain[s.start:s.end] == "❌" and "ollama/mistral" in text_renderable.plain[0:s.start])
-        zephyr_span = next(s for s in text_renderable.spans if text_renderable.plain[s.start:s.end] == "✔️" and "ollama/zephyr" in text_renderable.plain[0:s.start])
+        zephyr_span = next(s for s in text_renderable.spans if text_renderable.plain[s.start:s.end] == "✅" and "ollama/zephyr" in text_renderable.plain[0:s.start]) # Changed to ✅
 
         self.assertEqual(flash_span.style, "bright_green")
         self.assertEqual(mistral_span.style, "bright_red")

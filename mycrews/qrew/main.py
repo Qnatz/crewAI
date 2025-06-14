@@ -57,7 +57,7 @@ def display_model_initialization_status(title: str, statuses: list[tuple[str, bo
                 model_key_str = str(model_key) if model_key is not None else "N/A"
                 model_text = Text(f"{model_key_str}: ", style="default")
                 if aggregated_success_bool:
-                    model_text.append("✔️", style="bright_green") # Use bright_green
+                    model_text.append("✅", style="bright_green") # Changed to ✅
                 else:
                     model_text.append("❌", style="bright_red")   # Use bright_red
                 status_texts.append(model_text)
