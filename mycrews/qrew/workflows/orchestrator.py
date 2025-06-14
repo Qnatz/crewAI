@@ -301,22 +301,31 @@ class WorkflowOrchestrator:
                 traceback.print_exc()
                 break
 
-        # Finalize project if all stages completed successfully
+        # Finalize project if all prerequisite stages completed successfully
         if self.state.state["status"] != "failed":
-            # Use the canonical list of all stages to check for completion
-            all_stages_done = all(self.state.is_completed(s) for s in self.ALL_PIPELINE_STAGES)
-            if all_stages_done:
-                # If project status is already 'completed' (potentially by finalize_project itself
-                # if it was called on a previous run that completed all stages but didn't get here),
-                # then we don't need to call it again.
+            # Define prerequisite stages as all stages in ALL_PIPELINE_STAGES except "project_finalization"
+            prerequisite_stages_for_finalization = [s for s in self.ALL_PIPELINE_STAGES if s != "project_finalization"]
+
+            all_prerequisites_done = all(self.state.is_completed(s) for s in prerequisite_stages_for_finalization)
+
+            if all_prerequisites_done:
+                # If project status is already 'completed', it implies finalize_project was likely called before
+                # (e.g. in a resumed run that found all prerequisites done).
                 if self.state.state.get("status") != "completed":
-                    print("All defined pipeline stages are complete. Finalizing project...")
-                    self.state.finalize_project()
-                    # finalize_project should ideally mark 'project_finalization' as complete.
+                    print("All prerequisite stages are complete. Finalizing project...")
+                    self.state.finalize_project() # This will internally mark 'project_finalization' as complete
                 else:
-                    print("Project already marked as completed and all defined pipeline stages are done.")
+                    # This case implies all prerequisites are done AND project status is 'completed'.
+                    # This means 'project_finalization' stage should also be complete.
+                    if not self.state.is_completed("project_finalization"):
+                        # This would be an inconsistent state: project is "completed" but "project_finalization" stage isn't.
+                        # Call finalize_project() again to ensure the stage is marked.
+                        print("Project status is 'completed' but 'project_finalization' stage was not marked. Re-finalizing...")
+                        self.state.finalize_project()
+                    else:
+                        print("Project already marked as completed and all prerequisite stages (including finalization) are done.")
             else:
-                print("Workflow execution finished, but not all stages were completed. Project not finalized.")
+                print("Workflow execution finished, but not all prerequisite stages were completed. Project not finalized by orchestrator.")
 
         if self.state: # Ensure state is initialized before printing summary
             # self.state.get_summary().print() # Replaced by RichProjectReporter
