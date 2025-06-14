@@ -56,72 +56,103 @@ def run_subagent_execution_workflow(inputs: dict):
 def create_backend_tasks(plan):
     tasks = []
     if plan and isinstance(plan, dict) and "tasks" in plan and isinstance(plan["tasks"], list) and plan["tasks"]:
-        task_desc = plan["tasks"][0] # Process only the first task
-        # Simplified agent assignment, assuming api_creator_agent can handle generic backend tasks for now
-        # or determine based on keywords if necessary.
-        agent_to_assign = api_creator_agent
-        if "model" in task_desc.lower() or "schema" in task_desc.lower() or "database" in task_desc.lower():
-            agent_to_assign = data_model_agent
-        tasks.append(
-            Task(
-                description=task_desc,
-                agent=agent_to_assign,
-                expected_output=f"Completed backend task: {task_desc}"
+        for task_desc in plan["tasks"]:
+            if not isinstance(task_desc, str) or not task_desc.strip():
+                print(f"Warning: Invalid task description in backend_plan: '{task_desc}'. Skipping.")
+                continue
+            agent_to_assign = api_creator_agent
+            if "model" in task_desc.lower() or "schema" in task_desc.lower() or "database" in task_desc.lower():
+                agent_to_assign = data_model_agent
+            tasks.append(
+                Task(
+                    description=task_desc,
+                    agent=agent_to_assign,
+                    expected_output=f"The actual code/configuration for the backend task: {task_desc}. This should be directly usable code, not a message.",
+                    max_retries=1,
+                    # TODO: Implement a more robust guardrail (LLM-assisted or functional) for code validation.
+                    guardrail=f"Ensure the output is actual code/configuration for task: {task_desc}. Avoid conversational filler."
+                )
             )
-        )
-    # If no valid tasks in plan, return empty list, but the ValueError should be avoided if a plan exists.
-    # The ValueError occurs if the list of tasks passed to a Crew is empty.
-    if not tasks:
-        print(f"Warning: No tasks created for backend_plan: {plan}")
+    else:
+        print(f"Warning: No valid tasks found in backend_plan or plan is malformed: {plan}")
+
+    if not tasks: # This print remains for the case where the loop completes but no tasks were valid, or plan["tasks"] was empty
+        print(f"Warning: No tasks ultimately created for backend_plan: {plan}")
     return tasks
 
 def create_web_tasks(plan):
     tasks = []
     if plan and isinstance(plan, dict) and "tasks" in plan and isinstance(plan["tasks"], list) and plan["tasks"]:
-        task_desc = plan["tasks"][0] # Process only the first task
-        tasks.append(
-            Task(
-                description=task_desc,
-                agent=dynamic_page_builder_agent,
-                expected_output=f"Completed web task: {task_desc}"
+        for task_desc in plan["tasks"]:
+            if not isinstance(task_desc, str) or not task_desc.strip():
+                print(f"Warning: Invalid task description in frontend_plan: '{task_desc}'. Skipping.")
+                continue
+            tasks.append(
+                Task(
+                    description=task_desc,
+                    agent=dynamic_page_builder_agent,
+                    expected_output=f"The actual HTML/JS/CSS snippets or component code for the web task: {task_desc}. This should be directly usable code, not a message.",
+                    max_retries=1,
+                    # TODO: Implement a more robust guardrail (LLM-assisted or functional) for code validation.
+                    guardrail=f"Ensure the output is actual code/configuration for task: {task_desc}. Avoid conversational filler."
+                )
             )
-        )
+    else:
+        print(f"Warning: No valid tasks found in frontend_plan or plan is malformed: {plan}")
+
     if not tasks:
-        print(f"Warning: No tasks created for frontend_plan: {plan}")
+        print(f"Warning: No tasks ultimately created for frontend_plan: {plan}")
     return tasks
 
 def create_mobile_tasks(plan):
     tasks = []
     if plan and isinstance(plan, dict) and "tasks" in plan and isinstance(plan["tasks"], list) and plan["tasks"]:
-        task_desc = plan["tasks"][0] # Process only the first task
-        # Simplified agent assignment
-        agent_to_assign = android_ui_agent # Default or pick based on simple keyword
-        if "ios" in task_desc.lower():
-            agent_to_assign = ios_ui_agent
-        elif "android" in task_desc.lower(): # ensure android_ui_agent is used if explicitly mentioned
-             agent_to_assign = android_ui_agent
-        tasks.append(
-            Task(
-                description=task_desc,
-                agent=agent_to_assign,
-                expected_output=f"Completed mobile task: {task_desc}"
+        for task_desc in plan["tasks"]:
+            if not isinstance(task_desc, str) or not task_desc.strip():
+                print(f"Warning: Invalid task description in mobile_plan: '{task_desc}'. Skipping.")
+                continue
+            agent_to_assign = android_ui_agent
+            if "ios" in task_desc.lower():
+                agent_to_assign = ios_ui_agent
+            elif "android" in task_desc.lower():
+                 agent_to_assign = android_ui_agent
+            tasks.append(
+                Task(
+                    description=task_desc,
+                    agent=agent_to_assign,
+                    expected_output=f"The actual UI code snippets or platform-specific configurations for the mobile task: {task_desc}. This should be directly usable code, not a message.",
+                    max_retries=1,
+                    # TODO: Implement a more robust guardrail (LLM-assisted or functional) for code validation.
+                    guardrail=f"Ensure the output is actual code/configuration for task: {task_desc}. Avoid conversational filler."
+                )
             )
-        )
+    else:
+        print(f"Warning: No valid tasks found in mobile_plan or plan is malformed: {plan}")
+
     if not tasks:
-        print(f"Warning: No tasks created for mobile_plan: {plan}")
+        print(f"Warning: No tasks ultimately created for mobile_plan: {plan}")
     return tasks
 
 def create_devops_tasks(plan):
     tasks = []
     if plan and isinstance(plan, dict) and "tasks" in plan and isinstance(plan["tasks"], list) and plan["tasks"]:
-        task_desc = plan["tasks"][0] # Process only the first task
-        tasks.append(
-            Task(
-                description=task_desc,
-                agent=devops_agent,
-                expected_output=f"Completed devops task: {task_desc}"
+        for task_desc in plan["tasks"]:
+            if not isinstance(task_desc, str) or not task_desc.strip():
+                print(f"Warning: Invalid task description in deployment_plan: '{task_desc}'. Skipping.")
+                continue
+            tasks.append(
+                Task(
+                    description=task_desc,
+                    agent=devops_agent,
+                    expected_output=f"The actual script snippets, Dockerfile lines, or config file sections for the devops task: {task_desc}. This should be directly usable code, not a message.",
+                    max_retries=1,
+                    # TODO: Implement a more robust guardrail (LLM-assisted or functional) for code validation.
+                    guardrail=f"Ensure the output is actual code/configuration for task: {task_desc}. Avoid conversational filler."
+                )
             )
-        )
+    else:
+        print(f"Warning: No valid tasks found in deployment_plan or plan is malformed: {plan}")
+
     if not tasks:
-        print(f"Warning: No tasks created for deployment_plan: {plan}")
+        print(f"Warning: No tasks ultimately created for deployment_plan: {plan}")
     return tasks

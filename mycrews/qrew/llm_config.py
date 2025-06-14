@@ -116,7 +116,8 @@ def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_a
 
     try:
         # crewai.LLM handles API key via environment for supported models like Gemini
-        llm = LLM(model=chosen_model_string)
+        print(f"Configuring LLM with num_retries=3 for agent '{agent_identifier}'.")
+        llm = LLM(model=chosen_model_string, num_retries=3)
         print(f"Successfully initialized LLM for agent '{agent_identifier}' with model '{chosen_model_string}'.")
         return llm
     except Exception as e:

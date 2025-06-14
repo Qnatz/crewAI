@@ -5,6 +5,19 @@ from ..lead_agents.web_project_coordinator_agent.agent import web_project_coordi
 from ..lead_agents.mobile_project_coordinator_agent.agent import mobile_project_coordinator_agent
 from ..lead_agents.devops_and_integration_coordinator_agent.agent import devops_and_integration_coordinator_agent
 
+def validate_json_plan_output(result: str) -> tuple[bool, any]:
+    """
+    Validates if the LLM output is a JSON object with a 'tasks' key containing a list.
+    """
+    try:
+        data = json.loads(result)
+        if isinstance(data, dict) and "tasks" in data and isinstance(data["tasks"], list):
+            return True, data
+        else:
+            return False, "Output must be a valid JSON object with a 'tasks' key containing a list of strings."
+    except json.JSONDecodeError:
+        return False, "Output must be a valid JSON object with a 'tasks' key containing a list of strings."
+
 def run_crew_lead_workflow(inputs: dict):
     # Initialize crew leads for each domain
     backend_lead = backend_project_coordinator_agent
@@ -17,24 +30,40 @@ def run_crew_lead_workflow(inputs: dict):
     # Create tasks based on architecture
     tasks = [
         Task(
-            description=f"Plan backend implementation for {inputs['project_name']}. "                         f"The overall project architecture summary is: {architecture_summary_str}",
+            description=f"Plan backend implementation for {inputs['project_name']}. " \
+                        f"The overall project architecture summary is: {architecture_summary_str}. " \
+                        f"The architecture document now includes detailed component breakdowns, API endpoint definitions, and database schemas. Use these to create highly specific tasks, e.g., 'Implement GET /api/v1/items endpoint as per spec X with data model Y'.",
             agent=backend_lead,
-            expected_output="A JSON object with a single key 'tasks'. The value of 'tasks' MUST be a list of strings, where each string is a detailed task description for backend development. Ensure the output is ONLY the JSON object itself, starting with { and ending with }."
+            expected_output="A valid JSON object with a single key 'tasks'. The value of 'tasks' MUST be a list of strings, where each string is a detailed task description. Ensure the output is ONLY the JSON object itself, starting with { and ending with }.",
+            guardrail=validate_json_plan_output,
+            max_retries=2
         ),
         Task(
-            description=f"Plan frontend implementation for {inputs['project_name']}. "                         f"The overall project architecture summary is: {architecture_summary_str}",
+            description=f"Plan frontend implementation for {inputs['project_name']}. " \
+                        f"The overall project architecture summary is: {architecture_summary_str}. " \
+                        f"The architecture document provides detailed components and their API dependencies. Use this to define tasks for UI views, component creation, and API integrations, e.g., 'Develop UserProfile view to display data from /users/me endpoint'.",
             agent=web_lead,
-            expected_output="A JSON object with a single key 'tasks'. The value of 'tasks' MUST be a list of strings, where each string is a detailed task description for frontend implementation. Ensure the output is ONLY the JSON object itself, starting with { and ending with }."
+            expected_output="A valid JSON object with a single key 'tasks'. The value of 'tasks' MUST be a list of strings, where each string is a detailed task description. Ensure the output is ONLY the JSON object itself, starting with { and ending with }.",
+            guardrail=validate_json_plan_output,
+            max_retries=2
         ),
         Task(
-            description=f"Plan mobile implementation for {inputs['project_name']}. "                         f"The overall project architecture summary is: {architecture_summary_str}",
+            description=f"Plan mobile implementation for {inputs['project_name']}. " \
+                        f"The overall project architecture summary is: {architecture_summary_str}. " \
+                        f"Refer to the detailed components and API specifications. Create tasks for specific screens, platform-specific UI elements, and API data consumption, e.g., 'Implement iOS ItemDetail screen using data from /items/{{item_id}}'.",
             agent=mobile_lead,
-            expected_output="A JSON object with a single key 'tasks'. The value of 'tasks' MUST be a list of strings, where each string is a detailed task description for mobile implementation. Ensure the output is ONLY the JSON object itself, starting with { and ending with }."
+            expected_output="A valid JSON object with a single key 'tasks'. The value of 'tasks' MUST be a list of strings, where each string is a detailed task description. Ensure the output is ONLY the JSON object itself, starting with { and ending with }.",
+            guardrail=validate_json_plan_output,
+            max_retries=2
         ),
         Task(
-            description=f"Plan deployment for {inputs['project_name']}. "                         f"The overall project architecture summary is: {architecture_summary_str}",
+            description=f"Plan deployment for {inputs['project_name']}. " \
+                        f"The overall project architecture summary is: {architecture_summary_str}. " \
+                        f"The architecture details specific components and the database schema. Plan tasks for deploying each service, setting up the database tables, and configuring CI/CD pipelines, e.g., 'Configure PostgreSQL Users table based on schema' or 'Create Dockerfile for UserManagementService'.",
             agent=devops_lead,
-            expected_output="A JSON object with a single key 'tasks'. The value of 'tasks' MUST be a list of strings, where each string is a detailed task description for the deployment plan. Ensure the output is ONLY the JSON object itself, starting with { and ending with }."
+            expected_output="A valid JSON object with a single key 'tasks'. The value of 'tasks' MUST be a list of strings, where each string is a detailed task description. Ensure the output is ONLY the JSON object itself, starting with { and ending with }.",
+            guardrail=validate_json_plan_output,
+            max_retries=2
         )
     ]
 
@@ -52,52 +81,64 @@ def run_crew_lead_workflow(inputs: dict):
     # or if the number of tasks could vary. For now, assuming fixed order and count.
 
     parsed_outputs = []
-    default_error_plan = {"tasks": ["Error: Failed to parse plan from LLM output or previous error occurred."]}
+    default_error_plan = {"tasks": ["Error: Failed to generate a valid plan even after retries, or an unexpected error occurred."]}
 
     if result and result.tasks_output:
-        for i in range(4): # Assuming 4 tasks corresponding to backend, frontend, mobile, devops
-            plan_name = ["Backend", "Frontend", "Mobile", "Deployment"][i]
-            if i < len(result.tasks_output) and hasattr(result.tasks_output[i], 'raw') and result.tasks_output[i].raw:
-                raw_output_str = result.tasks_output[i].raw
-                # Attempt to strip markdown fences if present, as LLMs sometimes add them
-                if raw_output_str.startswith("```json"):
-                    raw_output_str = raw_output_str[len("```json"):].strip()
-                    if raw_output_str.endswith("```"):
-                        raw_output_str = raw_output_str[:-len("```")].strip()
-                elif raw_output_str.startswith("```"):
-                     raw_output_str = raw_output_str[len("```"):].strip()
-                     if raw_output_str.endswith("```"):
-                        raw_output_str = raw_output_str[:-len("```")].strip()
+        for i in range(len(tasks)): # Iterate based on the number of tasks defined
+            task_output = result.tasks_output[i] if i < len(result.tasks_output) else None
+            plan_name = ["Backend", "Frontend", "Mobile", "Deployment"][i] # Assuming order
 
-                # Ensure the string starts with { and ends with } after stripping
-                if not (raw_output_str.startswith('{') and raw_output_str.endswith('}')):
-                    print(f"Warning: Output for {plan_name} plan doesn't look like a JSON object after stripping fences: {raw_output_str[:100]}...") # Log a snippet
-                    parsed_outputs.append(default_error_plan)
-                    continue
-
+            if task_output and hasattr(task_output, 'raw') and task_output.raw:
+                # The guardrail should ensure task_output.raw is a valid JSON string.
+                # If the task failed despite retries, task_output.raw might be None or reflect an error state,
+                # or the task itself might be marked as failed (not directly checked here, relying on output).
                 try:
-                    parsed_plan = json.loads(raw_output_str)
-                    if not isinstance(parsed_plan, dict) or "tasks" not in parsed_plan or not isinstance(parsed_plan["tasks"], list):
-                        print(f"Warning: Parsed JSON for {plan_name} plan is not in the expected format (dict with 'tasks' list): {parsed_plan}")
-                        parsed_outputs.append(default_error_plan)
-                    else:
+                    # The guardrail already validated and returned the parsed data if successful.
+                    # However, crewAI's TaskOutput currently puts the raw string in .raw.
+                    # If the guardrail passed, .raw should be the valid JSON string.
+                    # If the task failed after retries with guardrail, .raw might be the last failing output
+                    # or an error message from crewAI. The guardrail's role is to prevent bad data *before* this point.
+
+                    # We attempt to parse what's in .raw. If it's valid JSON (meaning guardrail worked or last attempt was good), we use it.
+                    # If it's not (meaning guardrail failed on last attempt and crewAI passed it through, or some other issue),
+                    # we fall back to default_error_plan.
+                    parsed_plan = json.loads(task_output.raw)
+
+                    # Double-check format, though guardrail should have caught this.
+                    if isinstance(parsed_plan, dict) and "tasks" in parsed_plan and isinstance(parsed_plan["tasks"], list):
                         parsed_outputs.append(parsed_plan)
-                except json.JSONDecodeError as e:
-                    print(f"Error parsing JSON for {plan_name} plan: {e}. Raw output: {raw_output_str}")
+                    else:
+                        print(f"Warning: Output for {plan_name} plan was not in the expected format despite guardrail. Raw: {task_output.raw}")
+                        parsed_outputs.append(default_error_plan)
+                except json.JSONDecodeError:
+                    # This case implies the guardrail might have failed on its last attempt and crewAI returned
+                    # the raw, unvalidated output, or the task failed fundamentally.
+                    print(f"Error: Failed to parse JSON for {plan_name} plan from task's raw output, even after guardrail and retries. Raw: {task_output.raw}")
                     parsed_outputs.append(default_error_plan)
             else:
-                parsed_outputs.append({"tasks": [f"Error: {plan_name} task output not found, .raw attribute missing, or raw output is empty."]})
-    else: # Fill with error defaults if no tasks_output
-        for _ in range(4):
+                # This means the task either failed to produce any raw output, or the task_output object itself is missing.
+                print(f"Error: No valid output found for {plan_name} plan after task execution (possibly due to max_retries reached or other critical error).")
+                parsed_outputs.append(default_error_plan)
+    else:
+        # This case handles if crew.kickoff() returned None or result.tasks_output is empty.
+        print("Error: Crew execution did not produce any task outputs.")
+        for _ in range(len(tasks)): # Use length of tasks array
             parsed_outputs.append(default_error_plan)
 
-    # Ensure we have 4 elements in parsed_outputs, even if they are error objects
-    while len(parsed_outputs) < 4:
+    # Ensure we have an entry for each plan, even if it's an error object.
+    # This is more robust if the number of tasks changes, though plan_names are hardcoded.
+    expected_num_outputs = len(tasks)
+    while len(parsed_outputs) < expected_num_outputs:
+        print(f"Warning: Missing an expected output, padding with default error plan. Expected {expected_num_outputs}, got {len(parsed_outputs)}")
         parsed_outputs.append(default_error_plan)
 
+    # Ensure we don't exceed the expected number of outputs if something went wrong with loop logic
+    parsed_outputs = parsed_outputs[:expected_num_outputs]
+
+
     return {
-        "backend_plan": parsed_outputs[0],
-        "frontend_plan": parsed_outputs[1],
-        "mobile_plan": parsed_outputs[2],
-        "deployment_plan": parsed_outputs[3]
+        "backend_plan": parsed_outputs[0] if len(parsed_outputs) > 0 else default_error_plan,
+        "frontend_plan": parsed_outputs[1] if len(parsed_outputs) > 1 else default_error_plan,
+        "mobile_plan": parsed_outputs[2] if len(parsed_outputs) > 2 else default_error_plan,
+        "deployment_plan": parsed_outputs[3] if len(parsed_outputs) > 3 else default_error_plan
     }
