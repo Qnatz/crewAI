@@ -44,18 +44,18 @@ def run_qrew():
     print("Project name will be determined by the Taskmaster workflow.")
 
     # --- Inputs Preparation ---
-    sample_user_request = "I need a new mobile app for tracking personal fitness goals. It should be fun and engaging, perhaps with gamification elements and personalized plans. Call it 'FitQuest'."
-    sample_project_goal = "Develop a market-leading mobile fitness tracking application."
+    sample_user_request = "Create a simple, modern, single-page responsive website for a personal portfolio. It should include: a navigation bar, a header/hero section with my name and title, an 'About Me' section, a 'Projects' section (with placeholders for 2-3 projects including a title, short description, and an image placeholder for each), and a simple footer with copyright information. The design should be clean and professional."
+    sample_project_goal = "Develop a clean, professional, single-page personal portfolio website to showcase skills and projects."
     sample_priority = "High" # This might be used by taskmaster or other stages
 
     # These were previously passed to taskmaster, now part of initial inputs for the orchestrator
     # The 'taskmaster' stage in the orchestrator will handle this.
     # taskmaster_result will be an artifact produced by the "taskmaster" stage.
 
-    sample_stakeholder_feedback = "User retention is key. Gamification might be important. Mobile-first approach preferred."
-    sample_market_research = "Competitors X and Y lack real-time interaction. Users want personalized training plans."
-    sample_project_constraints = "Team has strong Python and React skills. Initial deployment on AWS. Budget for external services is moderate."
-    sample_technical_vision = "A modular microservices architecture is preferred for scalability. Prioritize user data privacy."
+    sample_stakeholder_feedback = "The site must be mobile-responsive and load quickly. It should be easy to add or update project details in the future."
+    sample_market_research = "Single-page portfolios are common for individuals. Emphasis on clean design and clear presentation of work. Contact forms are common but not essential for this first version."
+    sample_project_constraints = "To be built using HTML, CSS, and vanilla JavaScript (if necessary for minor interactivity). No backend database or server-side logic is required for this version. The site should be deployable as static files on any standard web hosting."
+    sample_technical_vision = "A lightweight, fast-loading static website. Code should be well-structured, semantic HTML and maintainable CSS. JavaScript usage should be minimal and purposeful."
 
     pipeline_inputs = {
         # "project_name": project_name, # Removed: Orchestrator will derive this via Taskmaster
