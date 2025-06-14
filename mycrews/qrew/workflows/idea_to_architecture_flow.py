@@ -11,10 +11,14 @@ def _perform_architecture_generation(inputs: dict):
 
     # Step A: Idea Interpretation Task
     taskmaster_artifacts = inputs.get("taskmaster", {})
-    refined_brief = taskmaster_artifacts.get("refined_brief", taskmaster_artifacts.get("initial_brief", "")) # Check both keys
+    refined_brief = taskmaster_artifacts.get("refined_brief", taskmaster_artifacts.get("initial_brief", ""))
     project_name = inputs.get("project_name", taskmaster_artifacts.get("project_name", "Unknown Project"))
     stakeholder_feedback = inputs.get("stakeholder_feedback", "")
     market_research_data = inputs.get("market_research_data", "")
+
+    # Access Tech Vetting Artifacts
+    tech_vetting_artifacts = inputs.get("tech_vetting", {})
+    vetting_report = tech_vetting_artifacts.get("vetting_report_markdown")
 
     if not refined_brief:
         print("Error in Idea-to-Architecture: No refined_brief from Taskmaster.")
@@ -24,12 +28,18 @@ def _perform_architecture_generation(inputs: dict):
         f"Project Name: '{project_name}'\n"
         f"Refined Brief from Taskmaster: '{refined_brief}'\n"
         f"Stakeholder Feedback (if any): '{stakeholder_feedback}'\n"
-        f"Market Research Data (if any): '{market_research_data}'\n\n"
-        f"Your primary goal is to analyze this information and translate it into a comprehensive "
+        f"Market Research Data (if any): '{market_research_data}'\n"
+    )
+    if vetting_report:
+        idea_interpretation_task_desc += f"\nTech Vetting Report (for context and to resolve ambiguities):\n{vetting_report}\n"
+
+    idea_interpretation_task_desc += (
+        f"\nYour primary goal is to analyze all available information and translate it into a comprehensive "
         f"technical requirements specification document. This document should include detailed user stories "
         f"with acceptance criteria, clear functional requirements, important non-functional requirements "
         f"(e.g., performance, security), data requirements, a glossary if new terms are introduced, "
-        f"and list any ambiguities. Consult your knowledge base if needed for similar patterns or requirements."
+        f"and list any ambiguities (especially if the vetting report highlights them or helps clarify them). "
+        f"Consult your knowledge base if needed for similar patterns or requirements."
     )
     idea_interpretation_expected_output = (
         "A comprehensive technical requirements specification document in Markdown format. This document should clearly outline: "
@@ -68,22 +78,49 @@ def _perform_architecture_generation(inputs: dict):
     constraints = inputs.get("constraints", "")
     technical_vision = inputs.get("technical_vision", "")
 
+    # Retrieve tech vetting outputs for the architect
+    recommended_tech_stack = tech_vetting_artifacts.get("recommended_tech_stack")
+    architectural_guidelines = tech_vetting_artifacts.get("architectural_guidelines_markdown")
+
     project_architecture_task_desc = (
         f"Project Name: '{project_name}'\n"
         f"Technical Requirements Specification:\n{requirements_doc_markdown}\n\n"
         f"Project Constraints (if any): '{constraints}'\n"
         f"Technical Vision (if any): '{technical_vision}'\n\n"
-        f"Your goal is to design a robust and scalable software architecture based on the provided technical requirements, "
-        f"constraints, and technical vision. The architecture should align with best practices."
     )
+
+    if recommended_tech_stack:
+        project_architecture_task_desc += (
+            f"A prior Tech Vetting stage has recommended the following technology stack: {json.dumps(recommended_tech_stack)}. "
+            f"You MUST base your architecture on this recommended stack. If strong reasons exist to deviate for a specific component, "
+            f"you must explicitly state the deviation and provide a compelling justification, referencing the original recommendation.\n"
+        )
+    else:
+        project_architecture_task_desc += (
+            "No specific tech stack was pre-determined by a vetting stage. You will need to recommend a suitable technology stack "
+            "as part of your architecture design, justifying your choices.\n"
+        )
+
+    if architectural_guidelines:
+        project_architecture_task_desc += (
+            f"Additionally, the Tech Vetting stage provided these architectural guidelines. You MUST adhere to them:\n"
+            f"'''\n{architectural_guidelines}\n'''\n\n"
+        )
+
+    project_architecture_task_desc += (
+        f"Your goal is to design a robust and scalable software architecture based on all the provided information. "
+        f"The architecture should align with best practices."
+    )
+
     project_architecture_expected_output = (
         "A detailed software architecture document in Markdown format. This document MUST include: "
         "1. High-level system diagrams descriptions (e.g., component diagram, deployment diagram). "
-        "2. Technology stack recommendations for each major component. "
+        "2. Technology stack for each major component (this MUST align with pre-vetted stack if provided, or be your recommendation if not). "
         "3. Data model design overview (key entities, relationships). "
         "4. API design guidelines and key endpoint definitions (e.g., paths, methods, brief request/response structure). "
         "5. Integration points with any external services. "
-        "6. Considerations for non-functional requirements (e.g., security plan, scalability strategy, performance)."
+        "6. Considerations for non-functional requirements (e.g., security plan, scalability strategy, performance). "
+        "7. If a pre-vetted tech stack was provided, confirm its adoption or clearly justify any deviations."
     )
     architecture_task = Task(
         description=project_architecture_task_desc,

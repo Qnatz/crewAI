@@ -8,7 +8,9 @@ from .idea_to_architecture_flow import run_idea_to_architecture_workflow
 from .crew_lead_workflow import run_crew_lead_workflow
 from .subagent_execution_workflow import run_subagent_execution_workflow
 from .final_assembly_workflow import run_final_assembly_workflow
-from ..project_manager import ProjectStateManager # Adjusted import path
+from .tech_vetting_flow import run_tech_vetting_workflow # Added import
+from ..project_manager import ProjectStateManager
+from ..utils import RichProjectReporter # Added import
 
 # Guardrail function for Taskmaster output
 def validate_taskmaster_output(task_output: TaskOutput) -> tuple[bool, Any]: # Changed signature
@@ -19,7 +21,7 @@ def validate_taskmaster_output(task_output: TaskOutput) -> tuple[bool, Any]: # C
         data = json.loads(output_str) # Changed to output_str
         if not isinstance(data, dict):
             return False, "Output must be a JSON dictionary."
-        required_keys = ["project_name", "refined_brief", "is_new_project"]
+        required_keys = ["project_name", "refined_brief", "is_new_project", "recommended_next_stage"] # Added new key
         for key in required_keys:
             if key not in data:
                 return False, f"Missing key in output: {key}"
@@ -29,6 +31,12 @@ def validate_taskmaster_output(task_output: TaskOutput) -> tuple[bool, Any]: # C
             return False, "refined_brief must be a non-empty string."
         if not isinstance(data["is_new_project"], bool):
             return False, "is_new_project must be a boolean."
+        if not isinstance(data["recommended_next_stage"], str) or not data["recommended_next_stage"].strip(): # Validate new key
+            return False, "recommended_next_stage must be a non-empty string."
+        # Optionally, validate against a list of known stages:
+        # known_stages = ["architecture", "tech_vetting", "execution_only"]
+        # if data["recommended_next_stage"] not in known_stages:
+        #     return False, f"recommended_next_stage must be one of {known_stages}."
         return True, data # Return parsed data on success
     except json.JSONDecodeError:
         return False, "Output must be valid JSON." # output_str is not directly visible here, but implied
@@ -48,7 +56,7 @@ class WorkflowOrchestrator:
         # specific to their internal steps, or check if they can be skipped.
         self.workflows = {
             "taskmaster": self.run_taskmaster_workflow,
-            # "idea_interpretation": self.run_idea_interpretation_workflow, # Removed
+            "tech_vetting": run_tech_vetting_workflow, # Added tech_vetting
             "architecture": run_idea_to_architecture_workflow,
             "crew_assignment": run_crew_lead_workflow,
             "subagent_execution": run_subagent_execution_workflow,
@@ -70,7 +78,8 @@ class WorkflowOrchestrator:
             return {
                 "project_name": "error_no_user_request",
                 "refined_brief": "Taskmaster failed: No user request was provided.",
-                "is_new_project": False, # Default to False to avoid accidental new project creation
+                "is_new_project": False,
+                "recommended_next_stage": "architecture", # Default fallback
                 "taskmaster_error": "No user_request provided"
             }
 
@@ -79,15 +88,18 @@ class WorkflowOrchestrator:
                         f"Determine if this pertains to a new or existing project. "
                         f"If it's a new project, generate a unique and descriptive project name (e.g., based on key themes from the request, and ensure it's filesystem-safe). "
                         f"Then, create a refined project brief based on the request. "
-                        f"You MUST use the 'knowledge_base_tool_instance' to check for existing projects or ideas if applicable, though the primary check for project name uniqueness will be handled by the ProjectStateManager based on the name you generate. "
-                        f"Focus on understanding the core needs and deliverables.",
+                        f"You MUST use the 'knowledge_base_tool_instance' to check for existing projects or ideas if applicable. "
+                        f"Focus on understanding the core needs and deliverables. "
+                        f"Based on the project's nature (e.g., complexity, use of new/unproven technologies, high uncertainty), recommend the next logical stage. "
+                        f"Valid recommendations are: 'tech_vetting' (if new/complex tech evaluation is needed) or 'architecture' (if project can proceed to design).",
             agent=taskmaster_agent,
             expected_output="A JSON object containing: "
                             "'project_name' (string, unique and descriptive for new projects), "
                             "'refined_brief' (string, a concise summary and scope), "
-                            "and 'is_new_project' (boolean, True if this is identified as a new project, False otherwise).",
+                            "'is_new_project' (boolean, True if this is identified as a new project, False otherwise), "
+                            "and 'recommended_next_stage' (string, either 'tech_vetting' or 'architecture').",
             guardrail=validate_taskmaster_output,
-            max_retries=1
+            max_retries=1 # Keep retries low for faster failure if guardrail fails
         )
 
         # Create a temporary crew to execute this task
@@ -121,98 +133,137 @@ class WorkflowOrchestrator:
                     "project_name": "error_taskmaster_output_invalid",
                     "refined_brief": f"Taskmaster failed to produce valid structured output. Raw output: {result.raw}",
                     "is_new_project": False,
+                    "recommended_next_stage": "architecture", # Default fallback
                     "taskmaster_error": "Invalid JSON output from task"
                 }
         else:
             # Handle cases where the task execution failed or produced no raw output
-            # (e.g., if task failed after retries, result might not have .raw or be None)
             print("Taskmaster task failed or produced no output.")
             return {
                 "project_name": "error_taskmaster_failed",
                 "refined_brief": "Taskmaster task execution failed or yielded no output.",
                 "is_new_project": False,
+                "recommended_next_stage": "architecture", # Default fallback
                 "taskmaster_error": "Task execution failed or no output"
             }
 
     def execute_pipeline(self, initial_inputs: dict):
         current_artifacts = {}
-        start_index = 0
-        stages = [
-            "taskmaster", "architecture", # Removed "idea_interpretation"
-            "crew_assignment", "subagent_execution", "final_assembly"
+
+        # Define the full sequence of possible stages
+        defined_pipeline_stages = [
+            "taskmaster",
+            "tech_vetting",
+            "architecture",
+            "crew_assignment",
+            "subagent_execution",
+            "final_assembly"
         ]
 
-        if self.state is None: # Project name to be determined by Taskmaster
+        stages_to_run = []
+        next_stage_index = 0
+
+        if self.state is None: # Project name to be determined by Taskmaster (New Project)
             print("Orchestrator state not initialized, running Taskmaster first...")
             taskmaster_output = self.run_taskmaster_workflow(initial_inputs)
-
-            actual_project_name = taskmaster_output.get("project_name")
-            if not actual_project_name or "error_" in actual_project_name:
-                print(f"Error: Taskmaster failed to provide a valid project name. Output: {taskmaster_output}")
-                # Attempt to log this critical failure if possible, though state isn't fully up.
-                # For now, just return the error output from taskmaster.
-                return {"error": "Taskmaster failed to initialize project", "details": taskmaster_output}
-
-            print(f"Taskmaster determined project name: {actual_project_name}")
-            self.state = ProjectStateManager(actual_project_name)
-
-            # Store Taskmaster's output as the first artifact
-            self.state.start_stage("taskmaster") # Mark as started
-            self.state.complete_stage("taskmaster", artifacts=taskmaster_output)
             current_artifacts["taskmaster"] = taskmaster_output
 
-            # Update initial_inputs with the determined project name for subsequent stages
-            initial_inputs["project_name"] = actual_project_name
+            if "taskmaster_error" in taskmaster_output or "error_" in taskmaster_output.get("project_name", ""):
+                print(f"Error: Taskmaster failed. Output: {taskmaster_output}")
+                # Potentially create a minimal state for error reporting if project_name is usable
+                error_project_name = taskmaster_output.get("project_name", "taskmaster_failed_project")
+                if "error_" in error_project_name: error_project_name = "taskmaster_failed_project" # Ensure valid name
+                self.state = ProjectStateManager(error_project_name)
+                self.state.fail_stage("taskmaster", taskmaster_output.get("refined_brief", "Taskmaster critical failure"))
+                # No further stages will run. Report will be generated at the end.
+                stages_to_run = [] # Empty list, skip loop
+            else:
+                actual_project_name = taskmaster_output.get("project_name")
+                print(f"Taskmaster determined project name: {actual_project_name}")
+                self.state = ProjectStateManager(actual_project_name)
+                self.state.start_stage("taskmaster")
+                self.state.complete_stage("taskmaster", artifacts=taskmaster_output)
+                initial_inputs["project_name"] = actual_project_name # Update for subsequent stages
 
-            # Taskmaster stage is done, so next stage is architecture
-            start_index = stages.index("architecture")
-        else:
-            # State was initialized, meaning project_name was provided (resuming or specific project run)
-            # Add project_name to initial_inputs if not already present from the state
+                # Determine the actual sequence of stages based on Taskmaster's recommendation
+                recommended_next = taskmaster_output.get("recommended_next_stage", "architecture")
+                print(f"Taskmaster recommended next stage: {recommended_next}")
+
+                stages_to_run.append("taskmaster") # Already effectively done for new projects
+                if recommended_next == "tech_vetting":
+                    stages_to_run.extend(["tech_vetting", "architecture", "crew_assignment", "subagent_execution", "final_assembly"])
+                elif recommended_next == "architecture":
+                    stages_to_run.extend(["architecture", "crew_assignment", "subagent_execution", "final_assembly"])
+                else: # Default to architecture if recommendation is unclear
+                    print(f"Warning: Unknown recommended next stage '{recommended_next}'. Defaulting to architecture flow.")
+                    stages_to_run.extend(["architecture", "crew_assignment", "subagent_execution", "final_assembly"])
+
+                # Since taskmaster is "done" by this block, the loop should start from the next stage.
+                # We mark taskmaster as completed, and the loop will skip it.
+                next_stage_index = 0 # The loop will check is_completed for taskmaster
+
+        else: # Resuming an existing project
             if "project_name" not in initial_inputs and hasattr(self.state, 'project_info'):
                  initial_inputs["project_name"] = self.state.project_info.get("name", self.initial_project_name_hint)
+            print(f"Resuming existing project: {initial_inputs.get('project_name', 'Unknown')}")
+            current_artifacts = self.state.get_artifacts() # Load all existing artifacts
 
-            current_artifacts = self.state.get_artifacts()
             resume_point = self.state.resume_point()
-
             if resume_point is None and self.state.state.get("status") == "completed":
                 print("Project already completed.")
-                self.state.get_summary().print()
-                return self.state.get_artifacts()
-
-            if resume_point is None and self.state.state.get("status") != "failed":
-                if self.state.state.get("status") != "completed":
+                # Report will be generated at the end.
+                stages_to_run = [] # Skip loop
+            elif resume_point is None and self.state.state.get("status") != "failed":
+                 if self.state.state.get("status") != "completed": # Should have been caught by finalize_project
                     print("All stages completed. Finalizing project...")
                     self.state.finalize_project()
-                self.state.get_summary().print()
-                return self.state.get_artifacts()
-
-            print(f"Resuming project '{initial_inputs['project_name']}' at stage: {resume_point if resume_point else 'start'}")
-
-            if resume_point:
+                 stages_to_run = [] # Skip loop
+            elif resume_point:
+                print(f"Resuming at stage: {resume_point}")
+                # Determine the sequence of stages from the resume point.
+                # This needs to consider the original recommended path if stored, or assume full path.
+                # For simplicity now, assume the defined_pipeline_stages is the path.
                 try:
-                    start_index = stages.index(resume_point)
+                    resume_idx = defined_pipeline_stages.index(resume_point)
+                    stages_to_run = defined_pipeline_stages # Run all stages from the full list
+                    next_stage_index = resume_idx # Start loop from this index
                 except ValueError:
-                    print(f"Error: Resume point '{resume_point}' not found in defined stages. Defaulting to start.")
-                    self.state.fail_stage("orchestrator_setup", f"Invalid resume point: {resume_point}")
-                    # This error should ideally be handled more gracefully, maybe by returning artifacts or error.
-                    # For now, it might try to run from start_index = 0 if not caught by fail_stage.
-                    # To be safe, let's print summary and return if resume_point is invalid.
-                    self.state.get_summary().print()
-                    return self.state.get_artifacts()
+                    print(f"Error: Resume point '{resume_point}' not found in defined stages. Cannot resume.")
+                    self.state.fail_stage("orchestrator_resume", f"Invalid resume point: {resume_point}")
+                    stages_to_run = [] # Skip loop
+            else: # No resume point, project not completed or failed (e.g. just initialized but no stages run)
+                # This case might indicate needing to run taskmaster again or re-evaluate.
+                # For now, assume it means start from the beginning of a standard flow.
+                # This path needs careful consideration if Taskmaster's recommendation isn't persisted.
+                # Let's assume if we are here, it's like a new project that somehow has state.
+                # Fallback: attempt to run a default sequence.
+                # However, if taskmaster output is in artifacts, we can use its recommendation.
+                taskmaster_output = current_artifacts.get("taskmaster", {})
+                recommended_next = taskmaster_output.get("recommended_next_stage", "architecture")
+                print(f"No clear resume point, using Taskmaster recommendation ('{recommended_next}') or default flow.")
+                if recommended_next == "tech_vetting" and not self.state.is_completed("tech_vetting"):
+                    stages_to_run = defined_pipeline_stages
+                elif recommended_next == "architecture" and not self.state.is_completed("architecture"):
+                     stages_to_run = [s for s in defined_pipeline_stages if s != "tech_vetting"]
+                else: # Default or if recommended stage is already done, try full sequence
+                    stages_to_run = defined_pipeline_stages
+                next_stage_index = 0
 
 
-        # Main execution loop for stages
-        for i in range(start_index, len(stages)):
-            stage = stages[i]
+        # Main execution loop
+        for i in range(next_stage_index, len(stages_to_run)):
+            stage = stages_to_run[i]
 
-            # This check is vital: if taskmaster was run above, it's already completed.
             if self.state.is_completed(stage):
-                print(f"Stage {stage} already completed. Skipping.")
-                # Ensure its artifacts are in current_artifacts if not already loaded by get_artifacts()
-                if stage not in current_artifacts and self.state.get_artifacts(stage):
+                print(f"Stage '{stage}' already completed. Skipping.")
+                if stage not in current_artifacts and self.state.get_artifacts(stage): # Ensure artifacts are loaded
                     current_artifacts[stage] = self.state.get_artifacts(stage)
                 continue
+
+            if stage not in self.workflows:
+                print(f"Warning: Stage '{stage}' is defined in the run sequence but no corresponding workflow method exists. Skipping.")
+                self.state.fail_stage(stage, f"Workflow for stage '{stage}' not found.") # Log as failure for this stage
+                break # Stop pipeline execution if a stage is missing its method
 
             self.state.start_stage(stage)
 
@@ -250,8 +301,10 @@ class WorkflowOrchestrator:
                 print("Workflow execution finished, but not all stages were completed. Project not finalized.")
 
         if self.state: # Ensure state is initialized before printing summary
-            self.state.get_summary().print()
-            return self.state.get_artifacts()
+            # self.state.get_summary().print() # Replaced by RichProjectReporter
+            reporter = RichProjectReporter(self.state.state) # Pass the state dictionary
+            reporter.print_report()
+            return self.state.get_artifacts() # Still return artifacts
         else: # Should not happen if taskmaster ran correctly
             print("Error: Orchestrator state was not initialized.")
             return {"error": "Orchestrator state not initialized."}
