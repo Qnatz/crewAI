@@ -95,9 +95,16 @@ class ObjectBoxMemory:
             # condition = qb.param(MemoryEntry.vector).nearest_neighbors(qvec.tolist(), count=limit)
             # _query = qb.build() # Build after condition is applied
 
-            # Attempting nearest_neighbors directly on the QueryBuilder
-            _query = self.box.query().nearest_neighbors(MemoryEntry.vector, qvec.tolist(), count=limit).build()
-            nearest_entities = _query.find() # This returns a list of MemoryEntry objects
+            # Construct the HNSW nearest neighbor condition on the vector property
+            # Assuming 'nearest' is the method and 'k' is the parameter for the count.
+            # If the actual method or parameter name is different, this will need adjustment.
+            condition = MemoryEntry.vector.nearest(qvec.tolist(), k=limit)
+
+            # Build the query with this condition
+            _query_obj = self.box.query(condition).build() # Renamed to _query_obj to avoid reusing _query variable if it exists elsewhere
+
+            # Execute the query
+            nearest_entities = _query_obj.find()
 
             # If the goal is to get Hit(object, distance) as implied by `hit.distance` later,
             # this query form doesn't directly provide distances.
