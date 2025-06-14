@@ -1,22 +1,36 @@
 import json
+from typing import Any # Added Any
 from crewai import Crew, Process, Task
+from crewai.tasks.task_output import TaskOutput # Added
 from ..lead_agents.backend_project_coordinator_agent.agent import backend_project_coordinator_agent
 from ..lead_agents.web_project_coordinator_agent.agent import web_project_coordinator_agent
 from ..lead_agents.mobile_project_coordinator_agent.agent import mobile_project_coordinator_agent
 from ..lead_agents.devops_and_integration_coordinator_agent.agent import devops_and_integration_coordinator_agent
 
-def validate_json_plan_output(result: str) -> tuple[bool, any]:
+def validate_json_plan_output(task_output: TaskOutput) -> tuple[bool, Any]:
     """
-    Validates if the LLM output is a JSON object with a 'tasks' key containing a list.
+    Validates if the LLM output (from task_output.raw) is a JSON object
+    with a 'tasks' key containing a list.
     """
+    if not hasattr(task_output, 'raw') or not isinstance(task_output.raw, str):
+        return False, "Guardrail input (task_output.raw) must be a string and present."
+    output_str = task_output.raw
+
     try:
-        data = json.loads(result)
+        data = json.loads(output_str)
         if isinstance(data, dict) and "tasks" in data and isinstance(data["tasks"], list):
-            return True, data
+            # Further check if all tasks in the list are strings, as per original intent
+            if all(isinstance(task_item, str) for task_item in data["tasks"]):
+                return True, data
+            else:
+                return False, "All items in the 'tasks' list must be strings."
         else:
             return False, "Output must be a valid JSON object with a 'tasks' key containing a list of strings."
     except json.JSONDecodeError:
-        return False, "Output must be a valid JSON object with a 'tasks' key containing a list of strings."
+        return False, "Output must be valid JSON." # output_str implied
+    except Exception as e: # Catch any other unexpected errors during validation
+        return False, f"Validation error: {str(e)}"
+
 
 def run_crew_lead_workflow(inputs: dict):
     # Initialize crew leads for each domain
