@@ -51,6 +51,59 @@ def validate_readiness_report(task_output: TaskOutput) -> tuple[bool, Any]:
     print("GUARDRAIL_READINESS_REPORT: Output does not seem to be a valid assessment or a clear missing data report.")
     return False, "Output is neither a readiness assessment/error report nor a clear statement about missing input components."
 
+def validate_integration_plan_output(task_output: TaskOutput) -> tuple[bool, Any]:
+    if not hasattr(task_output, 'raw') or not isinstance(task_output.raw, str):
+        print("GUARDRAIL_INTEGRATION_PLAN: Input task_output.raw is not a string or not present.")
+        return False, "Guardrail input (task_output.raw) must be a string and present."
+
+    output_str = task_output.raw.strip()
+    print(f"GUARDRAIL_INTEGRATION_PLAN: Validating output (first 300 chars): '{output_str[:300]}'")
+
+    if not output_str: # Handle empty string after strip
+        print("GUARDRAIL_INTEGRATION_PLAN: Output is empty.")
+        return False, "Output is empty after stripping whitespace."
+
+    cleaned_output_lower = output_str.lower()
+
+    # Keywords indicating a planning effort
+    plan_keywords = [
+        "integration plan", "integration steps", "sequence of integration",
+        "component interaction", "data flow", "configuration management",
+        "testing strategy", "deployment considerations", "deployment sequence"
+    ]
+
+    # Keywords indicating acknowledgment of issues within a plan
+    issue_keywords = [
+        "blockers", "prerequisites", "missing information", "non-functional",
+        "resolve them", "address these issues", "contingency"
+    ]
+
+    # Check for presence of planning content
+    has_plan_content = any(keyword in cleaned_output_lower for keyword in plan_keywords)
+
+    # Check for acknowledgment of issues (which is acceptable if a plan is also present)
+    has_issue_discussion = any(keyword in cleaned_output_lower for keyword in issue_keywords)
+
+    # Heuristic: Substantial length suggests more than just a simple refusal.
+    is_substantial = len(output_str) > 150 # Arbitrary length, tune if needed
+
+    # Condition for passing:
+    # 1. Must have planning content.
+    # 2. Must be of substantial length.
+    # (It's okay if it also discusses issues/blockers).
+    if has_plan_content and is_substantial:
+        print("GUARDRAIL_INTEGRATION_PLAN: Output appears to be a substantive integration plan.")
+        return True, task_output.raw # Return original raw output
+
+    # If it mentions issues but has no plan content or isn't substantial
+    if has_issue_discussion and not has_plan_content and not is_substantial:
+        print("GUARDRAIL_INTEGRATION_PLAN: Output primarily discusses issues without sufficient planning content or detail.")
+        return False, "Output focuses on issues without providing a sufficient integration plan for available components or clear steps to resolve."
+
+    # If it has neither, or is too short.
+    print("GUARDRAIL_INTEGRATION_PLAN: Output lacks clear planning content or sufficient detail.")
+    return False, "Output does not contain sufficient elements of an integration plan or is too brief."
+
 def run_final_assembly_workflow(inputs: dict):
     components_summary_str = json.dumps(inputs.get("subagent_execution", {}), indent=2) # Corrected key
     architecture_summary_str = json.dumps(inputs.get("architecture", {}), indent=2)
@@ -66,11 +119,11 @@ def run_final_assembly_workflow(inputs: dict):
 
     # Integration planning
     integration_task = Task(
-        description=f"Create integration plan based on components. "                     f"The overall project architecture is: {architecture_summary_str}. "                     f"The components to integrate are: {components_summary_str}",
+        description=f"Create a detailed integration plan based on the available components summarized as: {components_summary_str}. The overall project architecture is: {architecture_summary_str}. Your goal is to outline how these components should be combined into a functional system. IMPORTANT: If the component summary or architecture indicates some components are non-functional, incomplete, or if crucial information is missing, your integration plan MUST still be as complete as possible for the *available and functional* parts. Clearly identify any non-functional components or missing information as 'Blockers' or 'Prerequisites for Full Integration' within a dedicated section of your plan. Also, outline steps or strategies to address these blockers. Do NOT simply state you cannot create a plan. Provide a plan for what is possible now and what is needed to make the rest possible.",
         agent=final_assembler_agent,
-        expected_output="Detailed integration plan",
+        expected_output="A detailed integration plan (Markdown format preferred). The plan MUST include: 1. An explicit 'Integration Sequence' for available/functional components. 2. Details on 'Component Interactions & Data Flow'. 3. 'Configuration Management' notes for integration. 4. A dedicated section: 'Blockers & Prerequisites for Full Integration', which lists non-functional components or missing info and proposes steps/strategies to resolve them. 5. A 'Testing Strategy' for the integrated parts. 6. 'Deployment Considerations' for the integrated system. The plan should be actionable even if some parts are blocked, by clearly separating what can be done from what needs fixing.",
         max_retries=1,
-        guardrail="Ensure the output is a detailed integration plan, outlining steps and considerations for combining all provided software components."
+        guardrail=validate_integration_plan_output
     )
 
     # Code generation
