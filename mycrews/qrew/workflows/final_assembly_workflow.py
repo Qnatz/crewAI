@@ -223,8 +223,35 @@ def run_final_assembly_workflow(inputs: dict):
     integration_task = Task(
         description=f"Create a detailed integration plan based on the available components summarized as: {components_summary_str}. The overall project architecture is: {architecture_summary_str}. Your goal is to outline how these components should be combined into a functional system. IMPORTANT: If the component summary or architecture indicates some components are non-functional, incomplete, or if crucial information is missing, your integration plan MUST still be as complete as possible for the *available and functional* parts. Clearly identify any non-functional components or missing information as 'Blockers' or 'Prerequisites for Full Integration' within a dedicated section of your plan. Also, outline steps or strategies to address these blockers. Do NOT simply state you cannot create a plan. Provide a plan for what is possible now and what is needed to make the rest possible.",
         agent=final_assembler_agent,
-        expected_output="A detailed integration plan (Markdown format preferred). The plan MUST include: 1. An explicit 'Integration Sequence' for available/functional components. 2. Details on 'Component Interactions & Data Flow'. 3. 'Configuration Management' notes for integration. 4. A dedicated section: 'Blockers & Prerequisites for Full Integration', which lists non-functional components or missing info and proposes steps/strategies to resolve them. 5. A 'Testing Strategy' for the integrated parts. 6. 'Deployment Considerations' for the integrated system. The plan should be actionable even if some parts are blocked, by clearly separating what can be done from what needs fixing." \
-                        " Crucially, the plan MUST also include a specific section titled 'File Manifest for Code Generation'. This section must be a list of dictionaries, where each dictionary represents a file to be generated and contains at least 'file_path' (string, e.g., 'src/models/user.py') and 'description' (string, a brief explanation of what code or class/functions this file should contain, based on the integration plan and architecture). Example of manifest format: [{'file_path': 'src/main.py', 'description': 'Main application entry point, sets up routes.'}, {'file_path': 'src/models/user.py', 'description': 'User data model including fields like id, username, email.'}]. This manifest must be comprehensive for all components and functionalities discussed in the integration plan.",
+        expected_output=(
+            "YOUR RESPONSE MUST CONSIST OF TWO MAIN PARTS:\n"
+            "PART 1: A DETAILED INTEGRATION PLAN (Markdown format preferred).\n"
+            "PART 2: A FILE MANIFEST FOR CODE GENERATION (JSON format within a specific section).\n\n"
+            "--- PART 1: DETAILED INTEGRATION PLAN ---\n"
+            "The integration plan MUST include:\n"
+            "1. An explicit 'Integration Sequence' for available/functional components.\n"
+            "2. Details on 'Component Interactions & Data Flow'.\n"
+            "3. 'Configuration Management' notes for integration.\n"
+            "4. A dedicated section: 'Blockers & Prerequisites for Full Integration', listing non-functional components or missing info and proposing steps/strategies to resolve them.\n"
+            "5. A 'Testing Strategy' for the integrated parts.\n"
+            "6. 'Deployment Considerations' for the integrated system.\n"
+            "The plan should be actionable even if some parts are blocked, by clearly separating what can be done from what needs fixing.\n\n"
+            "--- PART 2: FILE MANIFEST FOR CODE GENERATION (MANDATORY REQUIREMENT) ---\n"
+            "This is a CRITICAL and MANDATORY part of your output.\n"
+            "You MUST include a specific section EXACTLY titled: 'File Manifest for Code Generation'.\n"
+            "Under this exact heading, you MUST provide a JSON code block (```json ... ```) containing a list of dictionaries.\n"
+            "Each dictionary represents a file to be generated and MUST contain:\n"
+            "  - 'file_path': (string) The full intended path for the file (e.g., 'src/models/user.py', 'static/css/styles.css').\n"
+            "  - 'description': (string) A concise explanation of what code, class, functions, or content this file should contain, based on your integration plan and the project architecture.\n"
+            "Example of the JSON list format for the manifest:\n"
+            "```json\n"
+            "[\n"
+            "  {\"file_path\": \"src/main.py\", \"description\": \"Main application entry point, sets up routes and initializes the Flask app.\"},\n"
+            "  {\"file_path\": \"src/models/user.py\", \"description\": \"Defines the User data model including fields like id, username, email, and password hash.\"}\n"
+            "]\n"
+            "```\n"
+            "This manifest MUST be comprehensive and include ALL files necessary to build the components and functionalities discussed in your integration plan. Task completion will be validated against the presence and correctness of this manifest."
+        ),
         max_retries=1,
         guardrail=validate_integration_plan_output
     )
