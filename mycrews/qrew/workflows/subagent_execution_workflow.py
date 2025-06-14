@@ -135,7 +135,7 @@ def create_backend_tasks(plan):
             if "model" in task_desc.lower() or "schema" in task_desc.lower() or "database" in task_desc.lower():
                 agent_to_assign = data_model_agent
             description_str = task_desc + " IMPORTANT REMINDER: Your final output for this task must be strictly the code/configuration artifact itself, with absolutely no other surrounding text or explanations, as per the detailed 'expected_output' format."
-            expected_output_str = f"CRITICAL: Your entire response MUST be ONLY the raw code/configuration for the task: '{task_desc}'. NO explanations, NO apologies, NO introductory or concluding remarks, NO markdown fences (like ```python or ```), NO conversational text. ONLY the code/configuration itself. For example, if creating a Python function, the output should start with 'def' or 'async def'. If it's a JSON config, it starts with '{{'{'. If it's HTML, it starts with '<!DOCTYPE html>' or a tag. Adhere strictly to outputting only the required software artifact."
+            expected_output_str = f"CRITICAL: Your entire response MUST be ONLY the raw code/configuration for the task: '{task_desc}'. NO explanations, NO apologies, NO introductory or concluding remarks, NO markdown fences (like ```python or ```), NO conversational text. ONLY the code/configuration itself. For example, if creating a Python function, the output should start with 'def' or 'async def'. If it's a JSON config, it starts with '{{'. If it's HTML, it starts with '<!DOCTYPE html>' or a tag. Adhere strictly to outputting only the required software artifact."
             tasks.append(
                 Task(
                     description=description_str,
@@ -160,7 +160,7 @@ def create_web_tasks(plan):
                 print(f"Warning: Invalid task description in frontend_plan: '{task_desc}'. Skipping.")
                 continue
             description_str = task_desc + " IMPORTANT REMINDER: Your final output for this task must be strictly the code/configuration artifact itself, with absolutely no other surrounding text or explanations, as per the detailed 'expected_output' format."
-            expected_output_str = f"CRITICAL: Your entire response MUST be ONLY the raw code/configuration for the task: '{task_desc}'. NO explanations, NO apologies, NO introductory or concluding remarks, NO markdown fences (like ```python or ```), NO conversational text. ONLY the code/configuration itself. For example, if creating a Python function, the output should start with 'def' or 'async def'. If it's a JSON config, it starts with '{{'{'. If it's HTML, it starts with '<!DOCTYPE html>' or a tag. Adhere strictly to outputting only the required software artifact."
+            expected_output_str = f"CRITICAL: Your entire response MUST be ONLY the raw code/configuration for the task: '{task_desc}'. NO explanations, NO apologies, NO introductory or concluding remarks, NO markdown fences (like ```python or ```), NO conversational text. ONLY the code/configuration itself. For example, if creating a Python function, the output should start with 'def' or 'async def'. If it's a JSON config, it starts with '{{'. If it's HTML, it starts with '<!DOCTYPE html>' or a tag. Adhere strictly to outputting only the required software artifact."
             tasks.append(
                 Task(
                     description=description_str,
@@ -190,7 +190,7 @@ def create_mobile_tasks(plan):
             elif "android" in task_desc.lower():
                  agent_to_assign = android_ui_agent
             description_str = task_desc + " IMPORTANT REMINDER: Your final output for this task must be strictly the code/configuration artifact itself, with absolutely no other surrounding text or explanations, as per the detailed 'expected_output' format."
-            expected_output_str = f"CRITICAL: Your entire response MUST be ONLY the raw code/configuration for the task: '{task_desc}'. NO explanations, NO apologies, NO introductory or concluding remarks, NO markdown fences (like ```python or ```), NO conversational text. ONLY the code/configuration itself. For example, if creating a Python function, the output should start with 'def' or 'async def'. If it's a JSON config, it starts with '{{'{'. If it's HTML, it starts with '<!DOCTYPE html>' or a tag. Adhere strictly to outputting only the required software artifact."
+            expected_output_str = f"CRITICAL: Your entire response MUST be ONLY the raw code/configuration for the task: '{task_desc}'. NO explanations, NO apologies, NO introductory or concluding remarks, NO markdown fences (like ```python or ```), NO conversational text. ONLY the code/configuration itself. For example, if creating a Python function, the output should start with 'def' or 'async def'. If it's a JSON config, it starts with '{{'. If it's HTML, it starts with '<!DOCTYPE html>' or a tag. Adhere strictly to outputting only the required software artifact."
             tasks.append(
                 Task(
                     description=description_str,
@@ -215,7 +215,7 @@ def create_devops_tasks(plan):
                 print(f"Warning: Invalid task description in deployment_plan: '{task_desc}'. Skipping.")
                 continue
             description_str = task_desc + " IMPORTANT REMINDER: Your final output for this task must be strictly the code/configuration artifact itself, with absolutely no other surrounding text or explanations, as per the detailed 'expected_output' format."
-            expected_output_str = f"CRITICAL: Your entire response MUST be ONLY the raw code/configuration for the task: '{task_desc}'. NO explanations, NO apologies, NO introductory or concluding remarks, NO markdown fences (like ```python or ```), NO conversational text. ONLY the code/configuration itself. For example, if creating a Python function, the output should start with 'def' or 'async def'. If it's a JSON config, it starts with '{{'{'. If it's HTML, it starts with '<!DOCTYPE html>' or a tag. Adhere strictly to outputting only the required software artifact."
+            expected_output_str = f"CRITICAL: Your entire response MUST be ONLY the raw code/configuration for the task: '{task_desc}'. NO explanations, NO apologies, NO introductory or concluding remarks, NO markdown fences (like ```python or ```), NO conversational text. ONLY the code/configuration itself. For example, if creating a Python function, the output should start with 'def' or 'async def'. If it's a JSON config, it starts with '{{'. If it's HTML, it starts with '<!DOCTYPE html>' or a tag. Adhere strictly to outputting only the required software artifact."
             tasks.append(
                 Task(
                     description=description_str,
