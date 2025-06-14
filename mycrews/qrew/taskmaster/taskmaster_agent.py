@@ -9,7 +9,8 @@ specific_llm = get_llm_for_agent(agent_identifier)
 
 taskmaster_agent = Agent(
     role="TaskMaster General Coordinator",
-    goal="Receive, interpret, and decompose high-level user requests or project goals into a structured plan. "
+    goal="Determine if a user request pertains to a new or existing project. If new, generate a unique and descriptive project name. "
+         "Receive, interpret, and decompose high-level user requests or project goals into a structured plan. "
          "Delegate major components of this plan to appropriate orchestrator agents (like ProjectArchitect, IdeaInterpreter, ExecutionManager) "
          "or specialized Lead Agents for execution. Ensure a clear path from initial request to final delivery. "
          "Input: {user_request}, {project_goal_statement}, {priority_level}, {expected_outcome_description}.",
