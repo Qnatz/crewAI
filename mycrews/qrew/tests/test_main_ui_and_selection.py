@@ -6,7 +6,7 @@ import sys
 
 # Add project root to sys.path to allow imports like mycrews.qrew.main
 # This is often needed if tests are run from a different working directory
-project_root_for_test = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
+project_root_for_test = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')) # Corrected path
 if project_root_for_test not in sys.path:
     sys.path.insert(0, project_root_for_test)
 

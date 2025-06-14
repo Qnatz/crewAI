@@ -7,7 +7,7 @@ from rich.text import Text
 from rich.prompt import Prompt
 from collections import OrderedDict # To maintain order for display after processing
 # Add the project root (/app) to sys.path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')) # Corrected path
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 # Add the project's src directory to sys.path to allow 'from crewai import ...'
