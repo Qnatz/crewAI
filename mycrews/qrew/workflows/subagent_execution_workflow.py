@@ -8,71 +8,72 @@ from ..agents.mobile import android_ui_agent, ios_ui_agent
 from ..agents.devops import devops_agent
 
 def validate_and_extract_code_output(task_output: TaskOutput) -> tuple[bool, Any]:
-    if not hasattr(task_output, 'raw') or not isinstance(task_output.raw, str):
-        print("GUARDRAIL_CODE_EXTRACT: Input task_output.raw is not a string or not present.")
-        return False, "Guardrail input (task_output.raw) must be a string and present."
+    try:
+        if not hasattr(task_output, 'raw') or not isinstance(task_output.raw, str):
+            print("GUARDRAIL_CODE_EXTRACT: Input task_output.raw is not a string or not present.")
+            return False, "Guardrail input (task_output.raw) must be a string and present."
 
-    output_str = task_output.raw.strip()
-    print(f"GUARDRAIL_CODE_EXTRACT: Original output (first 300 chars): '{output_str[:300]}'")
+        output_str = task_output.raw.strip()
+        print(f"GUARDRAIL_CODE_EXTRACT: Original output (first 300 chars): '{output_str[:300]}'")
 
-    extracted_code_blocks = []
+        extracted_code_blocks = []
 
-    # Regex to find common fenced code blocks (non-greedy)
-    # Matches ```optional_lang
-#...code...
-#``` or ```...code...```
-    fence_patterns = [
-        re.compile(r"```(?:[a-zA-Z0-9_]+)?\s*\n(.*?)\n```", re.DOTALL), # For multi-line blocks with language
-        re.compile(r"```(.*?)```", re.DOTALL) # For single or multi-line blocks without explicit language
-    ]
+        # Regex to find common fenced code blocks (non-greedy)
+        # Matches ```optional_lang
+    #...code...
+    #``` or ```...code...```
+        fence_patterns = [
+            re.compile(r"```(?:[a-zA-Z0-9_]+)?\s*\n(.*?)\n```", re.DOTALL), # For multi-line blocks with language
+            re.compile(r"```(.*?)```", re.DOTALL) # For single or multi-line blocks without explicit language
+        ]
 
-    temp_output_str = output_str
-    for pattern in fence_patterns:
-        matches = pattern.findall(temp_output_str)
-        if matches:
-            for match in matches:
-                extracted_code_blocks.append(match.strip())
-            # Remove found blocks to avoid re-matching if there are multiple types of fences
-            temp_output_str = pattern.sub("", temp_output_str).strip()
+        temp_output_str = output_str
+        for pattern in fence_patterns:
+            matches = pattern.findall(temp_output_str)
+            if matches:
+                for match in matches:
+                    extracted_code_blocks.append(match.strip())
+                # Remove found blocks to avoid re-matching if there are multiple types of fences
+                temp_output_str = pattern.sub("", temp_output_str).strip()
 
-    final_extracted_code = ""
-    if extracted_code_blocks:
-        final_extracted_code = "\n\n".join(extracted_code_blocks).strip()
-        print(f"GUARDRAIL_CODE_EXTRACT: Extracted code using fences (first 300 chars): '{final_extracted_code[:300]}'")
-    else:
-        # Fallback: If no fences, assume the whole (or significant part of) string might be code if it's not conversational.
-        # This is a basic heuristic: if it's short and mostly plain language, it's probably not just code.
-        # A more sophisticated check might involve token counting, keyword density, etc.
-        # For now, if it didn't have fences, we'll take it as is but check if it's empty.
-        # The hyper-focused prompts are meant to minimize conversational text.
-        if len(output_str.split()) > 50 and len(re.findall(r'[;,=\{\}\[\]\(\)<>]', output_str)) < 5: # Heuristic: many words, few code symbols
-             print(f"GUARDRAIL_CODE_EXTRACT: No fences found, and output looks more like text than code. Length: {len(output_str.split())} words.")
-             # Previously, the error was "The task result does not solely provide code/configuration examples... It includes significant explanatory text"
-             # This guardrail should now return the extracted code. If nothing is extracted and the original output is verbose, it should fail.
-             return False, "Output appears to be mainly explanatory text without clear code blocks, or code is not properly fenced."
-        final_extracted_code = output_str # Take the whole string if no fences and it's not clearly verbose text
-        print(f"GUARDRAIL_CODE_EXTRACT: No fences found. Assuming entire content might be code/config (first 300 chars): '{final_extracted_code[:300]}'")
+        final_extracted_code = ""
+        if extracted_code_blocks:
+            final_extracted_code = "\n\n".join(extracted_code_blocks).strip()
+            print(f"GUARDRAIL_CODE_EXTRACT: Extracted code using fences (first 300 chars): '{final_extracted_code[:300]}'")
+        else:
+            # Fallback: If no fences, assume the whole (or significant part of) string might be code if it's not conversational.
+            # This is a basic heuristic: if it's short and mostly plain language, it's probably not just code.
+            # A more sophisticated check might involve token counting, keyword density, etc.
+            # For now, if it didn't have fences, we'll take it as is but check if it's empty.
+            # The hyper-focused prompts are meant to minimize conversational text.
+            if len(output_str.split()) > 50 and len(re.findall(r'[;,=\{\}\[\]\(\)<>]', output_str)) < 5: # Heuristic: many words, few code symbols
+                 print(f"GUARDRAIL_CODE_EXTRACT: No fences found, and output looks more like text than code. Length: {len(output_str.split())} words.")
+                 # Previously, the error was "The task result does not solely provide code/configuration examples... It includes significant explanatory text"
+                 # This guardrail should now return the extracted code. If nothing is extracted and the original output is verbose, it should fail.
+                 return False, "Output appears to be mainly explanatory text without clear code blocks, or code is not properly fenced."
+            final_extracted_code = output_str # Take the whole string if no fences and it's not clearly verbose text
+            print(f"GUARDRAIL_CODE_EXTRACT: No fences found. Assuming entire content might be code/config (first 300 chars): '{final_extracted_code[:300]}'")
 
 
-    if not final_extracted_code:
-        print("GUARDRAIL_CODE_EXTRACT: No code content could be extracted.")
-        return False, "No code/configuration content could be extracted from the output."
+        if not final_extracted_code:
+            print("GUARDRAIL_CODE_EXTRACT: No code content could be extracted.")
+            return False, "No code/configuration content could be extracted from the output."
 
-    # At this point, final_extracted_code contains the best effort extraction.
-    # The previous error message was: "The task result does not solely provide code/configuration examples... It includes significant explanatory text..."
-    # This guardrail's purpose is to *extract* the code. If successful, it returns (True, extracted_code).
-    # The external guardrail (if CrewAI applies another one based on the string) would then judge this *extracted_code*.
-    # For a functional guardrail, we decide here.
-    # Let's refine the condition for success: extracted code should be substantial.
-    if len(final_extracted_code) < 10 and not ("def" in final_extracted_code or "class" in final_extracted_code or "{" in final_extracted_code or "<" in final_extracted_code): # very short, not looking like code
-         print(f"GUARDRAIL_CODE_EXTRACT: Extracted content is very short and doesn't resemble typical code structures: '{final_extracted_code}'")
-         return False, f"Extracted content is too short or doesn't resemble code: '{final_extracted_code}'"
+        # At this point, final_extracted_code contains the best effort extraction.
+        # The previous error message was: "The task result does not solely provide code/configuration examples... It includes significant explanatory text..."
+        # This guardrail's purpose is to *extract* the code. If successful, it returns (True, extracted_code).
+        # The external guardrail (if CrewAI applies another one based on the string) would then judge this *extracted_code*.
+        # For a functional guardrail, we decide here.
+        # Let's refine the condition for success: extracted code should be substantial.
+        if len(final_extracted_code) < 10 and not ("def" in final_extracted_code or "class" in final_extracted_code or "{" in final_extracted_code or "<" in final_extracted_code): # very short, not looking like code
+             print(f"GUARDRAIL_CODE_EXTRACT: Extracted content is very short and doesn't resemble typical code structures: '{final_extracted_code}'")
+             return False, f"Extracted content is too short or doesn't resemble code: '{final_extracted_code}'"
 
-    print(f"GUARDRAIL_CODE_EXTRACT: Successfully extracted code/configuration. Length: {len(final_extracted_code)}")
-    return True, final_extracted_code # Return the extracted code
-except Exception as e:
-    print(f"GUARDRAIL_CODE_EXTRACT: Error during code extraction: {str(e)}")
-    return False, f"Error during guardrail code extraction: {str(e)}"
+        print(f"GUARDRAIL_CODE_EXTRACT: Successfully extracted code/configuration. Length: {len(final_extracted_code)}")
+        return True, final_extracted_code # Return the extracted code
+    except Exception as e:
+        print(f"GUARDRAIL_CODE_EXTRACT: Error during code extraction: {str(e)}")
+        return False, f"Error during guardrail code extraction: {str(e)}"
 
 def run_subagent_execution_workflow(inputs: dict):
     # Backend implementation
