@@ -16,6 +16,23 @@ def validate_json_plan_output(task_output: TaskOutput) -> tuple[bool, Any]:
         return False, "Guardrail input (task_output.raw) must be a string and present."
     output_str = task_output.raw
 
+    # Strip markdown fences if present
+    if output_str.startswith("```json"):
+        output_str = output_str[len("```json"):].strip()
+        if output_str.endswith("```"):
+            output_str = output_str[:-len("```")].strip()
+    elif output_str.startswith("```"):
+        output_str = output_str[len("```"):].strip()
+        if output_str.endswith("```"):
+            output_str = output_str[:-len("```")].strip()
+
+    # Ensure the string starts with { and ends with } after stripping, if it's not empty
+    # This is a gentle correction, as json.loads() will fail anyway if it's not a valid object/array start/end.
+    # However, LLMs sometimes forget the final brace after stripping.
+    # This specific check might be too aggressive or not needed if json.loads() is the ultimate validator.
+    # For now, let's rely on the stripping and then the json.loads() to do its job.
+    # An empty string after stripping should also fail json.loads() correctly.
+
     try:
         data = json.loads(output_str)
         if isinstance(data, dict) and "tasks" in data and isinstance(data["tasks"], list):
@@ -57,7 +74,7 @@ def run_crew_lead_workflow(inputs: dict):
                         f"The overall project architecture summary is: {architecture_summary_str}. " \
                         f"The architecture document provides detailed components and their API dependencies. Use this to define tasks for UI views, component creation, and API integrations, e.g., 'Develop UserProfile view to display data from /users/me endpoint'.",
             agent=web_lead,
-            expected_output="A valid JSON object with a single key 'tasks'. The value of 'tasks' MUST be a list of strings, where each string is a detailed task description. Ensure the output is ONLY the JSON object itself, starting with { and ending with }.",
+            expected_output="CRITICAL: Your output MUST be a valid JSON object and NOTHING ELSE. It must start with '{' and end with '}'. Do not include any explanatory text, markdown code fences (like ```json or ```), or any characters outside of the JSON object itself. The JSON object must have a single key 'tasks', and its value must be a list of strings, where each string is a detailed task description for frontend implementation.",
             guardrail=validate_json_plan_output,
             max_retries=2
         ),
