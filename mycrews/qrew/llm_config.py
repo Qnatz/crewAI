@@ -103,7 +103,7 @@ def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_a
     # Early exit if API key is missing.
     if not GEMINI_API_KEY:
         # print(f"GEMINI_API_KEY not found in environment. Cannot initialize LLM for agent '{agent_identifier}'.") # Suppressed
-        llm_initialization_statuses.append((agent_identifier, "N/A_API_KEY_ISSUE", False))
+        llm_initialization_statuses.append(("N/A_API_KEY_ISSUE", False)) # Corrected to 2-tuple
         return None
 
     # Determine the model string: use agent-specific if defined, else use the model specified by default_model_key
@@ -114,7 +114,7 @@ def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_a
         chosen_model_string = MODEL_BY_AGENT.get(default_model_key)
         if not chosen_model_string: # Should not happen if default_model_key is in MODEL_BY_AGENT
              # print(f"Error: Default model key '{default_model_key}' not found in MODEL_BY_AGENT. Cannot configure LLM for '{agent_identifier}'.") # Suppressed
-             llm_initialization_statuses.append((agent_identifier, "N/A_CONFIG_ERROR", False))
+             llm_initialization_statuses.append(("N/A_CONFIG_ERROR", False)) # Corrected to 2-tuple
              return None
         # If default is used, chosen_model_string now correctly holds the default model string.
         # No need to alter chosen_model_string for logging here; it's already the actual model key.
@@ -126,11 +126,11 @@ def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_a
         # print(f"Configuring LLM with num_retries=3 for agent '{agent_identifier}'.") # Suppressed
         llm = LLM(model=chosen_model_string, num_retries=3)
         # print(f"Successfully initialized LLM for agent '{agent_identifier}' with model '{chosen_model_string}'.") # Suppressed
-        llm_initialization_statuses.append((agent_identifier, chosen_model_string, True))
+        llm_initialization_statuses.append((chosen_model_string, True)) # Corrected to 2-tuple
         return llm
     except Exception as e:
         # print(f"Failed to initialize LLM for agent '{agent_identifier}' with model '{chosen_model_string}': {e}") # Suppressed (Note: Exception details also suppressed)
-        llm_initialization_statuses.append((agent_identifier, chosen_model_string, False))
+        llm_initialization_statuses.append((chosen_model_string, False)) # Corrected to 2-tuple
         return None
 
 # Global default LLM for general use by Crews or as a fallback if an agent-specific one isn't assigned directly.
