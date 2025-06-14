@@ -24,12 +24,29 @@ def _perform_architecture_generation(inputs: dict):
     print("Performing internal architecture generation logic...")
     # Simulate artifact creation based on inputs
     project_name_for_sim = inputs.get('project_name', 'Unknown Project')
-    user_idea_for_sim = inputs.get('user_idea', inputs.get('taskmaster', {}).get('initial_brief', 'No user idea provided'))
+
+    idea_interpretation_artifacts = inputs.get("idea_interpretation", {})
+    interpreted_concept = idea_interpretation_artifacts.get("interpreted_concept", "")
+
+    taskmaster_artifacts = inputs.get("taskmaster", {})
+    # Check both 'initial_brief' (older key) and 'refined_brief' (newer key) from taskmaster output
+    refined_brief_from_taskmaster = taskmaster_artifacts.get("refined_brief", taskmaster_artifacts.get("initial_brief", ""))
+
+
+    user_idea_for_architecture = interpreted_concept # Prioritize interpreted concept
+
+    if not user_idea_for_architecture:
+        print("Warning: 'interpreted_concept' from Idea Interpretation stage was empty. Falling back to Taskmaster's refined_brief.")
+        user_idea_for_architecture = refined_brief_from_taskmaster
+
+    if not user_idea_for_architecture:
+        print("Warning: Both 'interpreted_concept' and Taskmaster's 'refined_brief' are empty. Using default 'No user idea provided'.")
+        user_idea_for_architecture = "No user idea provided for architecture generation."
 
     architecture_doc = [
         {
             "name": "UserManagementService",
-            "description": f"Handles user registration, login, profile management for {project_name_for_sim}. Based on idea: {user_idea_for_sim}",
+            "description": f"Handles user registration, login, profile management for {project_name_for_sim}. Based on interpreted concept: {user_idea_for_architecture}",
             "responsibilities": ["User authentication via JWT", "User data storage and retrieval", "Password hashing and recovery"],
             "api_endpoints": [
                 {"path": "/auth/register", "method": "POST", "description": "Register a new user.", "request_schema": {"username": "string", "email": "string", "password": "string"}, "response_schema": {"user_id": "uuid", "message": "string"}},
