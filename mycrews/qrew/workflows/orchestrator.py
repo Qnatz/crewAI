@@ -21,7 +21,8 @@ def validate_taskmaster_output(task_output: TaskOutput) -> tuple[bool, Any]: # C
         data = json.loads(output_str) # Changed to output_str
         if not isinstance(data, dict):
             return False, "Output must be a JSON dictionary."
-        required_keys = ["project_name", "refined_brief", "is_new_project", "recommended_next_stage"] # Added new key
+        # Added "project_scope" to required keys
+        required_keys = ["project_name", "refined_brief", "is_new_project", "recommended_next_stage", "project_scope"]
         for key in required_keys:
             if key not in data:
                 return False, f"Missing key in output: {key}"
@@ -31,12 +32,18 @@ def validate_taskmaster_output(task_output: TaskOutput) -> tuple[bool, Any]: # C
             return False, "refined_brief must be a non-empty string."
         if not isinstance(data["is_new_project"], bool):
             return False, "is_new_project must be a boolean."
-        if not isinstance(data["recommended_next_stage"], str) or not data["recommended_next_stage"].strip(): # Validate new key
+        if not isinstance(data["recommended_next_stage"], str) or not data["recommended_next_stage"].strip():
             return False, "recommended_next_stage must be a non-empty string."
-        # Optionally, validate against a list of known stages:
-        # known_stages = ["architecture", "tech_vetting", "execution_only"]
-        # if data["recommended_next_stage"] not in known_stages:
-        #     return False, f"recommended_next_stage must be one of {known_stages}."
+        if not isinstance(data["project_scope"], str) or not data["project_scope"].strip(): # Validate project_scope
+            return False, "project_scope must be a non-empty string."
+
+        # Optional: Validate project_scope against a list of known scopes
+        known_scopes = ["web-only", "mobile-only", "backend-only", "full-stack", "documentation-only", "unknown"]
+        if data["project_scope"] not in known_scopes:
+            # Allow unknown, but strict validation can be enabled if needed by removing "unknown" or raising error.
+            print(f"Warning: Taskmaster output 'project_scope' ('{data['project_scope']}') is not in known scopes: {known_scopes}. Proceeding with the provided scope.")
+            # return False, f"project_scope must be one of {known_scopes}."
+
         return True, data # Return parsed data on success
     except json.JSONDecodeError:
         return False, "Output must be valid JSON." # output_str is not directly visible here, but implied
@@ -89,7 +96,8 @@ class WorkflowOrchestrator:
                 "project_name": "error_no_user_request",
                 "refined_brief": "Taskmaster failed: No user request was provided.",
                 "is_new_project": False,
-                "recommended_next_stage": "architecture", # Default fallback
+                "recommended_next_stage": "architecture",
+                "project_scope": "unknown", # Default fallback
                 "taskmaster_error": "No user_request provided"
             }
 
@@ -101,13 +109,15 @@ class WorkflowOrchestrator:
                         f"You MUST use the 'knowledge_base_tool_instance' to check for existing projects or ideas if applicable. "
                         f"Focus on understanding the core needs and deliverables. "
                         f"Based on the project's nature (e.g., complexity, use of new/unproven technologies, high uncertainty), recommend the next logical stage. "
-                        f"Valid recommendations are: 'tech_vetting' (if new/complex tech evaluation is needed) or 'architecture' (if project can proceed to design).",
+                        f"Valid recommendations are: 'tech_vetting' (if new/complex tech evaluation is needed) or 'architecture' (if project can proceed to design). "
+                        f"Also, determine the primary scope of the project from the following options: 'web-only', 'mobile-only', 'backend-only', 'full-stack', 'documentation-only'. If ambiguous or not fitting these, use 'unknown'.",
             agent=taskmaster_agent,
             expected_output="A JSON object containing: "
                             "'project_name' (string, unique and descriptive for new projects), "
                             "'refined_brief' (string, a concise summary and scope), "
                             "'is_new_project' (boolean, True if this is identified as a new project, False otherwise), "
-                            "and 'recommended_next_stage' (string, either 'tech_vetting' or 'architecture').",
+                            "'recommended_next_stage' (string, either 'tech_vetting' or 'architecture'), "
+                            "and 'project_scope' (string, one of 'web-only', 'mobile-only', 'backend-only', 'full-stack', 'documentation-only', 'unknown').",
             guardrail=validate_taskmaster_output,
             max_retries=1 # Keep retries low for faster failure if guardrail fails
         )
@@ -143,7 +153,8 @@ class WorkflowOrchestrator:
                     "project_name": "error_taskmaster_output_invalid",
                     "refined_brief": f"Taskmaster failed to produce valid structured output. Raw output: {result.raw}",
                     "is_new_project": False,
-                    "recommended_next_stage": "architecture", # Default fallback
+                    "recommended_next_stage": "architecture",
+                    "project_scope": "unknown", # Default fallback
                     "taskmaster_error": "Invalid JSON output from task"
                 }
         else:
@@ -153,7 +164,8 @@ class WorkflowOrchestrator:
                 "project_name": "error_taskmaster_failed",
                 "refined_brief": "Taskmaster task execution failed or yielded no output.",
                 "is_new_project": False,
-                "recommended_next_stage": "architecture", # Default fallback
+                "recommended_next_stage": "architecture",
+                "project_scope": "unknown", # Default fallback
                 "taskmaster_error": "Task execution failed or no output"
             }
 

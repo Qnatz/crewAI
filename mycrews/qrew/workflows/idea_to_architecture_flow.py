@@ -13,6 +13,7 @@ def _perform_architecture_generation(inputs: dict):
     taskmaster_artifacts = inputs.get("taskmaster", {})
     refined_brief = taskmaster_artifacts.get("refined_brief", taskmaster_artifacts.get("initial_brief", ""))
     project_name = inputs.get("project_name", taskmaster_artifacts.get("project_name", "Unknown Project"))
+    project_scope = taskmaster_artifacts.get("project_scope", "unknown") # Get project_scope
     stakeholder_feedback = inputs.get("stakeholder_feedback", "")
     market_research_data = inputs.get("market_research_data", "")
 
@@ -26,6 +27,7 @@ def _perform_architecture_generation(inputs: dict):
 
     idea_interpretation_task_desc = (
         f"Project Name: '{project_name}'\n"
+        f"Project Scope: '{project_scope}'\n" # Add scope to context
         f"Refined Brief from Taskmaster: '{refined_brief}'\n"
         f"Stakeholder Feedback (if any): '{stakeholder_feedback}'\n"
         f"Market Research Data (if any): '{market_research_data}'\n"
@@ -35,9 +37,11 @@ def _perform_architecture_generation(inputs: dict):
 
     idea_interpretation_task_desc += (
         f"\nYour primary goal is to analyze all available information and translate it into a comprehensive "
-        f"technical requirements specification document. This document should include detailed user stories "
-        f"with acceptance criteria, clear functional requirements, important non-functional requirements "
-        f"(e.g., performance, security), data requirements, a glossary if new terms are introduced, "
+        f"technical requirements specification document. This document MUST strictly adhere to the defined 'Project Scope'. "
+        f"For instance, if scope is 'web-only', user stories and functional requirements should focus solely on web interactions and necessary backend APIs, excluding mobile-specific features. "
+        f"If 'documentation-only', focus on information structure, content generation needs, and target audience, not software features. "
+        f"The document should include detailed user stories with acceptance criteria, clear functional requirements, "
+        f"important non-functional requirements (e.g., performance, security), data requirements, a glossary if new terms are introduced, "
         f"and list any ambiguities (especially if the vetting report highlights them or helps clarify them). "
         f"Consult your knowledge base if needed for similar patterns or requirements."
     )
@@ -84,6 +88,7 @@ def _perform_architecture_generation(inputs: dict):
 
     project_architecture_task_desc = (
         f"Project Name: '{project_name}'\n"
+        f"Project Scope: '{project_scope}'\n" # Add scope to context
         f"Technical Requirements Specification:\n{requirements_doc_markdown}\n\n"
         f"Project Constraints (if any): '{constraints}'\n"
         f"Technical Vision (if any): '{technical_vision}'\n\n"
@@ -98,7 +103,7 @@ def _perform_architecture_generation(inputs: dict):
     else:
         project_architecture_task_desc += (
             "No specific tech stack was pre-determined by a vetting stage. You will need to recommend a suitable technology stack "
-            "as part of your architecture design, justifying your choices.\n"
+            "as part of your architecture design, justifying your choices for the given project scope.\n"
         )
 
     if architectural_guidelines:
@@ -109,7 +114,11 @@ def _perform_architecture_generation(inputs: dict):
 
     project_architecture_task_desc += (
         f"Your goal is to design a robust and scalable software architecture based on all the provided information. "
-        f"The architecture should align with best practices."
+        f"The architectural design MUST strictly adhere to the defined 'Project Scope' ('{project_scope}'). "
+        f"For instance, if scope is 'web-only', design only web components and any essential backend APIs supporting the web functionality; do not include mobile components or unrelated backend services. "
+        f"If scope is 'mobile-only', focus solely on the mobile application architecture and any direct backend services it requires. "
+        f"If 'documentation-only', your 'architecture' should focus on the structure of the documentation, information flow, and tools/platforms for hosting, not software components. "
+        f"The architecture should align with best practices for the specified scope."
     )
 
     project_architecture_expected_output = (
