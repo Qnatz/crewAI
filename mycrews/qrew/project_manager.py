@@ -154,10 +154,25 @@ class ProjectStateManager:
         return workflow_stages[0]
 
     def finalize_project(self):
-        self.state["status"] = "completed"
+        # Mark the "project_finalization" stage as completed first
+        # This ensures that is_completed("project_finalization") will be true
+        # when the orchestrator checks all stages from its canonical list.
+        self.complete_stage("project_finalization", artifacts={"summary": "Project finalized successfully by ProjectStateManager."})
+        # Note: complete_stage already calls self.save_state() and adds to error_summary.
+        # So, the explicit error_summary.add below might be redundant if complete_stage's message is sufficient.
+        # However, keeping it for clarity or if a more specific message is desired from finalize_project itself.
+
+        self.state["status"] = "completed" # Set overall project status
         self.state["completed_at"] = datetime.utcnow().isoformat()
-        self.error_summary.add("project_finalization", True, "Project finalized successfully.")
-        self.save_state()
+
+        # This will add another entry to error_summary for "project_finalization" or update if stage already added.
+        # ErrorSummary logic might need to handle duplicate stage entries if that's an issue,
+        # or ensure complete_stage's message is what we want.
+        # For now, let's assume ErrorSummary can handle it or it's a minor duplication.
+        # To avoid exact duplicate message, let's make this one slightly different.
+        self.error_summary.add("project_finalization", True, "Overall project status marked as COMPLETED.")
+
+        self.save_state() # Ensure final status and timestamp are saved.
 
     def get_summary(self):
         return self.error_summary

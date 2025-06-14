@@ -44,6 +44,16 @@ def validate_taskmaster_output(task_output: TaskOutput) -> tuple[bool, Any]: # C
         return False, f"Validation error: {str(e)}"
 
 class WorkflowOrchestrator:
+    ALL_PIPELINE_STAGES = [
+        "taskmaster",
+        "tech_vetting",
+        "architecture",
+        "crew_assignment",
+        "subagent_execution",
+        "final_assembly",
+        "project_finalization" # Ensure this is marked by ProjectStateManager
+    ]
+
     def __init__(self, project_name: str = None):
         self.initial_project_name_hint = project_name
         if project_name:
@@ -293,10 +303,18 @@ class WorkflowOrchestrator:
 
         # Finalize project if all stages completed successfully
         if self.state.state["status"] != "failed":
-            all_stages_done = all(self.state.is_completed(s) for s in stages)
+            # Use the canonical list of all stages to check for completion
+            all_stages_done = all(self.state.is_completed(s) for s in self.ALL_PIPELINE_STAGES)
             if all_stages_done:
-                self.state.finalize_project()
-                print("Project completed and finalized successfully.")
+                # If project status is already 'completed' (potentially by finalize_project itself
+                # if it was called on a previous run that completed all stages but didn't get here),
+                # then we don't need to call it again.
+                if self.state.state.get("status") != "completed":
+                    print("All defined pipeline stages are complete. Finalizing project...")
+                    self.state.finalize_project()
+                    # finalize_project should ideally mark 'project_finalization' as complete.
+                else:
+                    print("Project already marked as completed and all defined pipeline stages are done.")
             else:
                 print("Workflow execution finished, but not all stages were completed. Project not finalized.")
 
