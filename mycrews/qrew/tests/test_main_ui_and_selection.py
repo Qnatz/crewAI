@@ -39,43 +39,121 @@ class TestDisplayModelStatus(unittest.TestCase):
     @patch('mycrews.qrew.main.console.print')
     def test_display_model_initialization_status_single_success(self, mock_console_print):
         title_text = "[bold cyan]--- Test Success ---[/bold cyan]"
-        qrew_main.display_model_initialization_status(title_text, [("ModelA", True)])
+        # Test with model key instead of agent identifier
+        qrew_main.display_model_initialization_status(title_text, [("gemini/gemini-1.0-pro", True)])
 
         mock_console_print.assert_called_once()
         panel_instance = mock_console_print.call_args[0][0]
         self.assertEqual(panel_instance.title.plain, "--- Test Success ---")
         self.assertIsInstance(panel_instance.renderable, Text)
-        self.assertEqual(panel_instance.renderable.plain, "ModelA: ✔️")
-        self.assertTrue(any(span.style == "green" for span in panel_instance.renderable.spans if panel_instance.renderable.plain[span.start:span.end] == "✔️"))
+        self.assertEqual(panel_instance.renderable.plain, "gemini/gemini-1.0-pro: ✔️")
+        # Check for bright_green style
+        self.assertTrue(any(span.style == "bright_green" for span in panel_instance.renderable.spans if panel_instance.renderable.plain[span.start:span.end] == "✔️"))
 
     @patch('mycrews.qrew.main.console.print')
     def test_display_model_initialization_status_single_failure(self, mock_console_print):
         title_text = "[bold cyan]--- Test Failure ---[/bold cyan]"
-        qrew_main.display_model_initialization_status(title_text, [("ModelB", False)])
+        # Test with model key
+        qrew_main.display_model_initialization_status(title_text, [("ollama/mistral", False)])
 
         mock_console_print.assert_called_once()
         panel_instance = mock_console_print.call_args[0][0]
         self.assertEqual(panel_instance.title.plain, "--- Test Failure ---")
         self.assertIsInstance(panel_instance.renderable, Text)
-        self.assertEqual(panel_instance.renderable.plain, "ModelB: ❌")
-        self.assertTrue(any(span.style == "red" for span in panel_instance.renderable.spans if panel_instance.renderable.plain[span.start:span.end] == "❌"))
+        self.assertEqual(panel_instance.renderable.plain, "ollama/mistral: ❌")
+        # Check for bright_red style
+        self.assertTrue(any(span.style == "bright_red" for span in panel_instance.renderable.spans if panel_instance.renderable.plain[span.start:span.end] == "❌"))
 
     @patch('mycrews.qrew.main.console.print')
-    def test_display_model_initialization_status_multiple(self, mock_console_print):
-        title_text = "[bold cyan]--- Test Multiple ---[/bold cyan]"
-        statuses = [("ModelX", True), ("ModelY", False), ("ModelZ", True)]
+    def test_display_model_initialization_status_multiple_unique_keys(self, mock_console_print):
+        title_text = "[bold cyan]--- Test Multiple Unique Keys ---[/bold cyan]"
+        statuses = [("gemini/gemini-1.5-flash", True), ("ollama/mistral", False), ("anthropic/claude-2", True)]
         qrew_main.display_model_initialization_status(title_text, statuses)
 
         mock_console_print.assert_called_once()
         panel_instance = mock_console_print.call_args[0][0]
-        self.assertEqual(panel_instance.title.plain, "--- Test Multiple ---")
+        self.assertEqual(panel_instance.title.plain, "--- Test Multiple Unique Keys ---")
         self.assertIsInstance(panel_instance.renderable, Text)
 
-        expected_plain_text = "ModelX: ✔️\nModelY: ❌\nModelZ: ✔️"
+        # Output is sorted by model key
+        expected_plain_text = "anthropic/claude-2: ✔️\ngemini/gemini-1.5-flash: ✔️\nollama/mistral: ❌"
         self.assertEqual(panel_instance.renderable.plain, expected_plain_text)
 
-        self.assertTrue(any(span.style == "green" for span in panel_instance.renderable.spans if "✔️" in panel_instance.renderable.plain[span.start:span.end]))
-        self.assertTrue(any(span.style == "red" for span in panel_instance.renderable.spans if "❌" in panel_instance.renderable.plain[span.start:span.end]))
+        self.assertTrue(any(span.style == "bright_green" for span in panel_instance.renderable.spans if "✔️" in panel_instance.renderable.plain[span.start:span.end]))
+        self.assertTrue(any(span.style == "bright_red" for span in panel_instance.renderable.spans if "❌" in panel_instance.renderable.plain[span.start:span.end]))
+
+    @patch('mycrews.qrew.main.console.print')
+    def test_display_model_aggregation_success_overrides_failure(self, mock_console_print):
+        title_text = "[bold cyan]--- Test Aggregation Success ---[/bold cyan]"
+        statuses = [
+            ("gemini/gemini-1.5-pro", False),
+            ("gemini/gemini-1.5-pro", True),
+            ("gemini/gemini-1.5-pro", False)
+        ]
+        qrew_main.display_model_initialization_status(title_text, statuses)
+        panel_instance = mock_console_print.call_args[0][0]
+        self.assertEqual(panel_instance.renderable.plain, "gemini/gemini-1.5-pro: ✔️")
+        self.assertTrue(any(span.style == "bright_green" for span in panel_instance.renderable.spans if "✔️" in panel_instance.renderable.plain[span.start:span.end]))
+
+    @patch('mycrews.qrew.main.console.print')
+    def test_display_model_aggregation_all_failures(self, mock_console_print):
+        title_text = "[bold cyan]--- Test Aggregation Failure ---[/bold cyan]"
+        statuses = [
+            ("ollama/llama2", False),
+            ("ollama/llama2", False)
+        ]
+        qrew_main.display_model_initialization_status(title_text, statuses)
+        panel_instance = mock_console_print.call_args[0][0]
+        self.assertEqual(panel_instance.renderable.plain, "ollama/llama2: ❌")
+        self.assertTrue(any(span.style == "bright_red" for span in panel_instance.renderable.spans if "❌" in panel_instance.renderable.plain[span.start:span.end]))
+
+    @patch('mycrews.qrew.main.console.print')
+    def test_display_model_with_none_key(self, mock_console_print):
+        title_text = "[bold cyan]--- Test None Key ---[/bold cyan]"
+        statuses = [(None, False), ("gemini/gemini-valid", True)]
+        qrew_main.display_model_initialization_status(title_text, statuses)
+        panel_instance = mock_console_print.call_args[0][0]
+        # Output is sorted, "N/A" comes after "gemini/gemini-valid" if None is stringified late,
+        # or before if None is handled as "N/A" early and then sorted.
+        # The current implementation stringifies None to "N/A" within the loop before sorting.
+        expected_text_parts = ["N/A: ❌", "gemini/gemini-valid: ✔️"]
+        # Check if both parts are present, order might vary based on how None is sorted against strings
+        self.assertIn(expected_text_parts[0], panel_instance.renderable.plain)
+        self.assertIn(expected_text_parts[1], panel_instance.renderable.plain)
+
+        self.assertTrue(any(span.style == "bright_red" for span in panel_instance.renderable.spans if "❌" in panel_instance.renderable.plain[span.start:span.end]))
+        self.assertTrue(any(span.style == "bright_green" for span in panel_instance.renderable.spans if "✔️" in panel_instance.renderable.plain[span.start:span.end]))
+
+    @patch('mycrews.qrew.main.console.print')
+    def test_display_model_initialization_status_mixed_keys_and_aggregation(self, mock_console_print):
+        title_text = "[bold cyan]--- Test Mixed Aggregation ---[/bold cyan]"
+        statuses = [
+            ("gemini/gemini-flash", True),
+            ("ollama/mistral", False),
+            ("gemini/gemini-flash", False), # Should still be success for gemini-flash
+            ("ollama/zephyr", True),
+            ("ollama/mistral", False) # Should remain failure for mistral
+        ]
+        qrew_main.display_model_initialization_status(title_text, statuses)
+
+        mock_console_print.assert_called_once()
+        panel_instance = mock_console_print.call_args[0][0]
+        self.assertEqual(panel_instance.title.plain, "--- Test Mixed Aggregation ---")
+        self.assertIsInstance(panel_instance.renderable, Text)
+
+        # Expected output is sorted by model key
+        expected_plain_text = "gemini/gemini-flash: ✔️\nollama/mistral: ❌\nollama/zephyr: ✔️"
+        self.assertEqual(panel_instance.renderable.plain, expected_plain_text)
+
+        # Verify styles
+        text_renderable = panel_instance.renderable
+        flash_span = next(s for s in text_renderable.spans if text_renderable.plain[s.start:s.end] == "✔️" and "gemini/gemini-flash" in text_renderable.plain[0:s.start])
+        mistral_span = next(s for s in text_renderable.spans if text_renderable.plain[s.start:s.end] == "❌" and "ollama/mistral" in text_renderable.plain[0:s.start])
+        zephyr_span = next(s for s in text_renderable.spans if text_renderable.plain[s.start:s.end] == "✔️" and "ollama/zephyr" in text_renderable.plain[0:s.start])
+
+        self.assertEqual(flash_span.style, "bright_green")
+        self.assertEqual(mistral_span.style, "bright_red")
+        self.assertEqual(zephyr_span.style, "bright_green")
 
 
 class TestListAvailableProjects(unittest.TestCase):

@@ -5,6 +5,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 from rich.prompt import Prompt
+from collections import OrderedDict # To maintain order for display after processing
 # Add the project root (/app) to sys.path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 if project_root not in sys.path:
@@ -31,21 +32,40 @@ from .workflows.orchestrator import WorkflowOrchestrator
 from .project_manager import ProjectStateManager # Added import
 
 def display_model_initialization_status(title: str, statuses: list[tuple[str, bool]]):
-    """Displays the initialization status of models in a Rich Panel."""
+    """Displays the initialization status of unique models in a Rich Panel."""
     if not statuses:
         content = Text("No models to display status for in this category.", style="italic yellow")
     else:
-        status_texts = []
-        for name, status_bool in statuses:
-            model_text = Text(f"{name}: ")
-            if status_bool:
-                model_text.append("✔️", style="green")
-            else:
-                model_text.append("❌", style="red")
-            status_texts.append(model_text)
-        content = Text("\n").join(status_texts)
+        # Aggregate statuses: if a model key has at least one True, it's True.
+        # Using OrderedDict to preserve the order of first appearance, then sorting for final display.
+        processed_statuses = OrderedDict()
+        for model_key, success_bool in statuses:
+            if model_key not in processed_statuses:
+                processed_statuses[model_key] = False # Default to False
+            if success_bool: # If any attempt is true, mark it as true for that model key
+                processed_statuses[model_key] = True
 
-    panel = Panel(content, title=title, border_style="blue", expand=False, padding=(1, 2))
+        if not processed_statuses:
+             content = Text("No valid model statuses to display after processing.", style="italic yellow")
+        else:
+            status_texts = []
+            # Sort items by model_key for consistent display order
+            sorted_model_statuses = sorted(processed_statuses.items())
+
+            for model_key, aggregated_success_bool in sorted_model_statuses:
+                # Ensure model_key is a string for Text()
+                model_key_str = str(model_key) if model_key is not None else "N/A"
+                model_text = Text(f"{model_key_str}: ", style="default")
+                if aggregated_success_bool:
+                    model_text.append("✔️", style="bright_green") # Use bright_green
+                else:
+                    model_text.append("❌", style="bright_red")   # Use bright_red
+                status_texts.append(model_text)
+            content = Text("\n").join(status_texts)
+
+    # Ensure title is Text if it's a string with markup, or already Text
+    panel_title = title if isinstance(title, Text) else Text.from_markup(title)
+    panel = Panel(content, title=panel_title, border_style="blue", expand=False, padding=(1, 2))
     console.print(panel)
 
 def run_qrew():

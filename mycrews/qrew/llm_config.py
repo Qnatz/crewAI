@@ -100,26 +100,25 @@ def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_a
         An LLM instance or None if configuration fails or API key is missing.
     """
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    # Early exit if API key is missing. We log against agent_identifier as model isn't determined yet.
     if not GEMINI_API_KEY:
         # print(f"GEMINI_API_KEY not found in environment. Cannot initialize LLM for agent '{agent_identifier}'.") # Suppressed
-        llm_initialization_statuses.append((agent_identifier, False))
+        llm_initialization_statuses.append((f"API_KEY_ERROR_FOR_{agent_identifier}", False)) # Clarify it's an API key issue for this agent
         return None
 
     # Determine the model string: use agent-specific if defined, else use the model specified by default_model_key
     chosen_model_string = MODEL_BY_AGENT.get(agent_identifier)
-    model_to_log = agent_identifier # Default to agent_identifier for logging
 
     if not chosen_model_string:
         # print(f"No specific model found for agent '{agent_identifier}'. Using default model key: '{default_model_key}'.") # Suppressed
         chosen_model_string = MODEL_BY_AGENT.get(default_model_key)
         if not chosen_model_string: # Should not happen if default_model_key is in MODEL_BY_AGENT
              # print(f"Error: Default model key '{default_model_key}' not found in MODEL_BY_AGENT. Cannot configure LLM for '{agent_identifier}'.") # Suppressed
-             # Log failure against the original agent_identifier
-             llm_initialization_statuses.append((agent_identifier, False))
+             # Log failure against the agent_identifier as chosen_model_string is unresolved.
+             llm_initialization_statuses.append((f"CONFIG_ERROR_FOR_{agent_identifier}", False)) # Clarify config issue
              return None
-        # If default is used, log status against a more descriptive name if possible, or agent_identifier
-        model_to_log = f"{agent_identifier} (using default: {default_model_key})"
-
+        # If default is used, chosen_model_string now correctly holds the default model string.
+        # No need to alter chosen_model_string for logging here; it's already the actual model key.
 
     # print(f"Configuring LLM for agent '{agent_identifier}' with model: '{chosen_model_string}'...") # Suppressed
 
@@ -128,11 +127,11 @@ def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_a
         # print(f"Configuring LLM with num_retries=3 for agent '{agent_identifier}'.") # Suppressed
         llm = LLM(model=chosen_model_string, num_retries=3)
         # print(f"Successfully initialized LLM for agent '{agent_identifier}' with model '{chosen_model_string}'.") # Suppressed
-        llm_initialization_statuses.append((model_to_log, True))
+        llm_initialization_statuses.append((chosen_model_string, True)) # Log actual model key
         return llm
     except Exception as e:
         # print(f"Failed to initialize LLM for agent '{agent_identifier}' with model '{chosen_model_string}': {e}") # Suppressed (Note: Exception details also suppressed)
-        llm_initialization_statuses.append((model_to_log, False))
+        llm_initialization_statuses.append((chosen_model_string, False)) # Log actual model key
         return None
 
 # Global default LLM for general use by Crews or as a fallback if an agent-specific one isn't assigned directly.
