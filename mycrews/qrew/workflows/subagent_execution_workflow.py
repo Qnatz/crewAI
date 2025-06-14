@@ -77,45 +77,84 @@ def validate_and_extract_code_output(task_output: TaskOutput) -> tuple[bool, Any
 
 def run_subagent_execution_workflow(inputs: dict):
     # Backend implementation
-    backend_crew = Crew(
-        agents=[api_creator_agent, data_model_agent],
-        tasks=create_backend_tasks(inputs["crew_assignment"]["backend_plan"]),
-        process=Process.sequential,
-        verbose=True
-    )
-    backend_result = backend_crew.kickoff()
+    backend_tasks = create_backend_tasks(inputs["crew_assignment"]["backend_plan"])
+    if backend_tasks:
+        backend_crew = Crew(
+            agents=[api_creator_agent, data_model_agent],
+            tasks=backend_tasks,
+            process=Process.sequential,
+            verbose=True
+        )
+        backend_result = backend_crew.kickoff()
+    else:
+        backend_result = None
+        print("Skipping backend_crew execution as no tasks were generated.")
 
     # Web implementation
-    web_crew = Crew(
-        agents=[dynamic_page_builder_agent],
-        tasks=create_web_tasks(inputs["crew_assignment"]["frontend_plan"]),
-        process=Process.sequential,
-        verbose=True
-    )
-    web_result = web_crew.kickoff()
+    web_tasks = create_web_tasks(inputs["crew_assignment"]["frontend_plan"])
+    if web_tasks:
+        web_crew = Crew(
+            agents=[dynamic_page_builder_agent],
+            tasks=web_tasks,
+            process=Process.sequential,
+            verbose=True
+        )
+        web_result = web_crew.kickoff()
+    else:
+        web_result = None
+        print("Skipping web_crew execution as no tasks were generated.")
 
     # Mobile implementation
-    mobile_crew = Crew(
-        agents=[android_ui_agent, ios_ui_agent],
-        tasks=create_mobile_tasks(inputs["crew_assignment"]["mobile_plan"]),
-        process=Process.sequential,
-        verbose=True
-    )
-    mobile_result = mobile_crew.kickoff()
+    mobile_tasks = create_mobile_tasks(inputs["crew_assignment"]["mobile_plan"])
+    if mobile_tasks:
+        mobile_crew = Crew(
+            agents=[android_ui_agent, ios_ui_agent],
+            tasks=mobile_tasks,
+            process=Process.sequential,
+            verbose=True
+        )
+        mobile_result = mobile_crew.kickoff()
+    else:
+        mobile_result = None
+        print("Skipping mobile_crew execution as no tasks were generated.")
 
     # DevOps implementation
-    devops_crew = Crew(
-        agents=[devops_agent],
-        tasks=create_devops_tasks(inputs["crew_assignment"]["deployment_plan"]),
-        process=Process.sequential,
-        verbose=True
-    )
-    devops_result = devops_crew.kickoff()
+    devops_tasks = create_devops_tasks(inputs["crew_assignment"]["deployment_plan"])
+    if devops_tasks:
+        devops_crew = Crew(
+            agents=[devops_agent],
+            tasks=devops_tasks,
+            process=Process.sequential,
+            verbose=True
+        )
+        devops_result = devops_crew.kickoff()
+    else:
+        devops_result = None
+        print("Skipping devops_crew execution as no tasks were generated.")
+
+    # from crewai.tasks.task_output import TaskOutput # Repeated here for clarity in subtask, ensure it's at file top
 
     def extract_outputs(crew_output):
-        if crew_output and crew_output.tasks_output:
-            return [task_out.raw for task_out in crew_output.tasks_output if task_out is not None and hasattr(task_out, 'raw')]
-        return ["Error: No output found for this crew segment."]
+        if crew_output and hasattr(crew_output, 'tasks_output') and crew_output.tasks_output:
+            # Filter out None task_out objects more carefully
+            raw_outputs = []
+            for task_out in crew_output.tasks_output:
+                if task_out is not None and hasattr(task_out, 'raw') and task_out.raw is not None: # Check .raw is not None
+                    raw_outputs.append(task_out.raw)
+                elif task_out is not None and (not hasattr(task_out, 'raw') or task_out.raw is None): # .raw missing or None
+                    # If task_out exists but .raw is missing/None, it might be an error or different structure
+                    raw_outputs.append(f"Warning: Task output found but '.raw' attribute missing or None. Task description: '{getattr(task_out, 'description', 'N/A')}'")
+
+            if not raw_outputs and crew_output.tasks_output: # tasks_output was not empty, but all .raw were None/missing or empty strings if .strip() was used
+                 return ["Warning: Tasks were present but yielded no processable raw output or failed internally."]
+            # If raw_outputs is empty after processing, it means no valid .raw content was found.
+            return raw_outputs if raw_outputs else ["Info: No raw output content found in completed tasks for this segment."]
+
+        elif crew_output is None:
+            return ["Info: No tasks were executed for this segment as the plan was empty."]
+
+        # This case handles if crew_output is not None, but doesn't have tasks_output or it's empty.
+        return ["Info: No tasks were run or no valid crew output for this segment."]
 
     return {
         "backend": extract_outputs(backend_result),
