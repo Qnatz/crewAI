@@ -11,7 +11,8 @@ if project_src_path not in sys.path:
     sys.path.insert(1, project_src_path)
 
 # Ensure the llm_config is loaded first
-from .llm_config import default_llm
+# We'll import llm_initialization_statuses after modifying llm_config.py
+from .llm_config import default_llm, llm_initialization_statuses # Adjusted import
 from . import config as crew_config
 
 # TaskMasterAgent import is removed as it's handled by the orchestrator's "taskmaster" stage
@@ -22,61 +23,161 @@ os.environ["LITELLM_DEBUG"] = "0" # Disabled debug for cleaner output, can be "1
 from .workflows.orchestrator import WorkflowOrchestrator
 from .project_manager import ProjectStateManager # Added import
 
+def display_model_initialization_status(title: str, statuses: list[tuple[str, bool]]):
+    """Displays the initialization status of models in a formatted box."""
+    print(f"\n{title}")
+    if not statuses:
+        print("No models to display status for in this category.")
+    else:
+        for model_name, status in statuses:
+            icon = "✔️" if status else "❌"
+            print(f"{model_name}: {icon}")
+    print("-" * (len(title) if len(title) > 20 else 20)) # Adjust width based on title or min width
+
 def run_qrew():
-    print("Initializing Qrew System...")
+    # Display LLM initialization status first
+    # Note: llm_initialization_statuses is populated when llm_config.py is imported
+    display_model_initialization_status("--- LLM Initialization ---", llm_initialization_statuses)
 
-    # --- Project Setup ---
-    # project_name = "FitnessTrackerApp" # Example project name - This is now determined by Taskmaster
-    # print(f"\nStarting/Resuming project: {project_name}") # Moved to after orchestrator run
+    # Placeholder for TFLite and other models as per requirements
+    display_model_initialization_status("--- TFLite Model Initialization ---", [])
+    # Example with placeholder models:
+    # display_model_initialization_status("--- Other Model Initialization ---", [("Embedding Model", True), ("Another Model", False)])
 
-    # State manager is now primarily managed by the orchestrator.
-    # Pre-run checks for resume point are removed as project name isn't known yet.
-    # temp_state_manager_for_info = ProjectStateManager(project_name)
-    # resume_point_check = temp_state_manager_for_info.resume_point()
-    # project_path = temp_state_manager_for_info.project_info["path"] # Get project path for saving final output
+    print("\nInitializing Qrew System...") # Original print statement
 
-    # if temp_state_manager_for_info.state.get("status") == "completed":
-    #     print(f"Project '{project_name}' is already marked as completed.")
-    # elif resume_point_check:
-    #     print(f"Resuming existing project at stage: {resume_point_check}")
-    # else:
-    #     print(f"Project status: {temp_state_manager_for_info.state.get('status')}. Orchestrator will determine next steps.")
-    print("Project name will be determined by the Taskmaster workflow.")
+    # --- Helper function to list projects ---
+    def list_available_projects():
+        projects_dir = os.path.join(project_root, "mycrews", "qrew", "projects")
+        if not os.path.isdir(projects_dir):
+            return []
 
-    # --- Inputs Preparation ---
-    sample_user_request = "Create a simple, modern, single-page responsive website for a personal portfolio. It should include: a navigation bar, a header/hero section with my name and title, an 'About Me' section, a 'Projects' section (with placeholders for 2-3 projects including a title, short description, and an image placeholder for each), and a simple footer with copyright information. The design should be clean and professional."
-    sample_project_goal = "Develop a clean, professional, single-page personal portfolio website to showcase skills and projects."
-    sample_priority = "High" # This might be used by taskmaster or other stages
+        project_folders = []
+        for item in os.listdir(projects_dir):
+            if os.path.isdir(os.path.join(projects_dir, item)):
+                # Attempt to read project name from state.json if it exists
+                state_file_path = os.path.join(projects_dir, item, "state.json")
+                if os.path.exists(state_file_path):
+                    try:
+                        with open(state_file_path, 'r') as f:
+                            state_data = json.load(f)
+                            project_name_from_state = state_data.get("project_name")
+                            if project_name_from_state:
+                                project_folders.append(project_name_from_state)
+                            else:
+                                project_folders.append(item) # Fallback to folder name
+                    except json.JSONDecodeError:
+                        project_folders.append(item) # Fallback if state.json is malformed
+                else:
+                    project_folders.append(item) # Fallback if no state.json
+        return project_folders
 
-    # These were previously passed to taskmaster, now part of initial inputs for the orchestrator
-    # The 'taskmaster' stage in the orchestrator will handle this.
-    # taskmaster_result will be an artifact produced by the "taskmaster" stage.
+    # --- Taskmaster Initialization / User Input ---
+    print("\n--- Taskmaster Initialization ---")
 
-    sample_stakeholder_feedback = "The site must be mobile-responsive and load quickly. It should be easy to add or update project details in the future."
-    sample_market_research = "Single-page portfolios are common for individuals. Emphasis on clean design and clear presentation of work. Contact forms are common but not essential for this first version."
-    sample_project_constraints = "To be built using HTML, CSS, and vanilla JavaScript (if necessary for minor interactivity). No backend database or server-side logic is required for this version. The site should be deployable as static files on any standard web hosting."
-    sample_technical_vision = "A lightweight, fast-loading static website. Code should be well-structured, semantic HTML and maintainable CSS. JavaScript usage should be minimal and purposeful."
+    user_request = ""
+    project_name_for_orchestrator = None # Will be passed to orchestrator if a project is selected
+    pipeline_inputs = {}
 
-    pipeline_inputs = {
-        # "project_name": project_name, # Removed: Orchestrator will derive this via Taskmaster
-        "user_request": sample_user_request,
-        "project_goal": sample_project_goal,
-        "priority": sample_priority,
-        "stakeholder_feedback": sample_stakeholder_feedback,
-        "market_research_data": sample_market_research, # Ensure key matches idea_to_architecture
-        "constraints": sample_project_constraints,
-        "technical_vision": sample_technical_vision
-        # 'user_idea' was previously taskmaster_result. The 'architecture' flow expects 'user_idea'.
-        # The 'taskmaster' stage in the orchestrator should produce an artifact,
-        # which then becomes available for subsequent stages like 'architecture'.
-        # The orchestrator now handles passing artifacts.
-    }
+    available_projects = list_available_projects()
+    if available_projects:
+        print("Available Projects:")
+        for i, name in enumerate(available_projects):
+            print(f"{i + 1}. {name}")
+        print("-" * 30) # Separator
 
-    print("\nInitiating data pipeline with dynamic project determination...")
+    prompt_message = "Write your new idea or select an existing project number (e.g., '1'): "
+    user_input_str = input(prompt_message)
+
+    selected_project_state = None # To store loaded state for existing projects
+
+    try:
+        selected_index = int(user_input_str) - 1
+        if 0 <= selected_index < len(available_projects):
+            project_name_for_orchestrator = available_projects[selected_index]
+            print(f"Selected existing project: {project_name_for_orchestrator}")
+
+            # Attempt to load state for the selected project
+            temp_state_manager = ProjectStateManager(project_name_for_orchestrator)
+            selected_project_state = temp_state_manager.state # state is loaded in ProjectStateManager's __init__
+
+            if selected_project_state.get("status") == "completed":
+                print(f"Project '{project_name_for_orchestrator}' is already marked as completed.")
+                print("If you want to re-run or start a new version, please provide a new idea or modify the project name.")
+                # Optionally, exit or loop back to input prompt
+                return # Exit run_qrew if project is completed.
+
+            user_request = selected_project_state.get("artifacts", {}).get("taskmaster", {}).get("refined_brief", "")
+            if not user_request: # Fallback if refined_brief is not found
+                user_request = selected_project_state.get("user_request", f"Continuing project: {project_name_for_orchestrator}") # Original user_request if available
+
+            pipeline_inputs["project_name"] = project_name_for_orchestrator
+        else:
+            print("Invalid project number. Treating input as a new idea.")
+            project_name_for_orchestrator = None # Ensure it's None for new ideas
+            user_request = user_input_str
+    except ValueError:
+        # Input is not a number, so it's a new idea
+        print("Input treated as a new idea.")
+        project_name_for_orchestrator = None # Ensure it's None for new ideas
+        user_request = user_input_str
+
+    # --- Conditional Inputs Preparation ---
+    if project_name_for_orchestrator is None: # New Project
+        print("Processing as a new project idea.")
+        pipeline_inputs.update({
+            "user_request": user_request,
+            "project_goal": "To be defined by Taskmaster based on user request.",
+            "priority": "Medium",
+            "stakeholder_feedback": "To be gathered or assumed standard.",
+            "market_research_data": "To be gathered or assumed standard.",
+            "constraints": "Standard web technologies, static site unless specified otherwise.",
+            "technical_vision": "Clean, maintainable code. Scalable architecture."
+            # project_name is NOT set here for new projects
+        })
+    else: # Existing Project Selected
+        print(f"Preparing to resume project: {project_name_for_orchestrator}")
+        # Use loaded state if available, otherwise use placeholders
+        taskmaster_artifacts = selected_project_state.get("artifacts", {}).get("taskmaster", {})
+
+        pipeline_inputs.update({
+            "user_request": user_request, # Already set from state or as placeholder
+            "project_name": project_name_for_orchestrator, # Already set
+            "project_goal": selected_project_state.get("project_goal", taskmaster_artifacts.get("project_goal", "Resume existing project goals.")),
+            "priority": selected_project_state.get("priority", "As per existing project state."),
+            "stakeholder_feedback": selected_project_state.get("stakeholder_feedback", taskmaster_artifacts.get("stakeholder_feedback", "N/A - Resuming project")),
+            "market_research_data": selected_project_state.get("market_research_data", taskmaster_artifacts.get("market_research_data", "N/A - Resuming project")),
+            "constraints": selected_project_state.get("constraints", taskmaster_artifacts.get("constraints", "As per existing project state.")),
+            "technical_vision": selected_project_state.get("technical_vision", taskmaster_artifacts.get("technical_vision", "As per existing project state.")),
+            # Include other artifacts if they are needed by early stages when resuming
+            "refined_brief": taskmaster_artifacts.get("refined_brief", user_request), # refined_brief is often key
+            "is_new_project": False # Explicitly false for existing projects
+        })
+        # Add other top-level state items or specific artifacts if needed by orchestrator/stages
+        # For example, if 'architecture' stage needs 'user_idea' (which might be refined_brief)
+        if "refined_brief" in pipeline_inputs:
+             pipeline_inputs["user_idea"] = pipeline_inputs["refined_brief"]
+
+
+    # --- Old Inputs Preparation (Commented Out) ---
+
+    # --- Old Inputs Preparation (Commented Out) ---
+    # sample_user_request = "Create a simple, modern, single-page responsive website for a personal portfolio..."
+    # sample_project_goal = "Develop a clean, professional, single-page personal portfolio website..."
+    # ... (other sample variables) ...
+    # pipeline_inputs = { ... }
+
+    print(f"\nInitiating data pipeline. Project hint: {project_name_for_orchestrator if project_name_for_orchestrator else 'New Project'}")
+    print(f"User request for pipeline: {pipeline_inputs.get('user_request')}")
+
 
     # --- Execute Pipeline ---
-    orchestrator = WorkflowOrchestrator() # Initialize without project_name
+    # Pass project_name_for_orchestrator to WorkflowOrchestrator constructor
+    # This allows it to load the project state if a project name is provided.
+    orchestrator = WorkflowOrchestrator(project_name=project_name_for_orchestrator)
     try:
+        # pipeline_inputs already contains 'project_name' if one was selected,
+        # or it doesn't if it's a new idea (Taskmaster will create it).
         results = orchestrator.execute_pipeline(pipeline_inputs)
 
         # The orchestrator's ProjectStateManager instance holds the final state

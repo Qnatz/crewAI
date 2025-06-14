@@ -3,6 +3,9 @@ import os
 from crewai import LLM
 from typing import Optional # For type hinting LLM | None
 
+# List to store initialization statuses
+llm_initialization_statuses = []
+
 # Define the mapping of agent identifiers to specific Gemini model strings
 MODEL_BY_AGENT = {
     # Auth Agents
@@ -99,17 +102,23 @@ def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_a
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
     if not GEMINI_API_KEY:
         print(f"GEMINI_API_KEY not found in environment. Cannot initialize LLM for agent '{agent_identifier}'.")
+        llm_initialization_statuses.append((agent_identifier, False))
         return None
 
     # Determine the model string: use agent-specific if defined, else use the model specified by default_model_key
     chosen_model_string = MODEL_BY_AGENT.get(agent_identifier)
+    model_to_log = agent_identifier # Default to agent_identifier for logging
 
     if not chosen_model_string:
         print(f"No specific model found for agent '{agent_identifier}'. Using default model key: '{default_model_key}'.")
         chosen_model_string = MODEL_BY_AGENT.get(default_model_key)
         if not chosen_model_string: # Should not happen if default_model_key is in MODEL_BY_AGENT
              print(f"Error: Default model key '{default_model_key}' not found in MODEL_BY_AGENT. Cannot configure LLM for '{agent_identifier}'.")
+             # Log failure against the original agent_identifier
+             llm_initialization_statuses.append((agent_identifier, False))
              return None
+        # If default is used, log status against a more descriptive name if possible, or agent_identifier
+        model_to_log = f"{agent_identifier} (using default: {default_model_key})"
 
 
     print(f"Configuring LLM for agent '{agent_identifier}' with model: '{chosen_model_string}'...")
@@ -119,19 +128,30 @@ def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_a
         print(f"Configuring LLM with num_retries=3 for agent '{agent_identifier}'.")
         llm = LLM(model=chosen_model_string, num_retries=3)
         print(f"Successfully initialized LLM for agent '{agent_identifier}' with model '{chosen_model_string}'.")
+        llm_initialization_statuses.append((model_to_log, True))
         return llm
     except Exception as e:
         print(f"Failed to initialize LLM for agent '{agent_identifier}' with model '{chosen_model_string}': {e}")
+        llm_initialization_statuses.append((model_to_log, False))
         return None
 
 # Global default LLM for general use by Crews or as a fallback if an agent-specific one isn't assigned directly.
 # The "default_crew_llm" key in MODEL_BY_AGENT specifies which model this should be.
 default_crew_llm = get_llm_for_agent("default_crew_llm", "gemini/gemini-1.5-flash") # Ensure "gemini/gemini-1.5-flash" is a fallback if key is missing
 
+# The initialization of default_crew_llm itself will append to llm_initialization_statuses via get_llm_for_agent.
+# So, no separate print or status update is needed here for default_crew_llm's own initialization.
+# We can add a general print statement that confirms its status based on the list, if desired, for clarity.
+
 if not default_crew_llm:
-    print("llm_config.py: `default_crew_llm` could not be initialized. Crews may need LLMs passed explicitly or rely on other fallbacks.")
+    # This specific print is useful because it indicates a critical failure for the default LLM.
+    # The status list will reflect this, but an explicit message here is fine.
+    print("llm_config.py: `default_crew_llm` (and thus `default_llm`) could not be initialized. This is critical.")
+    # Ensure its status is logged if get_llm_for_agent failed before appending (e.g. API key missing early)
+    # However, get_llm_for_agent should handle appending its own failure.
 else:
-    print(f"llm_config.py: `default_crew_llm` initialized with model '{MODEL_BY_AGENT.get('default_crew_llm', 'gemini/gemini-1.5-flash')}'.")
+    # This print is mostly for confirmation during script load. The status list is the source of truth for display.
+    print(f"llm_config.py: `default_crew_llm` (and `default_llm`) initialization attempt completed. Check status list for details.")
 
 # Note: The old `default_llm` variable is no longer the primary way to get LLMs.
 # Agents/Crews should ideally call `get_llm_for_agent(their_identifier)` or be passed an LLM.
@@ -142,7 +162,19 @@ else:
 # However, to maintain compatibility with how `main.py` currently imports `default_llm`,
 # we can alias `default_crew_llm` to `default_llm` for now.
 default_llm = default_crew_llm
-if default_llm:
-    print(f"llm_config.py: `default_llm` (alias for `default_crew_llm`) is ready.")
-else:
-    print(f"llm_config.py: `default_llm` (alias for `default_crew_llm`) is None.")
+# The status of default_llm is already captured by the call to get_llm_for_agent for 'default_crew_llm'.
+# No need for further status updates or prints here regarding default_llm specifically,
+# as they would be redundant with the get_llm_for_agent logging and status list.
+
+# Final check for clarity in logs (optional)
+# found_default_status = False
+# for name, status in llm_initialization_statuses:
+#     if name == "default_crew_llm" or name.startswith("default_crew_llm "): # Handles the modified name if default was used
+#         found_default_status = True
+#         print(f"llm_config.py: `default_llm` (alias for `default_crew_llm`) status in list: {'Ready' if status else 'Failed'}.")
+#         break
+# if not found_default_status:
+#     print("llm_config.py: Status for `default_crew_llm` not found in list, this might indicate an issue before status recording.")
+
+# The print statements within get_llm_for_agent and the one for default_crew_llm initialization failure
+# are sufficient for console feedback during module load. The UI display will use llm_initialization_statuses.
