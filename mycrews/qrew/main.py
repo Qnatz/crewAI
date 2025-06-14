@@ -83,135 +83,28 @@ def run_qrew():
     # Keeping the original print for now, as the focus is on the status boxes.
     print("\nInitializing Qrew System...")
 
-    # --- Helper function to list projects ---
-    def list_available_projects():
-        projects_dir = os.path.join(project_root, "mycrews", "qrew", "projects")
-        if not os.path.isdir(projects_dir):
-            return []
-
-        project_folders = []
-        for item in os.listdir(projects_dir):
-            if os.path.isdir(os.path.join(projects_dir, item)):
-                # Attempt to read project name from state.json if it exists
-                state_file_path = os.path.join(projects_dir, item, "state.json")
-                if os.path.exists(state_file_path):
-                    try:
-                        with open(state_file_path, 'r') as f:
-                            state_data = json.load(f)
-                            project_name_from_state = state_data.get("project_name")
-                            if project_name_from_state:
-                                project_folders.append(project_name_from_state)
-                            else:
-                                project_folders.append(item) # Fallback to folder name
-                    except json.JSONDecodeError:
-                        project_folders.append(item) # Fallback if state.json is malformed
-                else:
-                    project_folders.append(item) # Fallback if no state.json
-        return project_folders
-
-    # --- Taskmaster Initialization / User Input ---
-    user_request = ""
-    project_name_for_orchestrator = None
-    pipeline_inputs = {}
-    selected_project_state = None
-
-    available_projects = list_available_projects()
-
-    taskmaster_content_texts = []
-    if available_projects:
-        taskmaster_content_texts.append(Text("Available Projects:", style="bold green"))
-        for i, name in enumerate(available_projects):
-            taskmaster_content_texts.append(Text(f"  {i+1}. {name}"))
-    else:
-        taskmaster_content_texts.append(Text("No existing projects found.", style="italic yellow"))
-
-    taskmaster_content_texts.append(Text("\nWrite your new idea or select an existing project number:", style="cyan"))
-
-    combined_content = Text("\n").join(taskmaster_content_texts)
-
-    taskmaster_panel = Panel(
-        combined_content,
-        title="[bold magenta]Taskmaster Initialization[/bold magenta]",
-        border_style="magenta",
-        padding=(1, 2)
-    )
-    console.print(taskmaster_panel)
-
-    # Use Prompt.ask for input, placed after the panel displaying options and prompt instructions.
-    user_input_str = Prompt.ask(Text("Your choice", style="bold default"))
-
-    try:
-        selected_index = int(user_input_str) - 1
-        if 0 <= selected_index < len(available_projects):
-            project_name_for_orchestrator = available_projects[selected_index]
-            console.print(Text(f"Selected existing project: '{project_name_for_orchestrator}'", style="bold blue"))
-
-            temp_state_manager = ProjectStateManager(project_name_for_orchestrator)
-            selected_project_state = temp_state_manager.state
-
-            if selected_project_state.get("status") == "completed":
-                console.print(Panel(Text(f"Project '{project_name_for_orchestrator}' is already marked as completed.\nIf you want to re-run or start a new version, please provide a new idea or modify the project name.", style="yellow"), title="[bold red]Project Completed[/bold red]", border_style="red", expand=False))
-                return
-
-            user_request = selected_project_state.get("artifacts", {}).get("taskmaster", {}).get("refined_brief", "")
-            if not user_request:
-                user_request = selected_project_state.get("user_request", f"Continuing project: {project_name_for_orchestrator}") # Fallback
-
-            pipeline_inputs["project_name"] = project_name_for_orchestrator
-        else:
-            # Invalid number
-            console.print(Text(f"Invalid selection '{user_input_str}'. Treating input as a new idea.", style="yellow"))
-            project_name_for_orchestrator = None
-            user_request = user_input_str # The full input string is the new idea
-    except ValueError:
-        # Input is not a number, so it's a new idea
-        console.print(Text(f"Input '{user_input_str}' treated as a new idea.", style="italic"))
-        project_name_for_orchestrator = None
-        user_request = user_input_str
-
-    if project_name_for_orchestrator is None:
-        console.print(Text(f"\nProcessing as a new project idea: '{user_request}'", style="bold"))
-        pipeline_inputs.update({
-            "user_request": user_request,
-            "project_goal": "To be defined by Taskmaster based on user request.",
-            "priority": "Medium",
-            "stakeholder_feedback": "To be gathered or assumed standard.",
-            "market_research_data": "To be gathered or assumed standard.",
-            "constraints": "Standard web technologies, static site unless specified otherwise.",
-            "technical_vision": "Clean, maintainable code. Scalable architecture."
-        })
-    else:
-        console.print(Text(f"Preparing to resume project: {project_name_for_orchestrator}", style="bold"))
-        taskmaster_artifacts = selected_project_state.get("artifacts", {}).get("taskmaster", {})
-
-        pipeline_inputs.update({
-            "user_request": user_request,
-            "project_name": project_name_for_orchestrator,
-            "project_goal": selected_project_state.get("project_goal", taskmaster_artifacts.get("project_goal", "Resume existing project goals.")),
-            "priority": selected_project_state.get("priority", "As per existing project state."),
-            "stakeholder_feedback": selected_project_state.get("stakeholder_feedback", taskmaster_artifacts.get("stakeholder_feedback", "N/A - Resuming project")),
-            "market_research_data": selected_project_state.get("market_research_data", taskmaster_artifacts.get("market_research_data", "N/A - Resuming project")),
-            "constraints": selected_project_state.get("constraints", taskmaster_artifacts.get("constraints", "As per existing project state.")),
-            "technical_vision": selected_project_state.get("technical_vision", taskmaster_artifacts.get("technical_vision", "As per existing project state.")),
-            "refined_brief": taskmaster_artifacts.get("refined_brief", user_request),
-            "is_new_project": False
-        })
-        if "refined_brief" in pipeline_inputs:
-             pipeline_inputs["user_idea"] = pipeline_inputs["refined_brief"]
-
-    # console.print(f"\nInitiating data pipeline. Project hint: {project_name_for_orchestrator if project_name_for_orchestrator else 'New Project'}")
-    # console.print(f"User request for pipeline: {pipeline_inputs.get('user_request')}")
-    # The above can be made richer later if needed.
-
+    project_name_for_orchestrator = None # Crucial for mock triggering
+    mock_taskmaster_data = {
+       "project_name": "MockSocialPlatform",
+       "refined_brief": "Prompt 1 brief: Social platform for updates and following, for phones and computers.",
+       "is_new_project": True,
+       "recommended_next_stage": "architecture",
+       "project_scope": "full-stack"
+    }
+    pipeline_inputs = {"user_request": "Mocked: " + mock_taskmaster_data["refined_brief"]} # Minimal initial inputs
+    print(f"DEBUG: Using MOCKED Taskmaster data: {mock_taskmaster_data}")
+    print("DEBUG: Bypassing live user input for mocked Taskmaster run.")
 
     # --- Execute Pipeline ---
     # Pass project_name_for_orchestrator to WorkflowOrchestrator constructor
     # This allows it to load the project state if a project name is provided.
+    # For mocked run, project_name_for_orchestrator is None, so orchestrator.state will be None initially.
     orchestrator = WorkflowOrchestrator(project_name=project_name_for_orchestrator)
     try:
         # pipeline_inputs already contains 'project_name' if one was selected,
         # or it doesn't if it's a new idea (Taskmaster will create it).
-        results = orchestrator.execute_pipeline(pipeline_inputs)
+        # Pass the mock_taskmaster_data to execute_pipeline
+        results = orchestrator.execute_pipeline(pipeline_inputs, mock_taskmaster_output=mock_taskmaster_data)
 
         # The orchestrator's ProjectStateManager instance holds the final state
         final_state_manager = orchestrator.state

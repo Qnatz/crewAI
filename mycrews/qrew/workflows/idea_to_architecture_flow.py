@@ -58,7 +58,6 @@ def _perform_architecture_generation(inputs: dict):
         description=idea_interpretation_task_desc,
         agent=idea_interpreter_agent,
         expected_output=idea_interpretation_expected_output,
-        guardrail="Ensure the output is a detailed technical requirements specification document in Markdown. It must not be empty and should cover user stories, functional, and non-functional requirements.",
         max_retries=1
     )
 
@@ -135,7 +134,6 @@ def _perform_architecture_generation(inputs: dict):
         description=project_architecture_task_desc,
         agent=project_architect_agent,
         expected_output=project_architecture_expected_output,
-        guardrail="Ensure the output is a detailed software architecture document in Markdown. It must cover system diagrams, tech stack, data model, and API design guidelines.",
         max_retries=1
     )
 

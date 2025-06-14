@@ -28,5 +28,30 @@
     "name": "TestDocs",
     "id": "testdocs_e265d12e",
     "path": "/app/mycrews/qrew/projects/testdocs_e265d12e"
+  },
+  "mocksocialplatformprompt1_1ae98e17": {
+    "name": "MockSocialPlatformPrompt1",
+    "id": "mocksocialplatformprompt1_1ae98e17",
+    "path": "/app/mycrews/qrew/projects/mocksocialplatformprompt1_1ae98e17"
+  },
+  "testdocsarchfix_6c38ddff": {
+    "name": "TestDocsArchFix",
+    "id": "testdocsarchfix_6c38ddff",
+    "path": "/app/mycrews/qrew/projects/testdocsarchfix_6c38ddff"
+  },
+  "mocksocialplatformarchfix_595ff36b": {
+    "name": "MockSocialPlatformArchFix",
+    "id": "mocksocialplatformarchfix_595ff36b",
+    "path": "/app/mycrews/qrew/projects/mocksocialplatformarchfix_595ff36b"
+  },
+  "mocksocialplatformcrewleadfix_3b041be6": {
+    "name": "MockSocialPlatformCrewLeadFix",
+    "id": "mocksocialplatformcrewleadfix_3b041be6",
+    "path": "/app/mycrews/qrew/projects/mocksocialplatformcrewleadfix_3b041be6"
+  },
+  "mocksocialtimeouttest_55a9d73f": {
+    "name": "MockSocialTimeoutTest",
+    "id": "mocksocialtimeouttest_55a9d73f",
+    "path": "/app/mycrews/qrew/projects/mocksocialtimeouttest_55a9d73f"
   }
 }

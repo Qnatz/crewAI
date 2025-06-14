@@ -9,7 +9,7 @@
   "artifacts": {
     "taskmaster": {
       "project_name": "MockSocialPlatform",
-      "refined_brief": "Mocked brief for Prompt 1: Social platform for updates and following, for phones and computers.",
+      "refined_brief": "Prompt 1 brief: Social platform for updates and following, for phones and computers.",
       "is_new_project": true,
       "recommended_next_stage": "architecture",
       "project_scope": "full-stack"
@@ -25,15 +25,27 @@
       "stage": "taskmaster",
       "success": true,
       "message": "Completed successfully",
-      "timestamp": "2025-06-14T20:51:31.684427"
+      "timestamp": "2025-06-14T21:40:00.410962"
     },
     {
       "stage": "architecture",
       "success": true,
       "message": "Completed successfully",
-      "timestamp": "2025-06-14T20:52:09.372244"
+      "timestamp": "2025-06-14T21:40:00.411007"
+    },
+    {
+      "stage": "taskmaster",
+      "success": true,
+      "message": "Completed successfully",
+      "timestamp": "2025-06-14T21:40:00.411427"
+    },
+    {
+      "stage": "crew_assignment",
+      "success": false,
+      "message": "Stage crew_assignment failed: Invalid response from LLM call - None or empty.",
+      "timestamp": "2025-06-14T21:43:24.894018"
     }
   ],
-  "status": "in_progress",
-  "updated_at": "2025-06-14T20:52:09.372873"
+  "status": "failed",
+  "updated_at": "2025-06-14T21:43:24.894029"
 }

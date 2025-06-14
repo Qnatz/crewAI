@@ -107,11 +107,9 @@ def run_crew_lead_workflow(inputs: dict):
 
     # Define task details (can be further templatized)
     task_expected_output_template = (
-        "CRITICAL WARNING: Your entire response MUST be a single, valid JSON object and NOTHING ELSE. "
-        "No explanatory text, apologies, or markdown formatting (like ```json or ```) should precede or follow the JSON object. "
-        "It must start with '{{' and end with '}}'. Ensure all strings within the JSON are correctly escaped. "
-        "The JSON object must have a single key 'tasks', and its value must be a list of strings, "
-        "where each string is a detailed task description for {domain} implementation."
+        "Output a JSON object with a single key 'tasks'. The value of 'tasks' must be a list of strings. "
+        "Each string should be a detailed task description for {domain} implementation. "
+        "Example: {{'tasks': ['Design the user login API endpoint.', 'Implement the user database schema.']}}"
     )
 
     backend_task_details = {
