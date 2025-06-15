@@ -176,3 +176,63 @@ class ProjectStateManager:
 
     def get_summary(self):
         return self.error_summary
+
+    @staticmethod
+    def list_projects():
+        if not PROJECTS_INDEX.exists():
+            return []
+
+        try:
+            index_data = json.loads(PROJECTS_INDEX.read_text())
+        except json.JSONDecodeError:
+            return [] # Index is corrupted
+
+        projects_list = []
+        for project_key, project_info in index_data.items():
+            project_name = project_info.get("name", "Unknown Project")
+            project_id = project_info.get("id", project_key) # Use key if id is missing
+            project_path_str = project_info.get("path")
+
+            if not project_path_str:
+                projects_list.append({
+                    "key": project_id,
+                    "name": project_name,
+                    "status": "Error - Path missing",
+                    "last_updated": "N/A",
+                    "path": "N/A"
+                })
+                continue
+
+            state_file_path = Path(project_path_str) / "state.json"
+            status = "Unknown"
+            last_updated = "N/A"
+
+            if state_file_path.exists():
+                try:
+                    state_data = json.loads(state_file_path.read_text())
+                    status = state_data.get("status", "Unknown")
+                    last_updated = state_data.get("updated_at", state_data.get("created_at", "N/A"))
+                    # Attempt to parse and reformat last_updated for better readability if it's ISO format
+                    try:
+                        # Ensure last_updated is a string before attempting to replace 'Z'
+                        if isinstance(last_updated, str):
+                             dt_obj = datetime.fromisoformat(last_updated.replace("Z", "+00:00"))
+                             last_updated = dt_obj.strftime("%Y-%m-%d %H:%M:%S %Z")
+                    except (ValueError, AttributeError): # Handle if not a string or not ISO
+                        pass # Keep original last_updated string
+                except json.JSONDecodeError:
+                    status = "Error - State file corrupted"
+            else:
+                status = "Error - State file missing"
+
+            projects_list.append({
+                "key": project_id,
+                "name": project_name,
+                "status": status,
+                "last_updated": last_updated,
+                "path": project_path_str
+            })
+
+        # Sort projects by name for consistent display
+        projects_list.sort(key=lambda p: p["name"])
+        return projects_list

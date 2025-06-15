@@ -1,4 +1,5 @@
 import json
+import os # Added for os.path.join, os.makedirs, etc.
 from typing import Any, Optional
 from crewai import Crew, Task
 from crewai.tasks.task_output import TaskOutput
@@ -58,6 +59,7 @@ class WorkflowOrchestrator:
         "crew_assignment",
         "subagent_execution",
         "final_assembly",
+        "persist_generated_code", # New stage
         "project_finalization" # Ensure this is marked by ProjectStateManager
     ]
 
@@ -77,7 +79,95 @@ class WorkflowOrchestrator:
             "architecture": run_idea_to_architecture_workflow,
             "crew_assignment": run_crew_lead_workflow,
             "subagent_execution": run_subagent_execution_workflow,
-            "final_assembly": run_final_assembly_workflow
+            "final_assembly": run_final_assembly_workflow,
+            "persist_generated_code": self.run_persist_code_files_workflow # Added new workflow
+        }
+
+    def run_persist_code_files_workflow(self, inputs: dict):
+        print(f"DEBUG: Entering run_persist_code_files_workflow for project '{self.state.project_info.get('name', 'N/A')}'")
+        if not self.state or not self.state.project_info:
+            error_msg = "Error: Project state or project_info not initialized in persist_code_files_workflow."
+            print(error_msg)
+            return {"status": "error", "message": error_msg, "files_written": []}
+
+        project_path = self.state.project_info.get('path')
+        if not project_path:
+            error_msg = "Error: Project path not found in project_info."
+            print(error_msg)
+            return {"status": "error", "message": error_msg, "files_written": []}
+
+        final_assembly_artifacts = inputs.get("final_assembly", {})
+        if not isinstance(final_assembly_artifacts, dict): # Check if it's a dict
+            error_msg = f"Error: final_assembly artifacts are not in the expected dictionary format. Found: {type(final_assembly_artifacts)}"
+            print(error_msg)
+            # Try to access .raw if it's a TaskOutput object, as a common case
+            if hasattr(final_assembly_artifacts, 'raw') and isinstance(final_assembly_artifacts.raw, dict):
+                print("DEBUG: Attempting to use .raw attribute from final_assembly_artifacts.")
+                final_assembly_artifacts = final_assembly_artifacts.raw
+            else:
+                return {"status": "error", "message": error_msg, "files_written": []}
+
+
+        generated_files_dict = final_assembly_artifacts.get("generated_files", {})
+        if not generated_files_dict:
+            print("Info: No 'generated_files' found in final_assembly_artifacts or it's empty. No files to persist.")
+            return {"status": "success", "message": "No files to persist.", "files_written": [], "output_path": project_path}
+
+        if not isinstance(generated_files_dict, dict):
+            error_msg = f"Error: 'generated_files' is not a dictionary. Found: {type(generated_files_dict)}"
+            print(error_msg)
+            return {"status": "error", "message": error_msg, "files_written": []}
+
+        files_written_paths = []
+        errors_encountered = []
+
+        print(f"Persisting {len(generated_files_dict)} generated file(s) to path: {project_path}")
+        for file_path_in_manifest, code_content in generated_files_dict.items():
+            if not isinstance(file_path_in_manifest, str) or not file_path_in_manifest.strip():
+                print(f"Warning: Invalid file_path_in_manifest (empty or not a string): '{file_path_in_manifest}'. Skipping.")
+                errors_encountered.append(f"Invalid file path: {file_path_in_manifest}")
+                continue
+
+            if not isinstance(code_content, str):
+                if code_content is not None:
+                    print(f"Warning: Code content for '{file_path_in_manifest}' is not a string (type: {type(code_content)}). Will attempt to write as str().")
+                code_content = str(code_content) if code_content is not None else ""
+
+
+            try:
+                sanitized_relative_path = os.path.normpath(file_path_in_manifest.lstrip('/\\'))
+                if ".." in sanitized_relative_path.split(os.path.sep):
+                    print(f"Error: Invalid file path '{file_path_in_manifest}' contains '..'. Skipping for security.")
+                    errors_encountered.append(f"Path traversal attempt: {file_path_in_manifest}")
+                    continue
+
+                target_file_path = os.path.join(project_path, sanitized_relative_path)
+
+                os.makedirs(os.path.dirname(target_file_path), exist_ok=True)
+
+                with open(target_file_path, "w", encoding="utf-8") as f:
+                    f.write(code_content)
+                files_written_paths.append(sanitized_relative_path)
+                print(f"Successfully wrote: {target_file_path}")
+            except Exception as e:
+                error_msg = f"Error writing file '{file_path_in_manifest}' to '{target_file_path}': {e}"
+                print(error_msg)
+                errors_encountered.append(error_msg)
+
+        if errors_encountered:
+            return {
+                "status": "partial_success",
+                "message": "Completed persisting files, but some errors were encountered.",
+                "files_written": files_written_paths,
+                "errors": errors_encountered,
+                "output_path": project_path
+            }
+
+        return {
+            "status": "success",
+            "message": "All generated files persisted successfully.",
+            "files_written": files_written_paths,
+            "output_path": project_path
         }
 
     # run_idea_interpretation_workflow method will be deleted by removing all its lines.
@@ -179,7 +269,8 @@ class WorkflowOrchestrator:
             "architecture",
             "crew_assignment",
             "subagent_execution",
-            "final_assembly"
+            "final_assembly",
+            "persist_generated_code" # New stage
         ]
 
         stages_to_run = []

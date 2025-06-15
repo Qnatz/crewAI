@@ -4,7 +4,7 @@ import json
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-from rich.prompt import Prompt
+from rich.prompt import Prompt, InvalidResponse # Added InvalidResponse
 from collections import OrderedDict # To maintain order for display after processing
 # Add the project root (/app) to sys.path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')) # Corrected path
@@ -83,11 +83,59 @@ def run_qrew():
     # Keeping the original print for now, as the focus is on the status boxes.
     print("\nInitializing Qrew System...")
 
-    project_name_for_orchestrator = None # For a new project, this should be None. Taskmaster will define it.
+    project_name_for_orchestrator = None
+    pipeline_inputs = {}
 
-    # Get user input for the project idea
-    user_idea = Prompt.ask("[bold yellow]Please enter your new project idea or request[/bold yellow]")
-    pipeline_inputs = {"user_request": user_idea}
+    listed_projects = ProjectStateManager.list_projects()
+
+    if listed_projects:
+        console.print(Panel(Text("Select a project to resume or start a new one.", style="bold green"), title="[bold cyan]Project Selection[/bold cyan]", border_style="green"))
+        for i, proj in enumerate(listed_projects):
+            console.print(Text(f"{i+1}. {proj['name']} (Status: {proj['status']}) - Last updated: {proj['last_updated']}", style="default"))
+
+        new_project_option_num = len(listed_projects) + 1
+        console.print(Text(f"{new_project_option_num}. Start New Project", style="bold yellow"))
+
+        choice_prompt = f"Enter project number (1-{len(listed_projects)}) to resume, or '{new_project_option_num}' (or 'n') for a new project"
+
+        while True:
+            try:
+                raw_choice = Prompt.ask(choice_prompt).strip().lower()
+                if raw_choice == 'n' or raw_choice == str(new_project_option_num):
+                    user_idea = Prompt.ask("[bold yellow]Please enter your new project idea or request[/bold yellow]")
+                    pipeline_inputs = {"user_request": user_idea}
+                    project_name_for_orchestrator = None # Taskmaster will handle naming for new projects
+                    console.print("Starting a new project...")
+                    break
+
+                chosen_idx = int(raw_choice) - 1
+                if 0 <= chosen_idx < len(listed_projects):
+                    chosen_project = listed_projects[chosen_idx]
+                    project_name_for_orchestrator = chosen_project['name'] # Use name to load project state
+                    # For resuming, pipeline_inputs might not need 'user_request' initially if orchestrator handles resume logic
+                    # pipeline_inputs = {"project_name": project_name_for_orchestrator}
+                    # The orchestrator's __init__ takes project_name, so this is enough.
+                    # execute_pipeline might need specific inputs if resuming a particular stage,
+                    # but for now, just loading the project is the primary goal.
+                    # If Taskmaster is the first stage for resume, it might need a way to know it's a resume.
+                    # For now, let's assume the orchestrator handles this via project_name.
+                    # The 'pipeline_inputs' for a resumed project might be different or even empty if the orchestrator
+                    # just picks up from the saved state.
+                    # For now, let's set it to indicate a resume if needed by later stages.
+                    pipeline_inputs = {"project_name": project_name_for_orchestrator, "action": "resume"}
+                    console.print(f"Resuming project: [bold cyan]{project_name_for_orchestrator}[/bold cyan]")
+                    break
+                else:
+                    console.print(f"[bold red]Invalid selection. Please choose a number between 1 and {new_project_option_num} or 'n'.[/bold red]")
+            except ValueError:
+                console.print("[bold red]Invalid input. Please enter a number or 'n'.[/bold red]")
+            except InvalidResponse: # Should not happen with basic Prompt.ask, but good practice
+                console.print("[bold red]Invalid response received from prompt.[/bold red]")
+    else:
+        console.print(Panel(Text("No existing projects found.", style="italic"), title="[bold cyan]Project Status[/bold cyan]", border_style="yellow"))
+        user_idea = Prompt.ask("[bold yellow]Please enter your new project idea or request[/bold yellow]")
+        pipeline_inputs = {"user_request": user_idea}
+        project_name_for_orchestrator = None
 
     # --- Execute Pipeline ---
     # Pass project_name_for_orchestrator to WorkflowOrchestrator constructor
