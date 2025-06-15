@@ -1,5 +1,5 @@
 import numpy as np
-from mycrews.qrew.tools.use_lite_embedding_tool import USELiteEmbeddingTool
+from tools.use_lite_embedding_tool import USELiteEmbeddingTool
 
 # TODO: The USELiteEmbeddingTool is expected to load the models automatically.
 # We need to confirm if it also handles L2 normalization.
