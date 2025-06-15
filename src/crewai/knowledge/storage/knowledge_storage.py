@@ -1,28 +1,24 @@
 import contextlib
-import hashlib
+import hashlib # Keep for now, might be useful for ID generation if needed, though ObjectBox handles its own
 import io
 import logging
 import os
 import shutil
 from typing import Any, Dict, List, Optional, Union
 
-# import chromadb # TODO: Remove chromadb
-# import chromadb.errors # TODO: Remove chromadb
-# from chromadb.api import ClientAPI # TODO: Remove chromadb
-# from chromadb.api.types import OneOrMany # TODO: Remove chromadb
-# from chromadb.config import Settings # TODO: Remove chromadb
+from tools.objectbox_memory import ObjectBoxMemory # Import ObjectBoxMemory
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-from crewai.utilities import EmbeddingConfigurator
-# from crewai.utilities.chromadb import sanitize_collection_name # TODO: Remove chromadb
-from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
+# EmbeddingConfigurator might not be needed if ObjectBoxMemory handles its own embedding via tools.embedder
+# from crewai.utilities import EmbeddingConfigurator
+from crewai.utilities.constants import KNOWLEDGE_DIRECTORY # Might be useful for path construction
 from crewai.utilities.logger import Logger
-from crewai.utilities.paths import db_storage_path
+from crewai.utilities.paths import db_storage_path # For default storage path
 
 
 @contextlib.contextmanager
 def suppress_logging(
-    logger_name="chromadb.segment.impl.vector.local_persistent_hnsw", # TODO: Update logger_name
+    logger_name="objectbox", # Changed to a generic name, or specific if known for ObjectBox
     level=logging.ERROR,
 ):
     logger = logging.getLogger(logger_name)
@@ -31,7 +27,7 @@ def suppress_logging(
     with (
         contextlib.redirect_stdout(io.StringIO()),
         contextlib.redirect_stderr(io.StringIO()),
-        contextlib.suppress(UserWarning),
+        contextlib.suppress(UserWarning), # Keep suppressing UserWarning
     ):
         yield
     logger.setLevel(original_level)
@@ -39,170 +35,156 @@ def suppress_logging(
 
 class KnowledgeStorage(BaseKnowledgeStorage):
     """
-    Extends Storage to handle embeddings for memory entries, improving
-    search efficiency.
+    Uses ObjectBoxMemory to store and search knowledge entries.
     """
 
-    collection: Optional[Any] = None # TODO: Replace chromadb.Collection with a suitable type
-    collection_name: Optional[str] = "knowledge"
-    app: Optional[Any] = None # TODO: Replace ClientAPI with a suitable type
+    db_memory: ObjectBoxMemory
+    collection_name: str # Making collection_name non-optional, will use a default
 
     def __init__(
         self,
-        embedder: Optional[Dict[str, Any]] = None,
-        collection_name: Optional[str] = None,
+        collection_name: Optional[str] = "default_knowledge",
+        # embedder parameter removed as ObjectBoxMemory uses a fixed embedder
     ):
-        self.collection_name = collection_name
-        self._set_embedder_config(embedder)
-        raise NotImplementedError("ChromaDB knowledge storage is no longer supported.")
+        self.collection_name = collection_name if collection_name else "default_knowledge"
 
-    def search(
-        self,
-        query: List[str],
-        limit: int = 3,
-        filter: Optional[dict] = None,
-        score_threshold: float = 0.35,
-    ) -> List[Dict[str, Any]]:
-        with suppress_logging():
-            if self.collection:
-                fetched = self.collection.query(
-                    query_texts=query,
-                    n_results=limit,
-                    where=filter,
-                )
-                results = []
-                for i in range(len(fetched["ids"][0])):  # type: ignore
-                    result = {
-                        "id": fetched["ids"][0][i],  # type: ignore
-                        "metadata": fetched["metadatas"][0][i],  # type: ignore
-                        "context": fetched["documents"][0][i],  # type: ignore
-                        "score": fetched["distances"][0][i],  # type: ignore
-                    }
-                    if result["score"] >= score_threshold:
-                        results.append(result)
-                return results
-            else:
-                raise Exception("Collection not initialized")
+        # Construct the path for ObjectBoxMemory store
+        # Example: .db/crewai_knowledge/objectbox_collections/default_knowledge
+        base_storage_dir = os.path.join(db_storage_path(), "objectbox_collections")
+        specific_collection_path = os.path.join(base_storage_dir, self.collection_name)
+
+        # Ensure the directory for this specific collection exists
+        os.makedirs(specific_collection_path, exist_ok=True)
+
+        self.db_memory = ObjectBoxMemory(store_path_override=specific_collection_path)
+        self.logger = Logger(self.__class__.__name__)
+        self.initialize_knowledge_storage() # Call initialization logic here
 
     def initialize_knowledge_storage(self):
-        # base_path = os.path.join(db_storage_path(), "knowledge") # TODO: Remove chromadb
-        # chroma_client = chromadb.PersistentClient( # TODO: Remove chromadb
-        #     path=base_path,
-        #     settings=Settings(allow_reset=True),
-        # )
-
-        # self.app = chroma_client # TODO: Remove chromadb
-
-        # try: # TODO: Remove chromadb
-        #     collection_name = (
-        #         f"knowledge_{self.collection_name}"
-        #         if self.collection_name
-        #         else "knowledge"
-        #     )
-        #     if self.app: # TODO: Remove chromadb
-        #         self.collection = self.app.get_or_create_collection(
-        #             name=sanitize_collection_name(collection_name), # TODO: Remove chromadb
-        #             embedding_function=self.embedder,
-        #         )
-        #     else: # TODO: Remove chromadb
-        #         raise Exception("Vector Database Client not initialized")
-        # except Exception: # TODO: Remove chromadb
-        #     raise Exception("Failed to create or get collection")
-        raise NotImplementedError("ChromaDB knowledge storage is no longer supported.")
-
-    def reset(self):
-        # base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY) # TODO: Remove chromadb
-        # if not self.app: # TODO: Remove chromadb
-        #     self.app = chromadb.PersistentClient(
-        #         path=base_path,
-        #         settings=Settings(allow_reset=True),
-        #     )
-
-        # self.app.reset() # TODO: Remove chromadb
-        # shutil.rmtree(base_path) # TODO: Remove chromadb
-        # self.app = None # TODO: Remove chromadb
-        # self.collection = None # TODO: Remove chromadb
-        raise NotImplementedError("ChromaDB knowledge storage is no longer supported.")
+        """
+        Ensures ObjectBoxMemory is ready. Currently a no-op as ObjectBoxMemory
+        initializes its store in its own __init__.
+        """
+        self.logger.info(f"ObjectBoxKnowledgeStorage initialized for collection: {self.collection_name} at path: {self.db_memory._current_store_actual_path}")
+        # No specific initialization steps needed here for ObjectBoxMemory as it's done in its __init__.
+        # This method can be expanded if future setup is required.
+        pass
 
     def save(
         self,
         documents: List[str],
         metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
     ):
-        if not self.collection:
-            raise Exception("Collection not initialized")
+        """
+        Saves documents and their metadata into ObjectBox.
+        """
+        if not self.db_memory:
+            self.logger.error("ObjectBoxMemory not initialized.")
+            raise Exception("ObjectBoxMemory not initialized.")
+
+        for i, doc_content in enumerate(documents):
+            doc_meta = None
+            if metadata:
+                doc_meta = metadata[i] if isinstance(metadata, list) else metadata
+
+            try:
+                self.db_memory.save(value=doc_content, metadata=doc_meta)
+                self.logger.info(f"Saved document: {doc_content[:50]}...")
+            except Exception as e:
+                self.logger.error(f"Failed to save document: {doc_content[:50]}... Error: {e}")
+                # Decide if to re-raise or collect errors
+                raise
+
+    def search(
+        self,
+        query: List[str],
+        limit: int = 3,
+        filter: Optional[dict] = None,
+        score_threshold: float = 0.0, # Default to 0.0 to include all results above minimal similarity
+    ) -> List[Dict[str, Any]]:
+        """
+        Searches for documents in ObjectBox based on query texts.
+        """
+        if not self.db_memory:
+            self.logger.error("ObjectBoxMemory not initialized.")
+            raise Exception("ObjectBoxMemory not initialized.")
+
+        if not query:
+            self.logger.warn("Search query is empty.")
+            return []
+
+        actual_query_text = query[0]
+        if len(query) > 1:
+            self.logger.info(f"Multiple queries provided, using the first one: '{actual_query_text}'.")
+
+        if filter:
+            self.logger.warn("Search filter parameter is provided but not currently supported by ObjectBoxMemory. It will be ignored.")
 
         try:
-            # Create a dictionary to store unique documents
-            unique_docs = {}
+            with suppress_logging(): # Suppress potential verbose logs from underlying libraries
+                db_results = self.db_memory.query(
+                    query_text=actual_query_text,
+                    limit=limit,
+                    score_threshold=score_threshold,
+                )
+        except Exception as e:
+            self.logger.error(f"Error during similarity search in ObjectBoxMemory: {e}")
+            return [] # Return empty list on error
 
-            # Generate IDs and create a mapping of id -> (document, metadata)
-            for idx, doc in enumerate(documents):
-                doc_id = hashlib.sha256(doc.encode("utf-8")).hexdigest()
-                doc_metadata = None
-                if metadata is not None:
-                    if isinstance(metadata, list):
-                        doc_metadata = metadata[idx]
-                    else:
-                        doc_metadata = metadata
-                unique_docs[doc_id] = (doc, doc_metadata)
+        # Adapt results to the expected format
+        formatted_results = []
+        for res in db_results:
+            # Assuming ObjectBoxMemory.query can be modified to return 'id'
+            # If 'id' is not available, it might be omitted or set to a placeholder
+            formatted_results.append({
+                "id": res.get("id", hashlib.sha256(res['content'].encode()).hexdigest()), # Placeholder ID if not from DB
+                "context": res["content"],
+                "metadata": res.get("metadata", {}),
+                "score": res["score"],
+            })
 
-            # Prepare filtered lists for ChromaDB
-            filtered_docs = []
-            filtered_metadata = []
-            filtered_ids = []
+        return formatted_results
 
-            # Build the filtered lists
-            for doc_id, (doc, meta) in unique_docs.items():
-                filtered_docs.append(doc)
-                filtered_metadata.append(meta)
-                filtered_ids.append(doc_id)
-
-            # If we have no metadata at all, set it to None # TODO: Remove chromadb
-            # final_metadata: Optional[OneOrMany[chromadb.Metadata]] = ( # TODO: Remove chromadb
-            #     None if all(m is None for m in filtered_metadata) else filtered_metadata
-            # )
-
-            # self.collection.upsert( # TODO: Remove chromadb
-            #     documents=filtered_docs,
-            #     metadatas=final_metadata,
-            #     ids=filtered_ids,
-            # )
-        # except chromadb.errors.InvalidDimensionException as e: # TODO: Remove chromadb
-            # Logger(verbose=True).log(
-                # "error",
-                # "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
-            #     "red",
-            # )
-            # raise ValueError(
-            #     "Embedding dimension mismatch. Make sure you're using the same embedding model "
-            #     "across all operations with this collection."
-            #     "Try resetting the collection using `crewai reset-memories -a`"
-            # ) from e
-        except Exception as e: # TODO: Remove this try-except block if chromadb.errors.InvalidDimensionException is removed
-            Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
-            raise
-        raise NotImplementedError("ChromaDB knowledge storage is no longer supported.")
-
-    def _create_default_embedding_function(self):
-        # from chromadb.utils.embedding_functions.openai_embedding_function import ( # TODO: Remove chromadb
-        #     OpenAIEmbeddingFunction,
-        # )
-
-        # return OpenAIEmbeddingFunction( # TODO: Remove chromadb
-        #     api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        # )
-        raise NotImplementedError("ChromaDB knowledge storage is no longer supported.")
-
-    def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
-        """Set the embedding configuration for the knowledge storage.
-
-        Args:
-            embedder_config (Optional[Dict[str, Any]]): Configuration dictionary for the embedder.
-                If None or empty, defaults to the default embedding function.
+    def reset(self):
         """
-        self.embedder = (
-            EmbeddingConfigurator().configure_embedder(embedder)
-            if embedder
-            else self._create_default_embedding_function()
-        )
+        Resets the knowledge storage by deleting the ObjectBox store directory.
+        """
+        if not self.db_memory or not self.db_memory._current_store_actual_path:
+            self.logger.error("ObjectBoxMemory instance or its store path is not available. Cannot reset.")
+            # Optionally, try to compute the path again if self.collection_name is available
+            # For now, just return to avoid errors with shutil.rmtree
+            return
+
+        store_path = self.db_memory._current_store_actual_path
+
+        try:
+            self.logger.info(f"Attempting to close ObjectBox store for collection: {self.collection_name}")
+            # ObjectBoxMemory.close_store() is a class method.
+            # It closes the shared static store.
+            ObjectBoxMemory.close_store()
+            self.logger.info(f"ObjectBox store closed for collection: {self.collection_name}")
+
+            if os.path.exists(store_path):
+                self.logger.info(f"Deleting store directory: {store_path}")
+                shutil.rmtree(store_path)
+                self.logger.info(f"Store directory deleted: {store_path}")
+            else:
+                self.logger.warn(f"Store directory not found, nothing to delete: {store_path}")
+
+            # After deleting, re-initialize db_memory to a fresh state for the current instance
+            # This uses the same path, which will be an empty directory now.
+            base_storage_dir = os.path.join(db_storage_path(), "objectbox_collections")
+            specific_collection_path = os.path.join(base_storage_dir, self.collection_name)
+            os.makedirs(specific_collection_path, exist_ok=True) # Ensure dir exists for new store
+            self.db_memory = ObjectBoxMemory(store_path_override=specific_collection_path)
+            self.logger.info(f"KnowledgeStorage for '{self.collection_name}' has been reset and re-initialized.")
+
+        except Exception as e:
+            self.logger.error(f"Failed to reset knowledge storage for collection '{self.collection_name}'. Error: {e}")
+            # Depending on the error, the state might be inconsistent.
+            # Consider how to handle this - perhaps by setting self.db_memory to None or raising
+            raise
+
+    # Removed _create_default_embedding_function and _set_embedder_config
+    # as ObjectBoxMemory handles its own embedding mechanism via tools.embedder.
+    # If KnowledgeStorage needs to influence embedding for other reasons, these might be reintroduced.

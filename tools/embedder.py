@@ -1,46 +1,36 @@
 import numpy as np
-import tflite_runtime.interpreter as tflite
-from transformers import AutoTokenizer
+from mycrews.qrew.tools.use_lite_embedding_tool import USELiteEmbeddingTool
 
-MODEL_PATH = "models/embedding_model.tflite" # Reverted to original (0-byte) model
-
-# Placeholder for TFLite model initialization
-# In a real scenario, ensure the model exists and is loaded correctly.
-try:
-    interp = tflite.Interpreter(model_path=MODEL_PATH)
-    interp.allocate_tensors()
-    # These will be used by the embed function if model loading succeeds
-    inp_idx = interp.get_input_details()[0]["index"]
-    out_idx = interp.get_output_details()[0]["index"]
-except ValueError as e:
-    # This will likely happen if the model file doesn't exist or is invalid (e.g., 0-byte)
-    print(f"Error initializing TFLite interpreter for {MODEL_PATH}: {e}")
-    print(f"Please ensure '{MODEL_PATH}' is a valid TFLite model. Falling back to DummyInterpreter.")
-    # Fallback to dummy values if model loading fails, to allow basic script execution
-    # This is for development purposes only; a real model is needed for functionality.
-    class DummyInterpreter:
-        def set_tensor(self, inp_idx, data): pass
-        def invoke(self): pass
-        def get_tensor(self, out_idx): return np.random.rand(1, 384).astype(np.float32) # Match dimension
-
-    interp = DummyInterpreter()
-    inp_idx = 0 # Dummy value, not used by DummyInterpreter's methods
-    out_idx = 0 # Dummy value, not used by DummyInterpreter's methods
-
-tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
+# TODO: The USELiteEmbeddingTool is expected to load the models automatically.
+# We need to confirm if it also handles L2 normalization.
+# For now, the L2 normalization from the original embed function is kept.
 
 def embed(texts: list[str]) -> list[np.ndarray]:
     embs = []
+    # Instantiate the tool within the function scope if it's lightweight,
+    # or outside if it's heavy to initialize and meant to be reused.
+    # Assuming it's okay to instantiate per call for now.
+    embedding_tool = USELiteEmbeddingTool()
+
     for t in texts:
-        toks = tokenizer(t, padding="max_length", truncation=True, max_length=128, return_tensors="np")
-        # Ensure input_ids are of the correct type (usually int32 or int64)
-        input_ids = toks["input_ids"].astype(np.int32)
-        interp.set_tensor(inp_idx, input_ids)
-        interp.invoke()
-        vec = interp.get_tensor(out_idx).squeeze()
+        # The USELiteEmbeddingTool.embed method is assumed to take a single string
+        # and return a numpy array (the embedding vector).
+        vec = embedding_tool.embed(t) # This should return a np.ndarray
+
+        # Ensure vec is a numpy array (USELiteEmbeddingTool.embed should guarantee this)
+        if not isinstance(vec, np.ndarray):
+            # This case should ideally not happen if USELiteEmbeddingTool works as expected.
+            # If it can return None or other types, error handling or conversion is needed.
+            print(f"Warning: Embedding for text '{t[:30]}...' is not a numpy array. Got {type(vec)}. Skipping normalization.")
+            # Potentially append a zero vector or handle as an error
+            embs.append(np.zeros(embedding_tool.DIMENSION, dtype=np.float32) if hasattr(embedding_tool, 'DIMENSION') else np.array([])) # Fallback if dimension is known
+            continue
+
         # L2-normalize
         vec_norm = np.linalg.norm(vec)
         if vec_norm == 0: # Avoid division by zero
+            # It's possible for an embedding to be all zeros, especially for empty or out-of-vocab inputs.
+            # In such cases, the normalized vector should also be all zeros.
             vec = np.zeros_like(vec, dtype=np.float32)
         else:
             vec = vec / vec_norm
