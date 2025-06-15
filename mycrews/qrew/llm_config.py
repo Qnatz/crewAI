@@ -6,90 +6,241 @@ from typing import Optional # For type hinting LLM | None
 # List to store initialization statuses
 llm_initialization_statuses = []
 
-# Define the new target model strings
-M1_FLASH_LATEST = "gemini/gemini-1.5-flash-latest"
-M2_PRO_LATEST = "gemini/gemini-1.5-flash-latest" # Changed from gemini-1.5-pro-latest
-M3_FLASH_2_5 = "gemini/gemini-2.5-flash" # Assuming this is a valid model identifier
+# Define new primary model strings
+PRO_MODEL_PRIMARY = "gemini/gemini-1.5-pro-002"  # Assuming this is a valid identifier for the latest Pro
+FLASH_STABLE_ALIAS = "gemini/gemini-1.5-flash"    # Alias for latest stable Flash
+FLASH_OLDER_STABLE = "gemini/gemini-2.0-flash"   # Older stable Flash (example, use actual if different)
 
-# Define the mapping of agent identifiers to specific Gemini model strings
+# Old constants M1, M2, M3 are removed as their roles are superseded by the new constants and logic.
+
+# Define the mapping of agent identifiers to a list of model configurations (for fallback)
 MODEL_BY_AGENT = {
-    # --- High-capability/Orchestration/Planning Agents (M2) ---
-    "idea_interpreter_agent": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.7},
-    "project_architect_agent": {"model": M2_PRO_LATEST, "max_tokens": 3000, "temperature": 0.7},
-    "taskmaster_agent": {"model": M2_PRO_LATEST, "max_tokens": 2000, "temperature": 0.7},
-    "final_assembler_agent": {"model": M2_PRO_LATEST, "max_tokens": 3000, "temperature": 0.6},
-    "execution_manager_agent": {"model": M2_PRO_LATEST, "max_tokens": 2000, "temperature": 0.7},
-    "tech_vetting_council_agent": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.7},
+    # --- High-capability/Orchestration/Planning Agents ---
+    # Primary: PRO_MODEL_PRIMARY, Fallbacks: FLASH_STABLE_ALIAS, FLASH_OLDER_STABLE
+    "idea_interpreter_agent": [
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
+    ],
+    "project_architect_agent": [
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.7},
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.7},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.7}
+    ],
+    "taskmaster_agent": [
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2000, "temperature": 0.7},
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
+    ],
+    "final_assembler_agent": [ # This was M2_PRO_LATEST (now flash-latest)
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.6},
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.6},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.6}
+    ],
+    "execution_manager_agent": [
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2000, "temperature": 0.7},
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
+    ],
+    "tech_vetting_council_agent": [
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
+    ],
 
-    # Lead Agents (Coordinators) (M2)
-    "backend_project_coordinator_agent": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.7},
-    "devops_and_integration_coordinator_agent": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.7},
-    "mobile_project_coordinator_agent": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.7},
-    "offline_support_coordinator_agent": {"model": M2_PRO_LATEST, "max_tokens": 2000, "temperature": 0.7},
-    "web_project_coordinator_agent": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.7},
-    "auth_coordinator_agent": {"model": M2_PRO_LATEST, "max_tokens": 2000, "temperature": 0.7},
+    # Lead Agents (Coordinators)
+    "backend_project_coordinator_agent": [
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
+    ],
+    "devops_and_integration_coordinator_agent": [
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
+    ],
+    "mobile_project_coordinator_agent": [
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
+    ],
+    "offline_support_coordinator_agent": [
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2000, "temperature": 0.7}, # Was M2
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
+    ],
+    "web_project_coordinator_agent": [
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
+    ],
+    "auth_coordinator_agent": [
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2000, "temperature": 0.7},
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
+    ],
 
     # --- Specialized Implementation/Utility Agents ---
-    # Auth Agents
-    "otp_verifier_agent": {"model": M1_FLASH_LATEST, "max_tokens": 1000, "temperature": 0.4},
+    # Primary: FLASH_STABLE_ALIAS, Fallback: FLASH_OLDER_STABLE
+    "otp_verifier_agent": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 1000, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 1000, "temperature": 0.4}
+    ],
+    "api_creator_agent": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3500, "temperature": 0.3},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 3500, "temperature": 0.3}
+    ],
+    "auth_agent_backend": [ # Was M3
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.3},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.3}
+    ],
+    "config_agent_backend": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.4}
+    ],
+    "data_model_agent_backend": [ # Was M3
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.4}
+    ],
+    "queue_agent_backend": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
+    ],
+    "storage_agent_backend": [ # Was M3
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
+    ],
+    "sync_agent_backend": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
+    ],
+    "code_writer_agent": [ # Was M3
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 4000, "temperature": 0.3},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 4000, "temperature": 0.3}
+    ],
+    "debugger_agent": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.5},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.5}
+    ],
+    "logger_agent_devutils": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 1500, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 1500, "temperature": 0.4}
+    ],
+    "tester_agent_devutils": [ # Was M3
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.5},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.5}
+    ],
+    "devops_agent": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.4}
+    ],
+    "android_api_client_agent": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.3},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.3}
+    ],
+    "android_storage_agent": [ # Was M3
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
+    ],
+    "android_ui_agent": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3500, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 3500, "temperature": 0.4}
+    ],
+    "ios_api_client_agent": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.3},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.3}
+    ],
+    "ios_storage_agent": [ # Was M3
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
+    ],
+    "ios_ui_agent": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3500, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 3500, "temperature": 0.4}
+    ],
+    "local_storage_agent_offline": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.4}
+    ],
+    "sync_agent_offline": [ # Was M3
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
+    ],
+    "asset_manager_agent_web": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.4}
+    ],
+    "dynamic_page_builder_agent_web": [ # Was M3
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3500, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 3500, "temperature": 0.4}
+    ],
+    "static_page_builder_agent_web": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.4},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.4}
+    ],
+    "constraint_checker_agent_tech_committee": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 1500, "temperature": 0.6},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 1500, "temperature": 0.6}
+    ],
+    "documentation_writer_agent_tech_committee": [ # Was M3
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.7},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.7}
+    ],
+    "stack_advisor_agent_tech_committee": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
+    ],
+    "knowledge_base_tool_summarizer": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 1500, "temperature": 0.6},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 1500, "temperature": 0.6}
+    ],
 
-    # Backend Agents (Distribute M1 & M3)
-    "api_creator_agent": {"model": M1_FLASH_LATEST, "max_tokens": 3500, "temperature": 0.3},
-    "auth_agent_backend": {"model": M3_FLASH_2_5, "max_tokens": 3000, "temperature": 0.3},
-    "config_agent_backend": {"model": M1_FLASH_LATEST, "max_tokens": 2000, "temperature": 0.4},
-    "data_model_agent_backend": {"model": M3_FLASH_2_5, "max_tokens": 3000, "temperature": 0.4},
-    "queue_agent_backend": {"model": M1_FLASH_LATEST, "max_tokens": 2500, "temperature": 0.4},
-    "storage_agent_backend": {"model": M3_FLASH_2_5, "max_tokens": 2500, "temperature": 0.4},
-    "sync_agent_backend": {"model": M1_FLASH_LATEST, "max_tokens": 2500, "temperature": 0.4},
-
-    # Dev Utilities Agents (Distribute M1 & M3)
-    "code_writer_agent": {"model": M3_FLASH_2_5, "max_tokens": 4000, "temperature": 0.3},
-    "debugger_agent": {"model": M1_FLASH_LATEST, "max_tokens": 2000, "temperature": 0.5},
-    "logger_agent_devutils": {"model": M1_FLASH_LATEST, "max_tokens": 1500, "temperature": 0.4},
-    "tester_agent_devutils": {"model": M3_FLASH_2_5, "max_tokens": 2500, "temperature": 0.5},
-
-    # DevOps Agent
-    "devops_agent": {"model": M1_FLASH_LATEST, "max_tokens": 3000, "temperature": 0.4},
-
-    # Mobile Agents (Android - M1 & M3)
-    "android_api_client_agent": {"model": M1_FLASH_LATEST, "max_tokens": 3000, "temperature": 0.3},
-    "android_storage_agent": {"model": M3_FLASH_2_5, "max_tokens": 2500, "temperature": 0.4},
-    "android_ui_agent": {"model": M1_FLASH_LATEST, "max_tokens": 3500, "temperature": 0.4},
-    # Mobile Agents (iOS - M1 & M3)
-    "ios_api_client_agent": {"model": M1_FLASH_LATEST, "max_tokens": 3000, "temperature": 0.3},
-    "ios_storage_agent": {"model": M3_FLASH_2_5, "max_tokens": 2500, "temperature": 0.4},
-    "ios_ui_agent": {"model": M1_FLASH_LATEST, "max_tokens": 3500, "temperature": 0.4},
-
-    # Offline Agents
-    "local_storage_agent_offline": {"model": M1_FLASH_LATEST, "max_tokens": 2000, "temperature": 0.4},
-    "sync_agent_offline": {"model": M3_FLASH_2_5, "max_tokens": 2500, "temperature": 0.4},
-
-    # Web Agents (Distribute M1 & M3)
-    "asset_manager_agent_web": {"model": M1_FLASH_LATEST, "max_tokens": 2000, "temperature": 0.4},
-    "dynamic_page_builder_agent_web": {"model": M3_FLASH_2_5, "max_tokens": 3500, "temperature": 0.4},
-    "static_page_builder_agent_web": {"model": M1_FLASH_LATEST, "max_tokens": 3000, "temperature": 0.4},
-
-    # Tech Stack Committee (Distribute M1 & M3, council lead is M2)
-    "constraint_checker_agent_tech_committee": {"model": M1_FLASH_LATEST, "max_tokens": 1500, "temperature": 0.6},
-    "documentation_writer_agent_tech_committee": {"model": M3_FLASH_2_5, "max_tokens": 3000, "temperature": 0.7},
-    "stack_advisor_agent_tech_committee": {"model": M1_FLASH_LATEST, "max_tokens": 2000, "temperature": 0.7},
-
-    # Tools (if a tool needed its own LLM)
-    "knowledge_base_tool_summarizer": {"model": M1_FLASH_LATEST, "max_tokens": 1500, "temperature": 0.6},
-
-    # --- Crew-level LLMs (can mirror lead or be specific) ---
-    "backend_development_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
-    "devops_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
-    "full_stack_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
-    "mobile_development_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
-    "offline_support_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
-    "code_writing_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
-    "final_assembly_crew": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.6}, # Promoted
-    "web_development_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
+    # --- Crew-level LLMs ---
+    # High-Capability for final_assembly_crew
+    "final_assembly_crew": [ # Was M2_PRO_LATEST (now flash-latest)
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.6},
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.6},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.6}
+    ],
+    # Others: Primary FLASH_STABLE_ALIAS, Fallback FLASH_OLDER_STABLE
+    "backend_development_crew": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+    ],
+    "devops_crew": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+    ],
+    "full_stack_crew": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+    ],
+    "mobile_development_crew": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+    ],
+    "offline_support_crew": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+    ],
+    "code_writing_crew": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+    ],
+    "web_development_crew": [
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+    ],
 
     # --- Default LLMs ---
-    "default_crew_llm": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
-    "default_agent_llm": {"model": M1_FLASH_LATEST, "max_tokens": 1500, "temperature": 0.5}
+    "default_crew_llm": [ # Was M3
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+    ],
+    "default_agent_llm": [ # Was M1
+        {"model": FLASH_STABLE_ALIAS, "max_tokens": 1500, "temperature": 0.5},
+        {"model": FLASH_OLDER_STABLE, "max_tokens": 1500, "temperature": 0.5}
+    ]
 }
 
 def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_agent_llm") -> Optional[LLM]:
@@ -109,44 +260,62 @@ def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_a
         llm_initialization_statuses.append((f"API_KEY_MISSING_FOR_{agent_identifier}", False))
         return None
 
-    agent_config = MODEL_BY_AGENT.get(agent_identifier)
-    if not agent_config:
-        # print(f"No specific config for agent '{agent_identifier}'. Using default config key: '{default_model_key}'.") # Suppressed
-        agent_config = MODEL_BY_AGENT.get(default_model_key)
-        if not agent_config:
+    model_configs_list = MODEL_BY_AGENT.get(agent_identifier)
+    if not model_configs_list:
+        # print(f"No specific config list for agent '{agent_identifier}'. Using default config key: '{default_model_key}'.") # Suppressed
+        model_configs_list = MODEL_BY_AGENT.get(default_model_key)
+        if not model_configs_list:
             # print(f"Error: Default config key '{default_model_key}' not found. Cannot configure LLM for '{agent_identifier}'.") # Suppressed
-            llm_initialization_statuses.append((f"CONFIG_ERROR_FOR_{agent_identifier}", False))
+            llm_initialization_statuses.append((f"CONFIG_LIST_ERROR_FOR_{agent_identifier}", False))
             return None
 
-    model_str = agent_config.get("model")
-    max_tokens_val = agent_config.get("max_tokens")
-    temp_val = agent_config.get("temperature")
-
-    if not model_str:
-        # print(f"Error: 'model' not specified in config for '{agent_identifier}'. Config: {agent_config}") # Suppressed
-        llm_initialization_statuses.append((f"MODEL_UNDEFINED_FOR_{agent_identifier}_IN_CONFIG_{agent_config.get('model', 'N/A')}", False))
+    if not isinstance(model_configs_list, list):
+        # print(f"Error: Agent configuration for '{agent_identifier}' is not a list. Found: {type(model_configs_list)}") # Suppressed
+        llm_initialization_statuses.append((f"CONFIG_NOT_LIST_FOR_{agent_identifier}", False))
         return None
 
-    # Construct llm_params, only including max_tokens and temperature if they are not None
-    # Default num_retries is already handled by LiteLLM/CrewAI's LLM class if not specified.
-    # Adding it explicitly like num_retries=3.
-    llm_params = {"model": model_str, "num_retries": 3}
-    if max_tokens_val is not None:
-        llm_params["max_tokens"] = max_tokens_val
-    if temp_val is not None:
-        llm_params["temperature"] = temp_val
+    for i, agent_config in enumerate(model_configs_list):
+        model_str = agent_config.get("model")
+        max_tokens_val = agent_config.get("max_tokens")
+        temp_val = agent_config.get("temperature")
 
-    # print(f"Configuring LLM for agent '{agent_identifier}' with params: {llm_params}") # Suppressed
+        if not model_str:
+            # print(f"Error: 'model' not specified in config entry {i} for '{agent_identifier}'. Config: {agent_config}") # Suppressed
+            # Log this attempt as a failure for this specific model string if available, else generic
+            llm_initialization_statuses.append((f"MODEL_UNDEFINED_IN_LIST_FOR_{agent_identifier}_{i}", False))
+            continue # Try next model in the list
 
-    try:
-        llm = LLM(**llm_params)
-        # print(f"Successfully initialized LLM for agent '{agent_identifier}' with model '{model_str}'.") # Suppressed
-        llm_initialization_statuses.append((model_str, True))
-        return llm
-    except Exception as e:
-        # print(f"Failed to initialize LLM for agent '{agent_identifier}' with model '{model_str}': {e}") # Suppressed
-        llm_initialization_statuses.append((model_str, False))
-        return None
+        llm_params = {"model": model_str, "num_retries": 3} # num_retries can also be configurable
+        if max_tokens_val is not None:
+            llm_params["max_tokens"] = max_tokens_val
+        if temp_val is not None:
+            llm_params["temperature"] = temp_val
+
+        # print(f"Attempting to initialize LLM for agent '{agent_identifier}' with model config {i+1}/{len(model_configs_list)}: {llm_params}") # Suppressed
+        try:
+            llm = LLM(**llm_params)
+            # Test call
+            try:
+                test_response = llm.call("Hello") # Simple, quick test prompt
+                if test_response and isinstance(test_response, str) and test_response.strip():
+                    # print(f"Successfully initialized AND tested LLM for agent '{agent_identifier}' with model '{model_str}'.") # Suppressed
+                    llm_initialization_statuses.append((f"{model_str} (tested)", True))
+                    return llm # Return the successfully initialized and tested LLM
+                else:
+                    # print(f"LLM for agent '{agent_identifier}' with model '{model_str}' initialized but failed test call (empty/invalid response). Response: '{test_response}'") # Suppressed
+                    llm_initialization_statuses.append((f"{model_str} (test_call_empty_response)", False))
+                    # Continue to the next model in the list
+            except Exception as e_test:
+                # print(f"LLM for agent '{agent_identifier}' with model '{model_str}' initialized but failed during test call: {e_test}") # Suppressed
+                llm_initialization_statuses.append((f"{model_str} (test_call_exception: {str(e_test)[:50]})", False))
+                # Continue to the next model in the list
+        except Exception as e_init:
+            # print(f"Failed to initialize LLM for agent '{agent_identifier}' with model '{model_str}' (Attempt {i+1}/{len(model_configs_list)}): {e_init}") # Suppressed
+            llm_initialization_statuses.append((f"{model_str} (init_exception: {str(e_init)[:50]})", False))
+            # Continue to the next model in the list if initialization fails
+
+    # print(f"All model configurations failed for agent '{agent_identifier}'.") # Suppressed
+    return None # Return None if all models in the list fail
 
 # Global default LLM for general use by Crews or as a fallback if an agent-specific one isn't assigned directly.
 default_crew_llm = get_llm_for_agent("default_crew_llm") # default_model_key will be "default_agent_llm" if "default_crew_llm" not found
