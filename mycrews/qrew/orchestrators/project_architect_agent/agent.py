@@ -1,6 +1,7 @@
 from crewai import Agent
 from ...llm_config import get_llm_for_agent
 from ...tools.custom_agent_tools import CustomDelegateWorkTool, CustomAskQuestionTool
+from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance
 # from crewAI.qrew.tools.file_io_tool import FileIOTool # Example if tools are ready
 
 # Use the agent's role or a unique key for the lookup
@@ -16,7 +17,7 @@ custom_ask_question_tool = CustomAskQuestionTool()
 # file_io_tool = FileIOTool()
 # agent_tools = [custom_delegate_tool, custom_ask_question_tool, file_io_tool]
 
-agent_tools = [] # Removed custom_delegate_tool and custom_ask_question_tool
+agent_tools = [knowledge_base_tool_instance] # Added KnowledgeBaseTool
 
 project_architect_agent = Agent(
     role="Project Architect",
@@ -26,7 +27,7 @@ project_architect_agent = Agent(
               "Known for creating elegant, maintainable, and future-proof architectures. "
               "Possesses deep knowledge of design patterns, system integration, and technology stacks.",
     llm=specific_llm, # Assign the fetched LLM
-    # tools=agent_tools, # Removed as agent_tools is now empty
+    tools=agent_tools, # Use the updated agent_tools list
     allow_delegation=True, # This will be used by defining sub-tasks, not by the agent itself using a tool.
     verbose=True
 )

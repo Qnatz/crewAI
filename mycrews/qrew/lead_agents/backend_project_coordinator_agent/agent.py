@@ -1,5 +1,6 @@
 from crewai import Agent
 from ...llm_config import get_llm_for_agent
+from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance
 # from mycrews.qrew.crews.backend_development_crew import BackendDevelopmentCrew
 
 # Use the agent's role or a unique key for the lookup
@@ -15,6 +16,7 @@ backend_project_coordinator_agent = Agent(
               "Proficient in agile methodologies, API design principles, database management, and cloud infrastructure. "
               "Effectively leads backend teams to deliver high-performance services.",
     llm=specific_llm, # Assign the fetched LLM
+    tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
     allow_delegation=True, # Can delegate tasks to the BackendDevelopmentCrew
     verbose=True
     # tools=[...] # Tools for API testing, performance monitoring, task management

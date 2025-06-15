@@ -1,5 +1,6 @@
 from crewai import Agent
 from ...llm_config import get_llm_for_agent
+from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance
 # from crewAI.qrew.crews.devops_crew import DevOpsCrew
 
 # Use the agent's role or a unique key for the lookup
@@ -15,6 +16,7 @@ devops_and_integration_coordinator_agent = Agent(
               "Expert in automating software delivery pipelines, managing cloud infrastructure, and ensuring seamless interaction "
               "between various microservices and application components. Bridges the gap between development and operations.",
     llm=specific_llm, # Assign the fetched LLM
+    tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
     allow_delegation=True, # Can delegate tasks to DevOpsCrew or other relevant agents
     verbose=True
     # tools=[...] # Tools for CI/CD management, infrastructure monitoring, API contract testing
