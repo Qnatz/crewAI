@@ -95,7 +95,7 @@ def validate_integration_plan_output(task_output: TaskOutput) -> tuple[bool, Any
         print("GUARDRAIL_INTEGRATION_PLAN: 'File Manifest for Code Generation' section is missing.")
         return False, "The 'File Manifest for Code Generation' section is missing from the integration plan."
 
-    json_block_pattern = re.compile(r"```json\s*\n(.*?)\n```", re.DOTALL | re.IGNORECASE)
+    json_block_pattern = re.compile(r"```(?:json)?\s*\n?(.*?)\n?```", re.DOTALL | re.IGNORECASE)
     search_area_for_manifest = output_str[manifest_start_index + len(manifest_heading):]
     manifest_match = json_block_pattern.search(search_area_for_manifest)
 
