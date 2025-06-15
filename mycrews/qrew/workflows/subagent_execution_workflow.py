@@ -2,25 +2,28 @@ from crewai import Crew, Process, Task
 from crewai.tasks.task_output import TaskOutput # Ensure TaskOutput is imported
 from typing import Any # Ensure Any is imported
 import re # Added import re
-# Updated backend agent imports
-from ..agents.backend import (
-    api_creator_agent,
-    data_model_agent,
-    backend_auth_agent,
-    config_agent,
-    queue_agent,
-    storage_agent as backend_storage_agent, # Alias to avoid confusion if other storage agents exist
-    backend_sync_agent
-)
-from ..agents.web import dynamic_page_builder_agent, static_page_builder_agent, asset_manager_agent
-from ..agents.mobile import (
-    android_ui_agent,
-    ios_ui_agent,
-    android_api_client_agent,
-    ios_api_client_agent,
-    android_storage_agent,
-    ios_storage_agent
-)
+# Direct imports for specialized backend agents
+from ..agents.backend.api_creator_agent.agent import api_creator_agent
+from ..agents.backend.data_model_agent.agent import data_model_agent
+from ..agents.backend.auth_agent.agent import auth_agent as backend_auth_agent
+from ..agents.backend.config_agent.agent import config_agent
+from ..agents.backend.queue_agent.agent import queue_agent
+from ..agents.backend.storage_agent.agent import storage_agent as backend_storage_agent
+from ..agents.backend.sync_agent.agent import sync_agent as backend_sync_agent
+
+# Direct imports for specialized web agents
+from ..agents.web.dynamic_page_builder_agent.agent import dynamic_page_builder_agent
+from ..agents.web.static_page_builder_agent.agent import static_page_builder_agent
+from ..agents.web.asset_manager_agent.agent import asset_manager_agent
+
+# Direct imports for specialized mobile agents from platform-specific subdirectories
+from ..agents.mobile.android.android_api_client_agent.agent import android_api_client_agent
+from ..agents.mobile.android.android_storage_agent.agent import android_storage_agent
+from ..agents.mobile.android.android_ui_agent.agent import android_ui_agent
+from ..agents.mobile.ios.ios_api_client_agent.agent import ios_api_client_agent
+from ..agents.mobile.ios.ios_storage_agent.agent import ios_storage_agent
+from ..agents.mobile.ios.ios_ui_agent.agent import ios_ui_agent
+
 from ..agents.devops import devops_agent
 
 def validate_and_extract_code_output(task_output: TaskOutput) -> tuple[bool, Any]:
