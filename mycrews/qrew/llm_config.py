@@ -7,6 +7,8 @@ from typing import Optional # For type hinting LLM | None
 llm_initialization_statuses = []
 
 # Define new primary model strings
+NEW_PRO_MODEL = "gemini/gemini-2.5-pro-preview-06-05"
+NEW_FLASH_MODEL = "gemini/gemini-2.5-flash-preview-05-20"
 PRO_MODEL_PRIMARY = "gemini/gemini-1.5-pro-002"  # Assuming this is a valid identifier for the latest Pro
 FLASH_STABLE_ALIAS = "gemini/gemini-1.5-flash"    # Alias for latest stable Flash
 FLASH_OLDER_STABLE = "gemini/gemini-2.0-flash"   # Older stable Flash (example, use actual if different)
@@ -16,33 +18,44 @@ FLASH_OLDER_STABLE = "gemini/gemini-2.0-flash"   # Older stable Flash (example, 
 # Define the mapping of agent identifiers to a list of model configurations (for fallback)
 MODEL_BY_AGENT = {
     # --- High-capability/Orchestration/Planning Agents ---
-    # Primary: PRO_MODEL_PRIMARY, Fallbacks: FLASH_STABLE_ALIAS, FLASH_OLDER_STABLE
     "idea_interpreter_agent": [
+        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.7},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.7},
         {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
     ],
     "project_architect_agent": [
+        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.7},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.7},
         {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.7},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.7},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.7}
     ],
     "taskmaster_agent": [
+        {"model": NEW_PRO_MODEL, "max_tokens": 2000, "temperature": 0.7},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.7},
         {"model": PRO_MODEL_PRIMARY, "max_tokens": 2000, "temperature": 0.7},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
     ],
-    "final_assembler_agent": [ # This was M2_PRO_LATEST (now flash-latest)
+    "final_assembler_agent": [
+        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.6},
         {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.6},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.6},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.6}
     ],
     "execution_manager_agent": [
+        {"model": NEW_PRO_MODEL, "max_tokens": 2000, "temperature": 0.7},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.7},
         {"model": PRO_MODEL_PRIMARY, "max_tokens": 2000, "temperature": 0.7},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
     ],
     "tech_vetting_council_agent": [
+        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.7},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.7},
         {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
@@ -50,194 +63,266 @@ MODEL_BY_AGENT = {
 
     # Lead Agents (Coordinators)
     "backend_project_coordinator_agent": [
+        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.7},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.7},
         {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
     ],
     "devops_and_integration_coordinator_agent": [
+        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.7},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.7},
         {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
     ],
     "mobile_project_coordinator_agent": [
+        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.7},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.7},
         {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
     ],
     "offline_support_coordinator_agent": [
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2000, "temperature": 0.7}, # Was M2
+        {"model": NEW_PRO_MODEL, "max_tokens": 2000, "temperature": 0.7},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.7},
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2000, "temperature": 0.7},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
     ],
     "web_project_coordinator_agent": [
+        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.7},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.7},
         {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
     ],
     "auth_coordinator_agent": [
+        {"model": NEW_PRO_MODEL, "max_tokens": 2000, "temperature": 0.7},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.7},
         {"model": PRO_MODEL_PRIMARY, "max_tokens": 2000, "temperature": 0.7},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
     ],
 
     # --- Specialized Implementation/Utility Agents ---
-    # Primary: FLASH_STABLE_ALIAS, Fallback: FLASH_OLDER_STABLE
-    "otp_verifier_agent": [
+    "otp_verifier_agent": [ # Gets NEW_FLASH_MODEL as primary
+        {"model": NEW_FLASH_MODEL, "max_tokens": 1000, "temperature": 0.4},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 1000, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 1000, "temperature": 0.4}
     ],
-    "api_creator_agent": [
+    "api_creator_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
+        {"model": NEW_PRO_MODEL, "max_tokens": 3500, "temperature": 0.6}, # Coding tasks - temp 0.6 for Pro
+        {"model": NEW_FLASH_MODEL, "max_tokens": 3500, "temperature": 0.3},
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3500, "temperature": 0.3}, # Assuming it should have had Pro
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 3500, "temperature": 0.3},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 3500, "temperature": 0.3}
     ],
-    "auth_agent_backend": [ # Was M3
+    "auth_agent_backend": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
+        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6}, # Coding tasks - temp 0.6 for Pro
+        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.3},
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.3}, # Assuming it should have had Pro
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.3},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.3}
     ],
-    "config_agent_backend": [
+    "config_agent_backend": [ # Gets NEW_FLASH_MODEL as primary
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.4},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.4}
     ],
-    "data_model_agent_backend": [ # Was M3
+    "data_model_agent_backend": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
+        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6}, # Coding tasks - temp 0.6 for Pro
+        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.4}, # Temp 0.4 for Flash as it's data model
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.4}, # Assuming it should have had Pro
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.4}
     ],
-    "queue_agent_backend": [
+    "queue_agent_backend": [ # Gets NEW_FLASH_MODEL as primary
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.4},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
     ],
-    "storage_agent_backend": [ # Was M3
+    "storage_agent_backend": [ # Gets NEW_FLASH_MODEL as primary (was M3, but not listed for Pro)
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.4},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
     ],
-    "sync_agent_backend": [
+    "sync_agent_backend": [ # Gets NEW_FLASH_MODEL as primary
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.4},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
     ],
-    "code_writer_agent": [ # Was M3
+    "code_writer_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
+        {"model": NEW_PRO_MODEL, "max_tokens": 4000, "temperature": 0.3},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 4000, "temperature": 0.3},
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 4000, "temperature": 0.3}, # Added PRO_MODEL_PRIMARY
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 4000, "temperature": 0.3},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 4000, "temperature": 0.3}
     ],
-    "debugger_agent": [
+    "debugger_agent": [ # Gets NEW_FLASH_MODEL as primary
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.5},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.5},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.5}
     ],
-    "logger_agent_devutils": [
+    "logger_agent_devutils": [ # Gets NEW_FLASH_MODEL as primary
+        {"model": NEW_FLASH_MODEL, "max_tokens": 1500, "temperature": 0.4},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 1500, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 1500, "temperature": 0.4}
     ],
-    "tester_agent_devutils": [ # Was M3
+    "tester_agent_devutils": [ # Gets NEW_FLASH_MODEL as primary (was M3, but not listed for Pro)
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.5},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.5},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.5}
     ],
-    "devops_agent": [
+    "devops_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
+        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6}, # Config/coding - temp 0.6 for Pro
+        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.4},
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.4}, # Assuming it should have had Pro
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.4}
     ],
-    "android_api_client_agent": [
+    "android_api_client_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
+        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6}, # Coding - temp 0.6 for Pro
+        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.3},
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.3}, # Assuming it should have had Pro
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.3},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.3}
     ],
-    "android_storage_agent": [ # Was M3
+    "android_storage_agent": [ # Gets NEW_FLASH_MODEL as primary (was M3, but not listed for Pro)
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.4},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
     ],
-    "android_ui_agent": [
+    "android_ui_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
+        {"model": NEW_PRO_MODEL, "max_tokens": 3500, "temperature": 0.6}, # Coding - temp 0.6 for Pro
+        {"model": NEW_FLASH_MODEL, "max_tokens": 3500, "temperature": 0.4},
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3500, "temperature": 0.4}, # Assuming it should have had Pro
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 3500, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 3500, "temperature": 0.4}
     ],
-    "ios_api_client_agent": [
+    "ios_api_client_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
+        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6}, # Coding - temp 0.6 for Pro
+        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.3},
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.3}, # Assuming it should have had Pro
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.3},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.3}
     ],
-    "ios_storage_agent": [ # Was M3
+    "ios_storage_agent": [ # Gets NEW_FLASH_MODEL as primary (was M3, but not listed for Pro)
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.4},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
     ],
-    "ios_ui_agent": [
+    "ios_ui_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
+        {"model": NEW_PRO_MODEL, "max_tokens": 3500, "temperature": 0.6}, # Coding - temp 0.6 for Pro
+        {"model": NEW_FLASH_MODEL, "max_tokens": 3500, "temperature": 0.4},
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3500, "temperature": 0.4}, # Assuming it should have had Pro
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 3500, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 3500, "temperature": 0.4}
     ],
-    "local_storage_agent_offline": [
+    "local_storage_agent_offline": [ # Gets NEW_FLASH_MODEL as primary
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.4},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.4}
     ],
-    "sync_agent_offline": [ # Was M3
+    "sync_agent_offline": [ # Gets NEW_FLASH_MODEL as primary (was M3, but not listed for Pro)
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.4},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
     ],
-    "asset_manager_agent_web": [
+    "asset_manager_agent_web": [ # Gets NEW_FLASH_MODEL as primary
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.4},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.4}
     ],
-    "dynamic_page_builder_agent_web": [ # Was M3
+    "dynamic_page_builder_agent_web": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
+        {"model": NEW_PRO_MODEL, "max_tokens": 3500, "temperature": 0.6}, # Coding - temp 0.6 for Pro
+        {"model": NEW_FLASH_MODEL, "max_tokens": 3500, "temperature": 0.4},
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3500, "temperature": 0.4}, # Assuming it should have had Pro
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 3500, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 3500, "temperature": 0.4}
     ],
-    "static_page_builder_agent_web": [
+    "static_page_builder_agent_web": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
+        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6}, # Coding - temp 0.6 for Pro
+        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.4},
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.4}, # Assuming it should have had Pro
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.4},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.4}
     ],
-    "constraint_checker_agent_tech_committee": [
+    "constraint_checker_agent_tech_committee": [ # Gets NEW_FLASH_MODEL as primary
+        {"model": NEW_FLASH_MODEL, "max_tokens": 1500, "temperature": 0.6},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 1500, "temperature": 0.6},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 1500, "temperature": 0.6}
     ],
-    "documentation_writer_agent_tech_committee": [ # Was M3
+    "documentation_writer_agent_tech_committee": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
+        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.7}, # High quality text - temp 0.7 for Pro
+        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.7},
+        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.7}, # Assuming it should have had Pro
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.7},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.7}
     ],
-    "stack_advisor_agent_tech_committee": [
+    "stack_advisor_agent_tech_committee": [ # Gets NEW_FLASH_MODEL as primary
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.7},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
     ],
-    "knowledge_base_tool_summarizer": [
+    "knowledge_base_tool_summarizer": [ # Gets NEW_FLASH_MODEL as primary
+        {"model": NEW_FLASH_MODEL, "max_tokens": 1500, "temperature": 0.6},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 1500, "temperature": 0.6},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 1500, "temperature": 0.6}
     ],
 
     # --- Crew-level LLMs ---
-    # High-Capability for final_assembly_crew
-    "final_assembly_crew": [ # Was M2_PRO_LATEST (now flash-latest)
+    "final_assembly_crew": [
+        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.6},
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.6},
         {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.6},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.6},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.6}
     ],
-    # Others: Primary FLASH_STABLE_ALIAS, Fallback FLASH_OLDER_STABLE
     "backend_development_crew": [
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
     ],
     "devops_crew": [
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
     ],
     "full_stack_crew": [
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
     ],
     "mobile_development_crew": [
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
     ],
     "offline_support_crew": [
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
     ],
     "code_writing_crew": [
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
     ],
     "web_development_crew": [
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
     ],
 
     # --- Default LLMs ---
-    "default_crew_llm": [ # Was M3
+    "default_crew_llm": [
+        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
     ],
-    "default_agent_llm": [ # Was M1
+    "default_agent_llm": [
+        {"model": NEW_FLASH_MODEL, "max_tokens": 1500, "temperature": 0.5},
         {"model": FLASH_STABLE_ALIAS, "max_tokens": 1500, "temperature": 0.5},
         {"model": FLASH_OLDER_STABLE, "max_tokens": 1500, "temperature": 0.5}
     ]

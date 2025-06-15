@@ -91,7 +91,19 @@ def run_qrew():
     if listed_projects:
         console.print(Panel(Text("Select a project to resume or start a new one.", style="bold green"), title="[bold cyan]Project Selection[/bold cyan]", border_style="green"))
         for i, proj in enumerate(listed_projects):
-            console.print(Text(f"{i+1}. {proj['name']} (Status: {proj['status']}) - Last updated: {proj['last_updated']}", style="default"))
+            # Base display string with rich_name and last_updated
+            display_text = Text(f"{i+1}. ")
+            # Use Text.from_markup if rich_name might contain Rich Console Markup, otherwise Text() is fine.
+            # Given ✅ and ❌ are simple characters, Text() is okay, but from_markup is safer if it evolves.
+            display_text.append(Text.from_markup(proj['rich_name']))
+            display_text.append(Text(f" - Last updated: {proj['last_updated']}", style="dim")) # Using dim style
+
+            console.print(display_text)
+
+            # If the project failed and has an error message, display it
+            if proj['status'] == 'failed' and proj.get('error_message'):
+                error_text = Text(f"   Error: {proj['error_message']}", style="italic red")
+                console.print(error_text)
 
         new_project_option_num = len(listed_projects) + 1
         console.print(Text(f"{new_project_option_num}. Start New Project", style="bold yellow"))

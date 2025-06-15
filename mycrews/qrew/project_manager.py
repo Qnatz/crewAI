@@ -192,47 +192,76 @@ class ProjectStateManager:
             project_name = project_info.get("name", "Unknown Project")
             project_id = project_info.get("id", project_key) # Use key if id is missing
             project_path_str = project_info.get("path")
+            error_message_str = None
+            rich_name_prefix = ""
+            state_data = None # Initialize state_data
 
             if not project_path_str:
-                projects_list.append({
-                    "key": project_id,
-                    "name": project_name,
-                    "status": "Error - Path missing",
-                    "last_updated": "N/A",
-                    "path": "N/A"
-                })
-                continue
-
-            state_file_path = Path(project_path_str) / "state.json"
-            status = "Unknown"
-            last_updated = "N/A"
-
-            if state_file_path.exists():
-                try:
-                    state_data = json.loads(state_file_path.read_text())
-                    status = state_data.get("status", "Unknown")
-                    last_updated = state_data.get("updated_at", state_data.get("created_at", "N/A"))
-                    # Attempt to parse and reformat last_updated for better readability if it's ISO format
-                    try:
-                        # Ensure last_updated is a string before attempting to replace 'Z'
-                        if isinstance(last_updated, str):
-                             dt_obj = datetime.fromisoformat(last_updated.replace("Z", "+00:00"))
-                             last_updated = dt_obj.strftime("%Y-%m-%d %H:%M:%S %Z")
-                    except (ValueError, AttributeError): # Handle if not a string or not ISO
-                        pass # Keep original last_updated string
-                except json.JSONDecodeError:
-                    status = "Error - State file corrupted"
+                status = "Error - Path missing"
+                last_updated = "N/A"
+                # No state_data, so error_message_str remains None, rich_name_prefix empty
             else:
-                status = "Error - State file missing"
+                state_file_path = Path(project_path_str) / "state.json"
+                if state_file_path.exists():
+                    try:
+                        state_data = json.loads(state_file_path.read_text())
+                        status = state_data.get("status", "Unknown")
+                        last_updated = state_data.get("updated_at", state_data.get("created_at", "N/A"))
+                        # Attempt to parse and reformat last_updated
+                        try:
+                            if isinstance(last_updated, str):
+                                 dt_obj = datetime.fromisoformat(last_updated.replace("Z", "+00:00"))
+                                 last_updated = dt_obj.strftime("%Y-%m-%d %H:%M:%S %Z")
+                        except (ValueError, AttributeError):
+                            pass # Keep original last_updated string
+                    except json.JSONDecodeError:
+                        status = "Error - State file corrupted"
+                        last_updated = "N/A" # Reset last_updated as state is corrupt
+                else:
+                    status = "Error - State file missing"
+                    last_updated = "N/A" # Reset last_updated as state is missing
+
+            # Determine rich_name_prefix and error_message_str based on status and state_data
+            if status == "completed":
+                rich_name_prefix = "✅ "
+            elif status == "failed":
+                rich_name_prefix = "❌ "
+                if state_data and "error_summary" in state_data:
+                    error_summary_list = state_data["error_summary"]
+                    if isinstance(error_summary_list, list) and error_summary_list:
+                        for record in reversed(error_summary_list):
+                            if isinstance(record, dict) and not record.get("success", True):
+                                error_message_str = record.get("message", "No specific error message found.")
+                                break
+                        if error_message_str is None: # No failure message found in list
+                            error_message_str = "Failed, but no specific error message recorded in summary."
+                    else: # Empty or malformed error_summary
+                        error_message_str = "Failed, error summary not available or empty."
+                elif status == "failed": # Ensure message if state_data was problematic but status is 'failed'
+                    error_message_str = "Failed, error summary not found in state file or state file issue."
+
 
             projects_list.append({
                 "key": project_id,
                 "name": project_name,
                 "status": status,
+                "rich_name": f"{rich_name_prefix}{project_name}",
                 "last_updated": last_updated,
-                "path": project_path_str
+                "path": project_path_str if project_path_str else "N/A",
+                "error_message": error_message_str
             })
 
-        # Sort projects by name for consistent display
-        projects_list.sort(key=lambda p: p["name"])
+        # Sort projects: failed first, then completed, then others, then by name
+        def sort_key_func(p):
+            if p['status'] == 'failed':
+                return 0
+            elif p['status'] == 'completed':
+                return 1
+            # Group error statuses (like missing path/corrupted file) after 'other' normal statuses
+            elif 'Error -' in p['status']:
+                return 3
+            else: # For "in_progress", "Unknown", etc.
+                return 2
+
+        projects_list.sort(key=lambda p: (sort_key_func(p), p['name']))
         return projects_list
