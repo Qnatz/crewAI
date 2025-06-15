@@ -6,85 +6,90 @@ from typing import Optional # For type hinting LLM | None
 # List to store initialization statuses
 llm_initialization_statuses = []
 
+# Define the new target model strings
+M1_FLASH_LATEST = "gemini/gemini-1.5-flash-latest"
+M2_PRO_LATEST = "gemini/gemini-1.5-pro-latest"
+M3_FLASH_2_5 = "gemini/gemini-2.5-flash" # Assuming this is a valid model identifier
+
 # Define the mapping of agent identifiers to specific Gemini model strings
 MODEL_BY_AGENT = {
+    # --- High-capability/Orchestration/Planning Agents (M2) ---
+    "idea_interpreter_agent": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.7},
+    "project_architect_agent": {"model": M2_PRO_LATEST, "max_tokens": 3000, "temperature": 0.7},
+    "taskmaster_agent": {"model": M2_PRO_LATEST, "max_tokens": 2000, "temperature": 0.7},
+    "final_assembler_agent": {"model": M2_PRO_LATEST, "max_tokens": 3000, "temperature": 0.6},
+    "execution_manager_agent": {"model": M2_PRO_LATEST, "max_tokens": 2000, "temperature": 0.7},
+    "tech_vetting_council_agent": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.7},
+
+    # Lead Agents (Coordinators) (M2)
+    "backend_project_coordinator_agent": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.7},
+    "devops_and_integration_coordinator_agent": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.7},
+    "mobile_project_coordinator_agent": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.7},
+    "offline_support_coordinator_agent": {"model": M2_PRO_LATEST, "max_tokens": 2000, "temperature": 0.7},
+    "web_project_coordinator_agent": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.7},
+    "auth_coordinator_agent": {"model": M2_PRO_LATEST, "max_tokens": 2000, "temperature": 0.7},
+
+    # --- Specialized Implementation/Utility Agents ---
     # Auth Agents
-    "auth_coordinator_agent": "gemini/gemini-2.0-flash-001",
-    "otp_verifier_agent": "gemini/gemini-2.0-flash-001",
+    "otp_verifier_agent": {"model": M1_FLASH_LATEST, "max_tokens": 1000, "temperature": 0.4},
 
-    # Backend Agents
-    "api_creator_agent": "gemini/gemini-2.0-flash-001",
-    "auth_agent_backend": "gemini/gemini-2.0-flash-001",
-    "config_agent_backend": "gemini/gemini-2.0-flash-001",
-    "data_model_agent_backend": "gemini/gemini-2.0-flash-001",
-    "queue_agent_backend": "gemini/gemini-2.0-flash-001",
-    "storage_agent_backend": "gemini/gemini-2.0-flash-001",
-    "sync_agent_backend": "gemini/gemini-2.0-flash-001",
+    # Backend Agents (Distribute M1 & M3)
+    "api_creator_agent": {"model": M1_FLASH_LATEST, "max_tokens": 3500, "temperature": 0.3},
+    "auth_agent_backend": {"model": M3_FLASH_2_5, "max_tokens": 3000, "temperature": 0.3},
+    "config_agent_backend": {"model": M1_FLASH_LATEST, "max_tokens": 2000, "temperature": 0.4},
+    "data_model_agent_backend": {"model": M3_FLASH_2_5, "max_tokens": 3000, "temperature": 0.4},
+    "queue_agent_backend": {"model": M1_FLASH_LATEST, "max_tokens": 2500, "temperature": 0.4},
+    "storage_agent_backend": {"model": M3_FLASH_2_5, "max_tokens": 2500, "temperature": 0.4},
+    "sync_agent_backend": {"model": M1_FLASH_LATEST, "max_tokens": 2500, "temperature": 0.4},
 
-    # Dev Utilities Agents
-    "code_writer_agent": "gemini/gemini-2.0-flash-001",
-    "debugger_agent": "gemini/gemini-2.0-flash-001",
-    "logger_agent_devutils": "gemini/gemini-2.0-flash-001",
-    "tester_agent_devutils": "gemini/gemini-2.0-flash-001",
+    # Dev Utilities Agents (Distribute M1 & M3)
+    "code_writer_agent": {"model": M3_FLASH_2_5, "max_tokens": 4000, "temperature": 0.3},
+    "debugger_agent": {"model": M1_FLASH_LATEST, "max_tokens": 2000, "temperature": 0.5},
+    "logger_agent_devutils": {"model": M1_FLASH_LATEST, "max_tokens": 1500, "temperature": 0.4},
+    "tester_agent_devutils": {"model": M3_FLASH_2_5, "max_tokens": 2500, "temperature": 0.5},
 
     # DevOps Agent
-    "devops_agent": "gemini/gemini-2.0-flash-001",
+    "devops_agent": {"model": M1_FLASH_LATEST, "max_tokens": 3000, "temperature": 0.4},
 
-    # Mobile Agents (Android)
-    "android_api_client_agent": "gemini/gemini-2.0-flash-001",
-    "android_storage_agent": "gemini/gemini-2.0-flash-001",
-    "android_ui_agent": "gemini/gemini-2.0-flash-001",
-    # Mobile Agents (iOS)
-    "ios_api_client_agent": "gemini/gemini-2.0-flash-001",
-    "ios_storage_agent": "gemini/gemini-2.0-flash-001",
-    "ios_ui_agent": "gemini/gemini-2.0-flash-001",
+    # Mobile Agents (Android - M1 & M3)
+    "android_api_client_agent": {"model": M1_FLASH_LATEST, "max_tokens": 3000, "temperature": 0.3},
+    "android_storage_agent": {"model": M3_FLASH_2_5, "max_tokens": 2500, "temperature": 0.4},
+    "android_ui_agent": {"model": M1_FLASH_LATEST, "max_tokens": 3500, "temperature": 0.4},
+    # Mobile Agents (iOS - M1 & M3)
+    "ios_api_client_agent": {"model": M1_FLASH_LATEST, "max_tokens": 3000, "temperature": 0.3},
+    "ios_storage_agent": {"model": M3_FLASH_2_5, "max_tokens": 2500, "temperature": 0.4},
+    "ios_ui_agent": {"model": M1_FLASH_LATEST, "max_tokens": 3500, "temperature": 0.4},
 
     # Offline Agents
-    "local_storage_agent_offline": "gemini/gemini-2.0-flash-001",
-    "sync_agent_offline": "gemini/gemini-2.0-flash-001", # Adjusted as per resource constraints theme
+    "local_storage_agent_offline": {"model": M1_FLASH_LATEST, "max_tokens": 2000, "temperature": 0.4},
+    "sync_agent_offline": {"model": M3_FLASH_2_5, "max_tokens": 2500, "temperature": 0.4},
 
-    # Web Agents
-    "asset_manager_agent_web": "gemini/gemini-2.0-flash-001", # Adjusted as asset management might be less complex
-    "dynamic_page_builder_agent_web": "gemini/gemini-2.0-flash-001",
-    "static_page_builder_agent_web": "gemini/gemini-2.0-flash-001",
+    # Web Agents (Distribute M1 & M3)
+    "asset_manager_agent_web": {"model": M1_FLASH_LATEST, "max_tokens": 2000, "temperature": 0.4},
+    "dynamic_page_builder_agent_web": {"model": M3_FLASH_2_5, "max_tokens": 3500, "temperature": 0.4},
+    "static_page_builder_agent_web": {"model": M1_FLASH_LATEST, "max_tokens": 3000, "temperature": 0.4},
 
-    # Crews (using generic keys for crew-level LLM if needed, can be same as lead agents)
-    "backend_development_crew": "gemini/gemini-2.0-flash-001",
-    "devops_crew": "gemini/gemini-2.0-flash-001",
-    "full_stack_crew": "gemini/gemini-2.0-flash-001",
-    "mobile_development_crew": "gemini/gemini-2.0-flash-001",
-    "offline_support_crew": "gemini/gemini-2.0-flash-001", # Crew dealing with offline might use lite
-    "code_writing_crew": "gemini/gemini-2.0-flash-001",
-    "final_assembly_crew": "gemini/gemini-2.0-flash-001",
-    "web_development_crew": "gemini/gemini-2.0-flash-001",
+    # Tech Stack Committee (Distribute M1 & M3, council lead is M2)
+    "constraint_checker_agent_tech_committee": {"model": M1_FLASH_LATEST, "max_tokens": 1500, "temperature": 0.6},
+    "documentation_writer_agent_tech_committee": {"model": M3_FLASH_2_5, "max_tokens": 3000, "temperature": 0.7},
+    "stack_advisor_agent_tech_committee": {"model": M1_FLASH_LATEST, "max_tokens": 2000, "temperature": 0.7},
 
-    # Lead Agents
-    "backend_project_coordinator_agent": "gemini/gemini-2.0-flash-001",
-    "devops_and_integration_coordinator_agent": "gemini/gemini-2.0-flash-001",
-    "mobile_project_coordinator_agent": "gemini/gemini-2.0-flash-001",
-    "offline_support_coordinator_agent": "gemini/gemini-2.0-flash-001", # Coordinator for offline might use lite
-    "web_project_coordinator_agent": "gemini/gemini-2.0-flash-001",
+    # Tools (if a tool needed its own LLM)
+    "knowledge_base_tool_summarizer": {"model": M1_FLASH_LATEST, "max_tokens": 1500, "temperature": 0.6},
 
-    # Orchestrators
-    "execution_manager_agent": "gemini/gemini-2.0-flash-001",
-    "final_assembler_agent": "gemini/gemini-2.0-flash-001",
-    "idea_interpreter_agent": "gemini/gemini-2.0-flash-001", # High capability needed
-    "project_architect_agent": "gemini/gemini-2.0-flash-001", # Changed for reliability, was gemini-2.5-flash-preview-04-17
-    # Tech Stack Committee
-    "constraint_checker_agent_tech_committee": "gemini/gemini-2.0-flash-001",
-    "documentation_writer_agent_tech_committee": "gemini/gemini-2.0-flash-001",
-    "stack_advisor_agent_tech_committee": "gemini/gemini-2.0-flash-001",
-    "tech_vetting_council_agent": "gemini/gemini-2.0-flash-001", # Main council agent
+    # --- Crew-level LLMs (can mirror lead or be specific) ---
+    "backend_development_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
+    "devops_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
+    "full_stack_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
+    "mobile_development_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
+    "offline_support_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
+    "code_writing_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
+    "final_assembly_crew": {"model": M2_PRO_LATEST, "max_tokens": 2500, "temperature": 0.6}, # Promoted
+    "web_development_crew": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
 
-    # TaskMaster
-    "taskmaster_agent": "gemini/gemini-2.0-flash-001", # High capability needed
-
-    # Tools (if a tool needed its own LLM, e.g., for summarization within the tool)
-    "knowledge_base_tool_summarizer": "gemini/gemini-2.0-flash-001",
-
-    # Default for crews or agents not specifically listed / Fallback LLM
-    "default_crew_llm": "gemini/gemini-2.0-flash-001", # Fallback, widely capable
-    "default_agent_llm": "gemini/gemini-2.0-flash-001", # Fallback for any agent not in this map
+    # --- Default LLMs ---
+    "default_crew_llm": {"model": M3_FLASH_2_5, "max_tokens": 2000, "temperature": 0.6},
+    "default_agent_llm": {"model": M1_FLASH_LATEST, "max_tokens": 1500, "temperature": 0.5}
 }
 
 def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_agent_llm") -> Optional[LLM]:
@@ -100,42 +105,51 @@ def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_a
         An LLM instance or None if configuration fails or API key is missing.
     """
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    # Early exit if API key is missing.
     if not GEMINI_API_KEY:
-        # print(f"GEMINI_API_KEY not found in environment. Cannot initialize LLM for agent '{agent_identifier}'.") # Suppressed
-        llm_initialization_statuses.append(("N/A_API_KEY_ISSUE", False)) # Corrected to 2-tuple
+        llm_initialization_statuses.append((f"API_KEY_MISSING_FOR_{agent_identifier}", False))
         return None
 
-    # Determine the model string: use agent-specific if defined, else use the model specified by default_model_key
-    chosen_model_string = MODEL_BY_AGENT.get(agent_identifier)
+    agent_config = MODEL_BY_AGENT.get(agent_identifier)
+    if not agent_config:
+        # print(f"No specific config for agent '{agent_identifier}'. Using default config key: '{default_model_key}'.") # Suppressed
+        agent_config = MODEL_BY_AGENT.get(default_model_key)
+        if not agent_config:
+            # print(f"Error: Default config key '{default_model_key}' not found. Cannot configure LLM for '{agent_identifier}'.") # Suppressed
+            llm_initialization_statuses.append((f"CONFIG_ERROR_FOR_{agent_identifier}", False))
+            return None
 
-    if not chosen_model_string:
-        # print(f"No specific model found for agent '{agent_identifier}'. Using default model key: '{default_model_key}'.") # Suppressed
-        chosen_model_string = MODEL_BY_AGENT.get(default_model_key)
-        if not chosen_model_string: # Should not happen if default_model_key is in MODEL_BY_AGENT
-             # print(f"Error: Default model key '{default_model_key}' not found in MODEL_BY_AGENT. Cannot configure LLM for '{agent_identifier}'.") # Suppressed
-             llm_initialization_statuses.append(("N/A_CONFIG_ERROR", False)) # Corrected to 2-tuple
-             return None
-        # If default is used, chosen_model_string now correctly holds the default model string.
-        # No need to alter chosen_model_string for logging here; it's already the actual model key.
+    model_str = agent_config.get("model")
+    max_tokens_val = agent_config.get("max_tokens")
+    temp_val = agent_config.get("temperature")
 
-    # print(f"Configuring LLM for agent '{agent_identifier}' with model: '{chosen_model_string}'...") # Suppressed
+    if not model_str:
+        # print(f"Error: 'model' not specified in config for '{agent_identifier}'. Config: {agent_config}") # Suppressed
+        llm_initialization_statuses.append((f"MODEL_UNDEFINED_FOR_{agent_identifier}_IN_CONFIG_{agent_config.get('model', 'N/A')}", False))
+        return None
+
+    # Construct llm_params, only including max_tokens and temperature if they are not None
+    # Default num_retries is already handled by LiteLLM/CrewAI's LLM class if not specified.
+    # Adding it explicitly like num_retries=3.
+    llm_params = {"model": model_str, "num_retries": 3}
+    if max_tokens_val is not None:
+        llm_params["max_tokens"] = max_tokens_val
+    if temp_val is not None:
+        llm_params["temperature"] = temp_val
+
+    # print(f"Configuring LLM for agent '{agent_identifier}' with params: {llm_params}") # Suppressed
 
     try:
-        # crewai.LLM handles API key via environment for supported models like Gemini
-        # print(f"Configuring LLM with num_retries=3 for agent '{agent_identifier}'.") # Suppressed
-        llm = LLM(model=chosen_model_string, num_retries=3)
-        # print(f"Successfully initialized LLM for agent '{agent_identifier}' with model '{chosen_model_string}'.") # Suppressed
-        llm_initialization_statuses.append((chosen_model_string, True)) # Corrected to 2-tuple
+        llm = LLM(**llm_params)
+        # print(f"Successfully initialized LLM for agent '{agent_identifier}' with model '{model_str}'.") # Suppressed
+        llm_initialization_statuses.append((model_str, True))
         return llm
     except Exception as e:
-        # print(f"Failed to initialize LLM for agent '{agent_identifier}' with model '{chosen_model_string}': {e}") # Suppressed (Note: Exception details also suppressed)
-        llm_initialization_statuses.append((chosen_model_string, False)) # Corrected to 2-tuple
+        # print(f"Failed to initialize LLM for agent '{agent_identifier}' with model '{model_str}': {e}") # Suppressed
+        llm_initialization_statuses.append((model_str, False))
         return None
 
 # Global default LLM for general use by Crews or as a fallback if an agent-specific one isn't assigned directly.
-# The "default_crew_llm" key in MODEL_BY_AGENT specifies which model this should be.
-default_crew_llm = get_llm_for_agent("default_crew_llm", "gemini/gemini-2.0-flash-001") # Ensure "gemini/gemini-1.5-flash" is a fallback if key is missing
+default_crew_llm = get_llm_for_agent("default_crew_llm") # default_model_key will be "default_agent_llm" if "default_crew_llm" not found
 
 # The initialization of default_crew_llm itself will append to llm_initialization_statuses via get_llm_for_agent.
 # So, no separate print or status update is needed here for default_crew_llm's own initialization.

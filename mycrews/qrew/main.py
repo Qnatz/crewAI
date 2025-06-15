@@ -83,17 +83,11 @@ def run_qrew():
     # Keeping the original print for now, as the focus is on the status boxes.
     print("\nInitializing Qrew System...")
 
-    project_name_for_orchestrator = None # Crucial for mock triggering
-    mock_taskmaster_data = {
-       "project_name": "MockSocialPlatform",
-       "refined_brief": "Prompt 1 brief: Social platform for updates and following, for phones and computers.",
-       "is_new_project": True,
-       "recommended_next_stage": "architecture",
-       "project_scope": "full-stack"
-    }
-    pipeline_inputs = {"user_request": "Mocked: " + mock_taskmaster_data["refined_brief"]} # Minimal initial inputs
-    print(f"DEBUG: Using MOCKED Taskmaster data: {mock_taskmaster_data}")
-    print("DEBUG: Bypassing live user input for mocked Taskmaster run.")
+    project_name_for_orchestrator = None # For a new project, this should be None. Taskmaster will define it.
+
+    # Get user input for the project idea
+    user_idea = Prompt.ask("[bold yellow]Please enter your new project idea or request[/bold yellow]")
+    pipeline_inputs = {"user_request": user_idea}
 
     # --- Execute Pipeline ---
     # Pass project_name_for_orchestrator to WorkflowOrchestrator constructor
@@ -101,10 +95,9 @@ def run_qrew():
     # For mocked run, project_name_for_orchestrator is None, so orchestrator.state will be None initially.
     orchestrator = WorkflowOrchestrator(project_name=project_name_for_orchestrator)
     try:
-        # pipeline_inputs already contains 'project_name' if one was selected,
-        # or it doesn't if it's a new idea (Taskmaster will create it).
-        # Pass the mock_taskmaster_data to execute_pipeline
-        results = orchestrator.execute_pipeline(pipeline_inputs, mock_taskmaster_output=mock_taskmaster_data)
+        # pipeline_inputs now contains the user's request.
+        # The mock_taskmaster_output is removed as Taskmaster will run live.
+        results = orchestrator.execute_pipeline(pipeline_inputs)
 
         # The orchestrator's ProjectStateManager instance holds the final state
         final_state_manager = orchestrator.state
