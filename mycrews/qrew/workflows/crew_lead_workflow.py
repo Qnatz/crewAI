@@ -113,26 +113,41 @@ def run_crew_lead_workflow(inputs: dict):
     )
 
     backend_task_details = {
-        "description": f"Plan backend implementation for {project_name}. Architecture: {architecture_summary_str}. "
-                       f"Focus on API endpoints, data models, and services as per architecture document. Create specific, actionable tasks.",
+        "description": f"Plan backend implementation for {project_name} based on Architecture: {architecture_summary_str}. "
+                       f"Your primary goal is to decompose the backend requirements into a comprehensive list of specific, actionable tasks, "
+                       f"each tailored for a distinct backend specialization. For each task, clearly indicate the type of work "
+                       f"(e.g., 'data model design for X module', 'API endpoint creation for Y feature', 'authentication logic for Z service', "
+                       f"'setup message queue for A', 'configure B service', 'implement data storage for C', 'develop data synchronization for D'). "
+                       f"Ensure tasks are granular enough to be handled by specialized agents like DataModelAgent, ApiCreatorAgent, AuthAgent, "
+                       f"ConfigAgent, QueueAgent, StorageAgent, SyncAgent, etc. The output must be a list of these detailed task strings.",
         "agent": backend_project_coordinator_agent,
         "expected_output": task_expected_output_template.format(domain="backend")
     }
     web_task_details = {
-        "description": f"Plan frontend (web) implementation for {project_name}. Architecture: {architecture_summary_str}. "
-                       f"Focus on UI views, components, and API integrations. Create specific, actionable tasks.",
+        "description": f"Plan frontend (web) implementation for {project_name} based on Architecture: {architecture_summary_str}. "
+                       f"Decompose web requirements into specific, actionable tasks, each tailored for a distinct frontend specialization. "
+                       f"Indicate task types like 'static page creation for X', 'dynamic UI component development for Y feature using Z framework', "
+                       f"'asset management and optimization for A section', 'API integration for B feature'. "
+                       f"Ensure tasks are granular for agents like StaticPageBuilderAgent, DynamicPageBuilderAgent, AssetManagerAgent. "
+                       f"Output a list of these detailed task strings.",
         "agent": web_project_coordinator_agent,
         "expected_output": task_expected_output_template.format(domain="frontend")
     }
     mobile_task_details = {
-        "description": f"Plan mobile implementation for {project_name}. Architecture: {architecture_summary_str}. "
-                       f"Focus on screens, platform-specific UI, and API consumption. Create specific, actionable tasks.",
+        "description": f"Plan mobile implementation for {project_name} (for relevant platforms like Android/iOS) based on Architecture: {architecture_summary_str}. "
+                       f"Decompose mobile requirements into specific, actionable tasks for distinct mobile specializations. "
+                       f"Indicate task types like 'Android UI for X screen', 'iOS UI for Y screen', 'Android API client for Z service', "
+                       f"'iOS data storage for A feature'. Ensure tasks are granular for agents like AndroidUIAgent, IOSUIAgent, "
+                       f"AndroidAPIClientAgent, IOSAPIClientAgent, AndroidStorageAgent, IOSStorageAgent. "
+                       f"Output a list of these detailed task strings.",
         "agent": mobile_project_coordinator_agent,
         "expected_output": task_expected_output_template.format(domain="mobile")
     }
     devops_task_details = {
-        "description": f"Plan deployment and CI/CD pipeline for {project_name}. Architecture: {architecture_summary_str}. "
-                       f"Focus on deploying services, database setup, and automation. Create specific, actionable tasks.",
+        "description": f"Plan deployment, CI/CD pipeline, and infrastructure setup for {project_name} based on Architecture: {architecture_summary_str}. "
+                       f"Decompose DevOps requirements into specific, actionable tasks. Indicate task types like 'setup Kubernetes deployment for X service', "
+                       f"'configure CI/CD pipeline for Y repository', 'database setup and migration script for Z', 'implement monitoring for A'. "
+                       f"Ensure tasks are granular for a DevOps specialist. Output a list of these detailed task strings.",
         "agent": devops_and_integration_coordinator_agent,
         "expected_output": task_expected_output_template.format(domain="deployment")
     }
