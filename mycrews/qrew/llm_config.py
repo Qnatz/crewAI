@@ -294,21 +294,10 @@ def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_a
         # print(f"Attempting to initialize LLM for agent '{agent_identifier}' with model config {i+1}/{len(model_configs_list)}: {llm_params}") # Suppressed
         try:
             llm = LLM(**llm_params)
-            # Test call
-            try:
-                test_response = llm.call("Hello") # Simple, quick test prompt
-                if test_response and isinstance(test_response, str) and test_response.strip():
-                    # print(f"Successfully initialized AND tested LLM for agent '{agent_identifier}' with model '{model_str}'.") # Suppressed
-                    llm_initialization_statuses.append((f"{model_str} (tested)", True))
-                    return llm # Return the successfully initialized and tested LLM
-                else:
-                    # print(f"LLM for agent '{agent_identifier}' with model '{model_str}' initialized but failed test call (empty/invalid response). Response: '{test_response}'") # Suppressed
-                    llm_initialization_statuses.append((f"{model_str} (test_call_empty_response)", False))
-                    # Continue to the next model in the list
-            except Exception as e_test:
-                # print(f"LLM for agent '{agent_identifier}' with model '{model_str}' initialized but failed during test call: {e_test}") # Suppressed
-                llm_initialization_statuses.append((f"{model_str} (test_call_exception: {str(e_test)[:50]})", False))
-                # Continue to the next model in the list
+            # If LLM instantiation is successful, consider it primarily successful for this configuration.
+            # print(f"Successfully initialized LLM for agent '{agent_identifier}' with model '{model_str}'.") # Suppressed
+            llm_initialization_statuses.append((f"{model_str} (initialized)", True))
+            return llm # Return the successfully initialized LLM
         except Exception as e_init:
             # print(f"Failed to initialize LLM for agent '{agent_identifier}' with model '{model_str}' (Attempt {i+1}/{len(model_configs_list)}): {e_init}") # Suppressed
             llm_initialization_statuses.append((f"{model_str} (init_exception: {str(e_init)[:50]})", False))
