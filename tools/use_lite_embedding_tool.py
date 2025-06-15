@@ -7,7 +7,7 @@ import tflite_runtime.interpreter as tflite
 class USELiteEmbeddingTool:
     def __init__(self, model_path=None, spm_path=None):
         # Determine absolute path to the project root (crewAI/)
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
 
         # Set default model and tokenizer paths
         model_path = model_path or os.path.join(base_dir, "models/use_lite.tflite")
