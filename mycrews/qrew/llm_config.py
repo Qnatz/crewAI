@@ -8,7 +8,7 @@ llm_initialization_statuses = []
 
 # Define the new target model strings
 M1_FLASH_LATEST = "gemini/gemini-1.5-flash-latest"
-M2_PRO_LATEST = "gemini/gemini-1.5-pro-latest"
+M2_PRO_LATEST = "gemini/gemini-1.5-flash-latest" # Changed from gemini-1.5-pro-latest
 M3_FLASH_2_5 = "gemini/gemini-2.5-flash" # Assuming this is a valid model identifier
 
 # Define the mapping of agent identifiers to specific Gemini model strings
