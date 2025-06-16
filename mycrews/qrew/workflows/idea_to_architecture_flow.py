@@ -1,12 +1,14 @@
 import json
 # import logging # logging import removed as it's not used in the new version
 from crewai import Crew, Task
-from ..orchestrators.idea_interpreter_agent.agent import idea_interpreter_agent
-from ..orchestrators.project_architect_agent.agent import project_architect_agent
+# from ..orchestrators.idea_interpreter_agent.agent import idea_interpreter_agent # Moved into _perform_architecture_generation
+# from ..orchestrators.project_architect_agent.agent import project_architect_agent # Moved into _perform_architecture_generation
 from ..project_manager import ProjectStateManager
 
 
 def _perform_architecture_generation(inputs: dict):
+    from ..orchestrators.idea_interpreter_agent.agent import idea_interpreter_agent
+    from ..orchestrators.project_architect_agent.agent import project_architect_agent
     print("Performing architecture generation using Idea Interpreter and Project Architect agents...")
 
     # Step A: Idea Interpretation Task
