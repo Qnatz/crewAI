@@ -1,4 +1,8 @@
 from crewai import Crew, Process, Task
+from ..crews.backend_development_crew import BackendDevelopmentCrew
+from ..crews.web_development_crew import WebDevelopmentCrew
+from ..crews.mobile_development_crew import MobileDevelopmentCrew
+from ..crews.devops_crew import DevOpsCrew
 from crewai.tasks.task_output import TaskOutput # Ensure TaskOutput is imported
 from typing import Any # Ensure Any is imported
 import re # Added import re
@@ -95,87 +99,78 @@ def validate_and_extract_code_output(task_output: TaskOutput) -> tuple[bool, Any
         return False, f"Error during guardrail code extraction: {str(e)}"
 
 def run_subagent_execution_workflow(inputs: dict):
-    print(f"DEBUG: Entering run_subagent_execution_workflow with inputs: {inputs.get('project_name', 'N/A')}") # Scope not easily available here
+    project_scope = inputs.get("taskmaster", {}).get("project_scope", "unknown")
+    print(f"DEBUG: Entering run_subagent_execution_workflow for project_name: {inputs.get('project_name', 'N/A')}, project_scope: {project_scope}")
+
     # Backend implementation
-    backend_tasks = create_backend_tasks(inputs["crew_assignment"]["backend_plan"])
-    if backend_tasks:
-        # Ensure all specialized backend agents are available to the crew
-        all_backend_agents = [
-            api_creator_agent,
-            data_model_agent,
-            backend_auth_agent,
-            config_agent,
-            queue_agent,
-            backend_storage_agent,
-            backend_sync_agent
-        ]
-        backend_crew = Crew(
-            agents=list(set(all_backend_agents)), # Use set to avoid duplicates if any agent is listed multiple times
-            tasks=backend_tasks,
-            process=Process.sequential,
-            verbose=True
-        )
-        backend_result = backend_crew.kickoff()
+    backend_result = None
+    if project_scope in ["backend-only", "full-stack", "web-only"]: # web-only often implies backend for APIs
+        print(f"INFO: Initializing BackendDevelopmentCrew for project_scope: {project_scope}")
+        backend_crew_instance = BackendDevelopmentCrew()
+
+        # Pass all high-level inputs from the workflow.
+        # BackendDevelopmentCrew's tasks are expected to use these inputs via placeholders.
+        # For example, if a task in BackendDevelopmentCrew needs '{feature_description}',
+        # it should be present in the main 'inputs' dictionary passed to this workflow.
+        final_kickoff_inputs = {**inputs}
+        # Add any specific transformations or keys if needed, e.g.:
+        # final_kickoff_inputs["planned_backend_task_descriptions"] = inputs.get("crew_assignment", {}).get("backend_plan", {}).get("tasks", [])
+
+        print(f"DEBUG: Kicking off BackendDevelopmentCrew with job_scope='{project_scope}' and input keys: {list(final_kickoff_inputs.keys())}")
+
+        backend_result = backend_crew_instance.crew(job_scope=project_scope).kickoff(inputs=final_kickoff_inputs)
+        print("INFO: BackendDevelopmentCrew execution completed.")
     else:
-        backend_result = None
-        print("Skipping backend_crew execution as no tasks were generated.")
+        print(f"INFO: Skipping BackendDevelopmentCrew for project_scope: {project_scope}")
+        # Ensure backend_result has a structure that extract_outputs can handle
+        backend_result = {"message": f"Skipped backend development due to project_scope: {project_scope}", "tasks_output": []}
+
 
     # Web implementation
-    web_tasks = create_web_tasks(inputs["crew_assignment"]["frontend_plan"])
-    if web_tasks:
-        all_web_agents = [
-            dynamic_page_builder_agent,
-            static_page_builder_agent,
-            asset_manager_agent
-        ]
-        web_crew = Crew(
-            agents=list(set(all_web_agents)),
-            tasks=web_tasks,
-            process=Process.sequential,
-            verbose=True
-        )
-        web_result = web_crew.kickoff()
+    web_result = None
+    if project_scope in ["web-only", "full-stack"]:
+        print(f"INFO: Initializing WebDevelopmentCrew for project_scope: {project_scope}")
+        web_crew_instance = WebDevelopmentCrew()
+        final_kickoff_inputs = {**inputs}
+        print(f"DEBUG: Kicking off WebDevelopmentCrew with job_scope='{project_scope}' and input keys: {list(final_kickoff_inputs.keys())}")
+        web_result = web_crew_instance.crew(job_scope=project_scope).kickoff(inputs=final_kickoff_inputs)
+        print("INFO: WebDevelopmentCrew execution completed.")
     else:
-        web_result = None
-        print("Skipping web_crew execution as no tasks were generated.")
+        print(f"INFO: Skipping WebDevelopmentCrew for project_scope: {project_scope}")
+        web_result = {"message": f"Skipped web development due to project_scope: {project_scope}", "tasks_output": []}
 
     # Mobile implementation
-    mobile_tasks = create_mobile_tasks(inputs["crew_assignment"]["mobile_plan"])
-    if mobile_tasks:
-        all_mobile_agents = [
-            android_ui_agent,
-            ios_ui_agent,
-            android_api_client_agent,
-            ios_api_client_agent,
-            android_storage_agent,
-            ios_storage_agent
-        ]
-        mobile_crew = Crew(
-            agents=list(set(all_mobile_agents)),
-            tasks=mobile_tasks,
-            process=Process.sequential,
-            verbose=True
-        )
-        mobile_result = mobile_crew.kickoff()
+    mobile_result = None
+    if project_scope in ["mobile-only", "full-stack"]:
+        print(f"INFO: Initializing MobileDevelopmentCrew for project_scope: {project_scope}")
+        mobile_crew_instance = MobileDevelopmentCrew()
+        final_kickoff_inputs = {**inputs}
+        print(f"DEBUG: Kicking off MobileDevelopmentCrew with job_scope='{project_scope}' and input keys: {list(final_kickoff_inputs.keys())}")
+        mobile_result = mobile_crew_instance.crew(job_scope=project_scope).kickoff(inputs=final_kickoff_inputs)
+        print("INFO: MobileDevelopmentCrew execution completed.")
     else:
-        mobile_result = None
-        print("Skipping mobile_crew execution as no tasks were generated.")
+        print(f"INFO: Skipping MobileDevelopmentCrew for project_scope: {project_scope}")
+        mobile_result = {"message": f"Skipped mobile development due to project_scope: {project_scope}", "tasks_output": []}
 
     # DevOps implementation
-    devops_tasks = create_devops_tasks(inputs["crew_assignment"]["deployment_plan"])
-    if devops_tasks:
-        devops_crew = Crew(
-            agents=[devops_agent],
-            tasks=devops_tasks,
-            process=Process.sequential,
-            verbose=True
-        )
-        devops_result = devops_crew.kickoff()
-    else:
-        devops_result = None
-        print("Skipping devops_crew execution as no tasks were generated.")
+    devops_result = None
+    is_dev_scope_active = any(s in project_scope for s in ["backend", "web", "mobile", "full-stack"]) or \
+                           project_scope in ["backend-only", "web-only", "mobile-only", "full-stack"]
 
-    # from crewai.tasks.task_output import TaskOutput # Repeated here for clarity in subtask, ensure it's at file top
+    if is_dev_scope_active:
+        print(f"INFO: Initializing DevOpsCrew for project_scope: {project_scope} (Dev scope active)")
+        devops_crew_instance = DevOpsCrew()
+        final_kickoff_inputs = {**inputs}
+        # Optionally add previous results if needed by DevOps tasks, e.g.:
+        # final_kickoff_inputs['backend_artifacts_summary'] = backend_result.summary if backend_result else None
+        # final_kickoff_inputs['web_artifacts_summary'] = web_result.summary if web_result else None
+        # final_kickoff_inputs['mobile_artifacts_summary'] = mobile_result.summary if mobile_result else None
+        print(f"DEBUG: Kicking off DevOpsCrew with job_scope='devops' and input keys: {list(final_kickoff_inputs.keys())}")
+        devops_result = devops_crew_instance.crew(job_scope="devops").kickoff(inputs=final_kickoff_inputs)
+        print("INFO: DevOpsCrew execution completed.")
+    else:
+        print(f"INFO: Skipping DevOpsCrew as no primary development scope was active for project_scope: {project_scope}")
+        devops_result = {"message": f"Skipped devops due to project_scope: {project_scope}", "tasks_output": []}
 
     def extract_outputs(crew_output):
         if crew_output and hasattr(crew_output, 'tasks_output') and crew_output.tasks_output:
@@ -206,178 +201,3 @@ def run_subagent_execution_workflow(inputs: dict):
         "devops": extract_outputs(devops_result)
     }
     print(f"DEBUG: Exiting run_subagent_execution_workflow") # Added exit print before the final return
-
-def create_backend_tasks(plan):
-    tasks = []
-    if plan and isinstance(plan, dict) and "tasks" in plan and isinstance(plan["tasks"], list) and plan["tasks"]:
-        for task_desc in plan["tasks"]:
-            if not isinstance(task_desc, str) or not task_desc.strip():
-                print(f"Warning: Invalid task description in backend_plan: '{task_desc}'. Skipping.")
-                continue
-
-            task_desc_lower = task_desc.lower()
-            agent_to_assign = api_creator_agent # Default agent
-
-            if "data model" in task_desc_lower or "schema" in task_desc_lower or "database design" in task_desc_lower:
-                agent_to_assign = data_model_agent
-            elif "auth" in task_desc_lower or "authentication" in task_desc_lower or "user login" in task_desc_lower or "security policy" in task_desc_lower:
-                agent_to_assign = backend_auth_agent
-            elif "config" in task_desc_lower or "service setup" in task_desc_lower or "environment variable" in task_desc_lower:
-                agent_to_assign = config_agent
-            elif "queue" in task_desc_lower or "message broker" in task_desc_lower or "async task" in task_desc_lower:
-                agent_to_assign = queue_agent
-            elif "storage" in task_desc_lower or "file system" in task_desc_lower or "s3 bucket" in task_desc_lower or "database interaction" in task_desc_lower:
-                agent_to_assign = backend_storage_agent
-            elif "sync" in task_desc_lower or "data synchronization" in task_desc_lower:
-                agent_to_assign = backend_sync_agent
-            elif "api" in task_desc_lower or "endpoint" in task_desc_lower or "route" in task_desc_lower:
-                agent_to_assign = api_creator_agent
-            else:
-                print(f"Warning: No specific backend agent matched for task: '{task_desc}'. Defaulting to api_creator_agent.")
-
-            description_str = task_desc + " IMPORTANT REMINDER: Your final output for this task must be strictly the code/configuration artifact itself, with absolutely no other surrounding text or explanations, as per the detailed 'expected_output' format."
-            expected_output_str = f"CRITICAL: Your entire response MUST be ONLY the raw code/configuration for the task: '{task_desc}'. NO explanations, NO apologies, NO introductory or concluding remarks, NO markdown fences (like ```python or ```), NO conversational text. ONLY the code/configuration itself. For example, if creating a Python function, the output should start with 'def' or 'async def'. If it's a JSON config, it starts with '{{'. If it's HTML, it starts with '<!DOCTYPE html>' or a tag. Adhere strictly to outputting only the required software artifact."
-            tasks.append(
-                Task(
-                    description=description_str,
-                    agent=agent_to_assign,
-                    expected_output=expected_output_str,
-                    max_retries=1,
-                    guardrail=validate_and_extract_code_output
-                )
-            )
-    else:
-        print(f"Warning: No valid tasks found in backend_plan or plan is malformed: {plan}")
-
-    if not tasks: # This print remains for the case where the loop completes but no tasks were valid, or plan["tasks"] was empty
-        print(f"Warning: No tasks ultimately created for backend_plan: {plan}")
-    return tasks
-
-def create_web_tasks(plan):
-    tasks = []
-    if plan and isinstance(plan, dict) and "tasks" in plan and isinstance(plan["tasks"], list) and plan["tasks"]:
-        for task_desc in plan["tasks"]:
-            if not isinstance(task_desc, str) or not task_desc.strip():
-                print(f"Warning: Invalid task description in frontend_plan: '{task_desc}'. Skipping.")
-                continue
-
-            task_desc_lower = task_desc.lower()
-            agent_to_assign = dynamic_page_builder_agent # Default
-
-            if "static page" in task_desc_lower or \
-               ("info page" in task_desc_lower or "html page" in task_desc_lower) and not "dynamic" in task_desc_lower:
-                agent_to_assign = static_page_builder_agent
-            elif ("asset" in task_desc_lower or "image" in task_desc_lower or \
-                  "css" in task_desc_lower or "javascript file" in task_desc_lower) or \
-                 ("optimize" in task_desc_lower and "asset" in task_desc_lower):
-                agent_to_assign = asset_manager_agent
-            elif "dynamic" in task_desc_lower or "interactive" in task_desc_lower or \
-                 "component" in task_desc_lower or "feature" in task_desc_lower:
-                agent_to_assign = dynamic_page_builder_agent
-            else:
-                print(f"Warning: No specific web agent matched for task: '{task_desc}'. Defaulting to dynamic_page_builder_agent.")
-
-            description_str = task_desc + " IMPORTANT REMINDER: Your final output for this task must be strictly the code/configuration artifact itself, with absolutely no other surrounding text or explanations, as per the detailed 'expected_output' format."
-            expected_output_str = f"CRITICAL: Your entire response MUST be ONLY the raw code/configuration for the task: '{task_desc}'. NO explanations, NO apologies, NO introductory or concluding remarks, NO markdown fences (like ```python or ```), NO conversational text. ONLY the code/configuration itself. For example, if creating a Python function, the output should start with 'def' or 'async def'. If it's a JSON config, it starts with '{{'. If it's HTML, it starts with '<!DOCTYPE html>' or a tag. Adhere strictly to outputting only the required software artifact."
-            tasks.append(
-                Task(
-                    description=description_str,
-                    agent=agent_to_assign,
-                    expected_output=expected_output_str,
-                    max_retries=1,
-                    guardrail=validate_and_extract_code_output
-                )
-            )
-    else:
-        print(f"Warning: No valid tasks found in frontend_plan or plan is malformed: {plan}")
-
-    if not tasks:
-        print(f"Warning: No tasks ultimately created for frontend_plan: {plan}")
-    return tasks
-
-def create_mobile_tasks(plan):
-    tasks = []
-    if plan and isinstance(plan, dict) and "tasks" in plan and isinstance(plan["tasks"], list) and plan["tasks"]:
-        for task_desc in plan["tasks"]:
-            if not isinstance(task_desc, str) or not task_desc.strip():
-                print(f"Warning: Invalid task description in mobile_plan: '{task_desc}'. Skipping.")
-                continue
-
-            task_desc_lower = task_desc.lower()
-            agent_to_assign = None
-
-            is_android = "android" in task_desc_lower
-            is_ios = "ios" in task_desc_lower or "apple" in task_desc_lower
-
-            if "api client" in task_desc_lower or "network request" in task_desc_lower or "fetch data" in task_desc_lower:
-                if is_android:
-                    agent_to_assign = android_api_client_agent
-                elif is_ios:
-                    agent_to_assign = ios_api_client_agent
-                # else: Consider a generic mobile api client or default if platform is not specified but task is API related
-            elif "storage" in task_desc_lower or "database" in task_desc_lower or "local data" in task_desc_lower:
-                if is_android:
-                    agent_to_assign = android_storage_agent
-                elif is_ios:
-                    agent_to_assign = ios_storage_agent
-                # else: Consider a generic mobile storage agent
-            elif "ui" in task_desc_lower or "screen" in task_desc_lower or "layout" in task_desc_lower:
-                if is_android:
-                    agent_to_assign = android_ui_agent
-                elif is_ios:
-                    agent_to_assign = ios_ui_agent
-
-            if agent_to_assign is None: # Fallback if no specific category matches or platform ambiguity for specialized tasks
-                if is_android:
-                    agent_to_assign = android_ui_agent # Default Android to UI agent
-                elif is_ios:
-                    agent_to_assign = ios_ui_agent # Default iOS to UI agent
-                else:
-                    # If no platform is specified, default to Android UI agent and log a warning.
-                    # This could be made more sophisticated, e.g. by having a generic mobile agent
-                    # or by requiring platform specification in task descriptions.
-                    agent_to_assign = android_ui_agent
-                    print(f"Warning: No specific mobile agent category or platform matched for task: '{task_desc}'. Defaulting to android_ui_agent.")
-
-            description_str = task_desc + " IMPORTANT REMINDER: Your final output for this task must be strictly the code/configuration artifact itself, with absolutely no other surrounding text or explanations, as per the detailed 'expected_output' format."
-            expected_output_str = f"CRITICAL: Your entire response MUST be ONLY the raw code/configuration for the task: '{task_desc}'. NO explanations, NO apologies, NO introductory or concluding remarks, NO markdown fences (like ```python or ```), NO conversational text. ONLY the code/configuration itself. For example, if creating a Python function, the output should start with 'def' or 'async def'. If it's a JSON config, it starts with '{{'. If it's HTML, it starts with '<!DOCTYPE html>' or a tag. Adhere strictly to outputting only the required software artifact."
-            tasks.append(
-                Task(
-                    description=description_str,
-                    agent=agent_to_assign,
-                    expected_output=expected_output_str,
-                    max_retries=1,
-                    guardrail=validate_and_extract_code_output
-                )
-            )
-    else:
-        print(f"Warning: No valid tasks found in mobile_plan or plan is malformed: {plan}")
-
-    if not tasks:
-        print(f"Warning: No tasks ultimately created for mobile_plan: {plan}")
-    return tasks
-
-def create_devops_tasks(plan):
-    tasks = []
-    if plan and isinstance(plan, dict) and "tasks" in plan and isinstance(plan["tasks"], list) and plan["tasks"]:
-        for task_desc in plan["tasks"]:
-            if not isinstance(task_desc, str) or not task_desc.strip():
-                print(f"Warning: Invalid task description in deployment_plan: '{task_desc}'. Skipping.")
-                continue
-            description_str = task_desc + " IMPORTANT REMINDER: Your final output for this task must be strictly the code/configuration artifact itself, with absolutely no other surrounding text or explanations, as per the detailed 'expected_output' format."
-            expected_output_str = f"CRITICAL: Your entire response MUST be ONLY the raw code/configuration for the task: '{task_desc}'. NO explanations, NO apologies, NO introductory or concluding remarks, NO markdown fences (like ```python or ```), NO conversational text. ONLY the code/configuration itself. For example, if creating a Python function, the output should start with 'def' or 'async def'. If it's a JSON config, it starts with '{{'. If it's HTML, it starts with '<!DOCTYPE html>' or a tag. Adhere strictly to outputting only the required software artifact."
-            tasks.append(
-                Task(
-                    description=description_str,
-                    agent=devops_agent,
-                    expected_output=expected_output_str,
-                    max_retries=1,
-                    guardrail=validate_and_extract_code_output
-                )
-            )
-    else:
-        print(f"Warning: No valid tasks found in deployment_plan or plan is malformed: {plan}")
-
-    if not tasks:
-        print(f"Warning: No tasks ultimately created for deployment_plan: {plan}")
-    return tasks

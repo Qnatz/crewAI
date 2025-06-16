@@ -73,6 +73,11 @@ class DevOpsCrew:
             tsk for tsk in all_tasks if tsk.agent in active_agents
         ]
 
+        pruned_tasks = [task for task in all_tasks if task not in filtered_tasks]
+        if pruned_tasks:
+            pruned_task_descriptions = [task.description for task in pruned_tasks]
+            logging.info(f"Pruned tasks for job_scope '{job_scope}' in DevOpsCrew: {pruned_task_descriptions}")
+
         if not active_agents:
             logging.warning(f"No active agents for job_scope '{job_scope}' in DevOpsCrew. Crew will have no agents.")
         if not filtered_tasks:
