@@ -203,7 +203,8 @@ class WorkflowOrchestrator:
                         f"Focus on understanding the core needs and deliverables. "
                         f"Based on the project's nature (e.g., complexity, use of new/unproven technologies, high uncertainty), recommend the next logical stage. "
                         f"Valid recommendations are: 'tech_vetting' (if new/complex tech evaluation is needed) or 'architecture' (if project can proceed to design). "
-                        f"Also, determine the primary scope of the project from the following options: 'web-only', 'mobile-only', 'backend-only', 'full-stack', 'documentation-only'. If ambiguous or not fitting these, use 'unknown'.",
+                        f"Also, determine the primary scope of the project from the following options: 'web-only', 'mobile-only', 'backend-only', 'full-stack', 'documentation-only'. If ambiguous or not fitting these, use 'unknown'. "
+                        "Your final response MUST be ONLY a single, valid JSON object that strictly adheres to the structure specified in the expected_output. Do not include any other text, explanations, or conversational remarks before or after the JSON object.",
             agent=taskmaster_agent,
             expected_output="A JSON object containing: "
                             "'project_name' (string, unique and descriptive for new projects), "

@@ -53,85 +53,105 @@ VERIFIED_GEMINI_2_5_FLASH_PREVIEW = "gemini/gemini-2.5-flash-preview-04-17"
 #     {"model": VERIFIED_GEMINI_2_0_FLASH_LITE, "max_tokens": 2000, "temperature": 0.7}  # For lighter tasks
 # ]
 
-# Define specific model configuration objects from VERIFIED_ constants for clarity
-CFG_2_5_FLASH_PREVIEW = {"model": VERIFIED_GEMINI_2_5_FLASH_PREVIEW, "max_tokens": 3000, "temperature": 0.7}
-CFG_1_5_FLASH = {"model": VERIFIED_GEMINI_1_5_FLASH, "max_tokens": 2800, "temperature": 0.7}
-CFG_1_5_FLASH_8B = {"model": VERIFIED_GEMINI_1_5_FLASH_8B, "max_tokens": 2800, "temperature": 0.7}
-CFG_2_0_FLASH = {"model": VERIFIED_GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
-CFG_2_0_FLASH_LITE = {"model": VERIFIED_GEMINI_2_0_FLASH_LITE, "max_tokens": 2000, "temperature": 0.7}
+# Comment out old CFG objects and template lists
+# CFG_2_5_FLASH_PREVIEW = {"model": VERIFIED_GEMINI_2_5_FLASH_PREVIEW, "max_tokens": 3000, "temperature": 0.7}
+# CFG_1_5_FLASH = {"model": VERIFIED_GEMINI_1_5_FLASH, "max_tokens": 2800, "temperature": 0.7}
+# CFG_1_5_FLASH_8B = {"model": VERIFIED_GEMINI_1_5_FLASH_8B, "max_tokens": 2800, "temperature": 0.7}
+# CFG_2_0_FLASH = {"model": VERIFIED_GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
+# CFG_2_0_FLASH_LITE = {"model": VERIFIED_GEMINI_2_0_FLASH_LITE, "max_tokens": 2000, "temperature": 0.7}
 
-# Template model lists by capability
-HIGH_CAPABILITY_MODELS_A = [CFG_2_5_FLASH_PREVIEW, CFG_1_5_FLASH, CFG_1_5_FLASH_8B]
-HIGH_CAPABILITY_MODELS_B = [CFG_1_5_FLASH, CFG_2_5_FLASH_PREVIEW, CFG_2_0_FLASH]
+# HIGH_CAPABILITY_MODELS_A = [CFG_2_5_FLASH_PREVIEW, CFG_1_5_FLASH, CFG_1_5_FLASH_8B]
+# HIGH_CAPABILITY_MODELS_B = [CFG_1_5_FLASH, CFG_2_5_FLASH_PREVIEW, CFG_2_0_FLASH]
+# STANDARD_CAPABILITY_MODELS_A = [CFG_1_5_FLASH, CFG_2_0_FLASH, CFG_2_5_FLASH_PREVIEW]
+# STANDARD_CAPABILITY_MODELS_B = [CFG_2_0_FLASH, CFG_1_5_FLASH_8B, CFG_2_5_FLASH_PREVIEW]
+# UTILITY_CAPABILITY_MODELS_A = [CFG_2_0_FLASH_LITE, CFG_2_0_FLASH, CFG_1_5_FLASH]
+# UTILITY_CAPABILITY_MODELS_B = [CFG_2_0_FLASH, CFG_2_0_FLASH_LITE, CFG_1_5_FLASH_8B]
 
-STANDARD_CAPABILITY_MODELS_A = [CFG_1_5_FLASH, CFG_2_0_FLASH, CFG_2_5_FLASH_PREVIEW]
-STANDARD_CAPABILITY_MODELS_B = [CFG_2_0_FLASH, CFG_1_5_FLASH_8B, CFG_2_5_FLASH_PREVIEW]
+# Configuration objects based on user's matrix for verified Flash models
+CFG_1_5_FLASH_DETERMINISTIC = {"model": VERIFIED_GEMINI_1_5_FLASH, "temperature": 0.1, "max_tokens": 1500}
+CFG_1_5_FLASH_8B_BASIC = {"model": VERIFIED_GEMINI_1_5_FLASH_8B, "temperature": 0.2, "max_tokens": 1000}
+CFG_2_0_FLASH_SCAFFOLD = {"model": VERIFIED_GEMINI_2_0_FLASH, "temperature": 0.4, "max_tokens": 2000}
+CFG_2_0_FLASH_LITE_UTILITY = {"model": VERIFIED_GEMINI_2_0_FLASH_LITE, "temperature": 0.3, "max_tokens": 768}
+CFG_2_5_FLASH_PREVIEW_E2E = {"model": VERIFIED_GEMINI_2_5_FLASH_PREVIEW, "temperature": 0.3, "max_tokens": 3000}
 
-UTILITY_CAPABILITY_MODELS_A = [CFG_2_0_FLASH_LITE, CFG_2_0_FLASH, CFG_1_5_FLASH]
-UTILITY_CAPABILITY_MODELS_B = [CFG_2_0_FLASH, CFG_2_0_FLASH_LITE, CFG_1_5_FLASH_8B]
+# Template model lists by capability using new CFG objects
+PLANNING_DESIGN_MODELS = [CFG_2_5_FLASH_PREVIEW_E2E, CFG_2_0_FLASH_SCAFFOLD, CFG_1_5_FLASH_DETERMINISTIC]
+SCAFFOLDING_API_MODELS = [CFG_2_0_FLASH_SCAFFOLD, CFG_2_5_FLASH_PREVIEW_E2E, CFG_1_5_FLASH_DETERMINISTIC]
+DETERMINISTIC_CODE_MODELS = [CFG_1_5_FLASH_DETERMINISTIC, CFG_2_0_FLASH_SCAFFOLD, CFG_1_5_FLASH_8B_BASIC]
+DOCS_UTILITY_MODELS_A = [CFG_2_0_FLASH_LITE_UTILITY, CFG_1_5_FLASH_8B_BASIC, CFG_1_5_FLASH_DETERMINISTIC]
+DOCS_UTILITY_MODELS_B = [CFG_1_5_FLASH_8B_BASIC, CFG_2_0_FLASH_LITE_UTILITY, CFG_1_5_FLASH_DETERMINISTIC]
+UI_GEN_MODELS = [CFG_2_0_FLASH_SCAFFOLD, CFG_2_5_FLASH_PREVIEW_E2E, CFG_1_5_FLASH_DETERMINISTIC]
+COORDINATOR_MODELS_A = [CFG_1_5_FLASH_DETERMINISTIC, CFG_2_0_FLASH_SCAFFOLD, CFG_2_5_FLASH_PREVIEW_E2E]
+COORDINATOR_MODELS_B = [CFG_2_0_FLASH_SCAFFOLD, CFG_1_5_FLASH_8B_BASIC, CFG_2_5_FLASH_PREVIEW_E2E]
 
+# Specific model list for Taskmaster Agent with adjusted temperature (remains from previous step, uses VERIFIED constants)
+TASKMASTER_AGENT_MODELS = [
+    {"model": VERIFIED_GEMINI_2_5_FLASH_PREVIEW, "max_tokens": 3000, "temperature": 0.3},
+    {"model": VERIFIED_GEMINI_1_5_FLASH, "max_tokens": 2800, "temperature": 0.3},
+    {"model": VERIFIED_GEMINI_1_5_FLASH_8B, "max_tokens": 2800, "temperature": 0.3}
+]
 
 # Define the mapping of agent identifiers to a list of model configurations (for fallback)
 MODEL_BY_AGENT = {
     # --- High-capability/Orchestration/Planning Agents ---
-    "idea_interpreter_agent": HIGH_CAPABILITY_MODELS_A,
-    "project_architect_agent": HIGH_CAPABILITY_MODELS_B,
-    "taskmaster_agent": HIGH_CAPABILITY_MODELS_A,
-    "final_assembler_agent": HIGH_CAPABILITY_MODELS_B,
-    "execution_manager_agent": HIGH_CAPABILITY_MODELS_A,
-    "tech_vetting_council_agent": HIGH_CAPABILITY_MODELS_B,
+    "idea_interpreter_agent": PLANNING_DESIGN_MODELS,
+    "project_architect_agent": PLANNING_DESIGN_MODELS,
+    "taskmaster_agent": TASKMASTER_AGENT_MODELS, # Special case with lower temp
+    "final_assembler_agent": PLANNING_DESIGN_MODELS,
+    "execution_manager_agent": PLANNING_DESIGN_MODELS,
+    "tech_vetting_council_agent": PLANNING_DESIGN_MODELS,
+    "stack_advisor_agent_tech_committee": PLANNING_DESIGN_MODELS,
 
     # Lead Agents (Coordinators)
-    "backend_project_coordinator_agent": STANDARD_CAPABILITY_MODELS_A,
-    "devops_and_integration_coordinator_agent": STANDARD_CAPABILITY_MODELS_B,
-    "mobile_project_coordinator_agent": STANDARD_CAPABILITY_MODELS_A,
-    "offline_support_coordinator_agent": UTILITY_CAPABILITY_MODELS_A,
-    "web_project_coordinator_agent": STANDARD_CAPABILITY_MODELS_B,
-    "auth_coordinator_agent": STANDARD_CAPABILITY_MODELS_A,
+    "backend_project_coordinator_agent": COORDINATOR_MODELS_A,
+    "devops_and_integration_coordinator_agent": COORDINATOR_MODELS_B,
+    "mobile_project_coordinator_agent": COORDINATOR_MODELS_A,
+    "offline_support_coordinator_agent": DOCS_UTILITY_MODELS_A, # Simpler coordination
+    "web_project_coordinator_agent": COORDINATOR_MODELS_B,
+    "auth_coordinator_agent": COORDINATOR_MODELS_A,
 
     # --- Specialized Implementation/Utility Agents ---
-    "otp_verifier_agent": UTILITY_CAPABILITY_MODELS_A,
-    "api_creator_agent": HIGH_CAPABILITY_MODELS_A,
-    "auth_agent_backend": HIGH_CAPABILITY_MODELS_B,
-    "config_agent_backend": UTILITY_CAPABILITY_MODELS_B,
-    "data_model_agent_backend": HIGH_CAPABILITY_MODELS_A,
-    "queue_agent_backend": UTILITY_CAPABILITY_MODELS_A,
-    "storage_agent_backend": STANDARD_CAPABILITY_MODELS_A,
-    "sync_agent_backend": UTILITY_CAPABILITY_MODELS_B,
-    "code_writer_agent": HIGH_CAPABILITY_MODELS_B,
-    "debugger_agent": STANDARD_CAPABILITY_MODELS_B,
-    "logger_agent_devutils": UTILITY_CAPABILITY_MODELS_A,
-    "tester_agent_devutils": STANDARD_CAPABILITY_MODELS_A,
-    "devops_agent": HIGH_CAPABILITY_MODELS_A,
-    "android_api_client_agent": HIGH_CAPABILITY_MODELS_B,
-    "android_ui_agent": HIGH_CAPABILITY_MODELS_A,
-    "ios_api_client_agent": HIGH_CAPABILITY_MODELS_B,
-    "ios_ui_agent": HIGH_CAPABILITY_MODELS_A,
-    "android_storage_agent": UTILITY_CAPABILITY_MODELS_B,
-    "ios_storage_agent": UTILITY_CAPABILITY_MODELS_A,
-    "local_storage_agent_offline": UTILITY_CAPABILITY_MODELS_B,
-    "sync_agent_offline": UTILITY_CAPABILITY_MODELS_A,
-    "asset_manager_agent_web": UTILITY_CAPABILITY_MODELS_B,
-    "dynamic_page_builder_agent_web": HIGH_CAPABILITY_MODELS_A,
-    "static_page_builder_agent_web": HIGH_CAPABILITY_MODELS_B,
-    "constraint_checker_agent_tech_committee": STANDARD_CAPABILITY_MODELS_A,
-    "documentation_writer_agent_tech_committee": HIGH_CAPABILITY_MODELS_A,
-    "stack_advisor_agent_tech_committee": HIGH_CAPABILITY_MODELS_B,
-    "knowledge_base_tool_summarizer": STANDARD_CAPABILITY_MODELS_B,
+    "otp_verifier_agent": DOCS_UTILITY_MODELS_A,
+    "api_creator_agent": SCAFFOLDING_API_MODELS,
+    "auth_agent_backend": DETERMINISTIC_CODE_MODELS, # Security-sensitive code
+    "config_agent_backend": DOCS_UTILITY_MODELS_B, # Often simpler, structured files
+    "data_model_agent_backend": DETERMINISTIC_CODE_MODELS, # Needs precision
+    "queue_agent_backend": DOCS_UTILITY_MODELS_A,
+    "storage_agent_backend": DETERMINISTIC_CODE_MODELS, # Logic for DB interaction
+    "sync_agent_backend": DOCS_UTILITY_MODELS_B,
+    "code_writer_agent": DETERMINISTIC_CODE_MODELS, # Core coding task
+    "debugger_agent": DETERMINISTIC_CODE_MODELS, # Needs to understand code precisely
+    "logger_agent_devutils": DOCS_UTILITY_MODELS_A,
+    "tester_agent_devutils": DOCS_UTILITY_MODELS_B, # Test generation can be creative but also structured
+    "devops_agent": SCAFFOLDING_API_MODELS, # Scripts, configs
+    "android_api_client_agent": SCAFFOLDING_API_MODELS,
+    "android_ui_agent": UI_GEN_MODELS,
+    "ios_api_client_agent": SCAFFOLDING_API_MODELS,
+    "ios_ui_agent": UI_GEN_MODELS,
+    "android_storage_agent": DOCS_UTILITY_MODELS_B, # Simpler file/DB interactions
+    "ios_storage_agent": DOCS_UTILITY_MODELS_A,
+    "local_storage_agent_offline": DOCS_UTILITY_MODELS_B,
+    "sync_agent_offline": DOCS_UTILITY_MODELS_A,
+    "asset_manager_agent_web": DOCS_UTILITY_MODELS_B,
+    "dynamic_page_builder_agent_web": UI_GEN_MODELS,
+    "static_page_builder_agent_web": DETERMINISTIC_CODE_MODELS, # Template-heavy
+    "constraint_checker_agent_tech_committee": DOCS_UTILITY_MODELS_A, # Analysis, not generation
+    "documentation_writer_agent_tech_committee": DOCS_UTILITY_MODELS_B, # Text generation focus
+    "knowledge_base_tool_summarizer": DOCS_UTILITY_MODELS_A,
 
     # --- Crew-level LLMs ---
-    "final_assembly_crew": HIGH_CAPABILITY_MODELS_A,
-    "backend_development_crew": STANDARD_CAPABILITY_MODELS_A,
-    "devops_crew": STANDARD_CAPABILITY_MODELS_A, # Using A for variety from backend
-    "full_stack_crew": STANDARD_CAPABILITY_MODELS_B, # Using B for variety
-    "mobile_development_crew": STANDARD_CAPABILITY_MODELS_A,
-    "offline_support_crew": UTILITY_CAPABILITY_MODELS_A,
-    "code_writing_crew": HIGH_CAPABILITY_MODELS_A, # Should be capable
-    "web_development_crew": STANDARD_CAPABILITY_MODELS_B, # Using B for variety
+    "final_assembly_crew": PLANNING_DESIGN_MODELS,
+    "backend_development_crew": SCAFFOLDING_API_MODELS,
+    "devops_crew": SCAFFOLDING_API_MODELS,
+    "full_stack_crew": PLANNING_DESIGN_MODELS, # Needs broader understanding
+    "mobile_development_crew": UI_GEN_MODELS,
+    "offline_support_crew": DOCS_UTILITY_MODELS_A,
+    "code_writing_crew": DETERMINISTIC_CODE_MODELS,
+    "web_development_crew": UI_GEN_MODELS,
 
     # --- Default LLMs ---
-    "default_crew_llm": STANDARD_CAPABILITY_MODELS_A,
-    "default_agent_llm": UTILITY_CAPABILITY_MODELS_A
+    "default_crew_llm": [CFG_1_5_FLASH_DETERMINISTIC, CFG_2_0_FLASH_SCAFFOLD, CFG_1_5_FLASH_8B_BASIC],
+    "default_agent_llm": [CFG_1_5_FLASH_8B_BASIC, CFG_2_0_FLASH_LITE_UTILITY, CFG_1_5_FLASH_DETERMINISTIC]
 }
 
 def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_agent_llm") -> Optional[LLM]:
