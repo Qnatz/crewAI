@@ -11,6 +11,9 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Global variable to store ONNX embedding model initialization status
+ONNX_EMBEDDING_INITIALIZATION_STATUS = [("ONNX Embedding Model", False)]
+
 class KnowledgeBaseTool(BaseTool): # Renamed from EnhancedKnowledgeBaseTool
     name: str = "Enhanced Knowledge Base Tool" # Name from the new tool
     description: str = (
@@ -40,6 +43,7 @@ class KnowledgeBaseTool(BaseTool): # Renamed from EnhancedKnowledgeBaseTool
             self.embedding_session = ort.InferenceSession(onnx_model_path, options)
             self.tokenizer = Tokenizer.from_file(tokenizer_path)
             logger.info("Embedding model loaded successfully")
+            ONNX_EMBEDDING_INITIALIZATION_STATUS[0] = ("ONNX Embedding Model", True)
         except Exception as e:
             logger.error(f"Failed to load embedding model: {str(e)}")
             self.embedding_session = None

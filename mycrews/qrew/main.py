@@ -20,6 +20,7 @@ if project_src_path not in sys.path:
 # We'll import llm_initialization_statuses after modifying llm_config.py
 from .llm_config import default_llm, llm_initialization_statuses # Adjusted import
 from . import config as crew_config
+from .tools.knowledge_base_tool import ONNX_EMBEDDING_INITIALIZATION_STATUS as onnx_embedding_status
 
 # Initialize Rich Console
 console = Console()
@@ -73,7 +74,7 @@ def run_qrew():
     display_model_initialization_status("[bold cyan]--- LLM Initialization ---[/bold cyan]", llm_initialization_statuses)
 
     # Placeholder for TFLite and other models as per requirements, also using Rich
-    display_model_initialization_status("[bold cyan]--- TFLite Model Initialization ---[/bold cyan]", [])
+    display_model_initialization_status("[bold cyan]--- ONNX Model Initialization ---[/bold cyan]", onnx_embedding_status)
     # Example with placeholder models:
     # display_model_initialization_status("[bold cyan]--- Other Model Initialization ---[/bold cyan]", [("Embedding Model", True), ("Another Model", False)])
 
@@ -100,24 +101,29 @@ def run_qrew():
     listed_projects = ProjectStateManager.list_projects()
 
     if listed_projects:
-        console.print(Panel(Text("Select a project to resume or start a new one.", style="bold green"), title="[bold cyan]Project Selection[/bold cyan]", border_style="green"))
+        project_display_lines = []
+        intro_text = Text("Select a project to resume or start a new one:\n", style="bold green")
+        # project_display_lines.append(intro_text) # Will be assembled later
+
         for i, proj in enumerate(listed_projects):
-            # Base display string with rich_name and last_updated
             display_text = Text(f"{i+1}. ")
-            # Use Text.from_markup if rich_name might contain Rich Console Markup, otherwise Text() is fine.
-            # Given ✅ and ❌ are simple characters, Text() is okay, but from_markup is safer if it evolves.
             display_text.append(Text.from_markup(proj['rich_name']))
-            display_text.append(Text(f" - Last updated: {proj['last_updated']}", style="dim")) # Using dim style
+            display_text.append(Text(f" - Last updated: {proj['last_updated']}", style="dim"))
 
-            console.print(display_text)
-
-            # If the project failed and has an error message, display it
             if proj['status'] == 'failed' and proj.get('error_message'):
                 error_text = Text(f"   Error: {proj['error_message']}", style="italic red")
-                console.print(error_text)
+                display_text.append("\n") # Add a newline before the error
+                display_text.append(error_text)
+            project_display_lines.append(display_text)
 
         new_project_option_num = len(listed_projects) + 1
-        console.print(Text(f"{new_project_option_num}. Start New Project", style="bold yellow"))
+        new_project_text = Text(f"{new_project_option_num}. Start New Project", style="bold yellow")
+        project_display_lines.append(new_project_text)
+
+        project_list_text = Text("\n").join(project_display_lines)
+        panel_content = Text.assemble(intro_text, project_list_text)
+        panel_title = "[bold cyan]Project Options[/bold cyan]"
+        console.print(Panel(panel_content, title=panel_title, border_style="green", expand=False, padding=(1,2)))
 
         choice_prompt = f"Enter project number (1-{len(listed_projects)}) to resume, or '{new_project_option_num}' (or 'n') for a new project"
 

@@ -6,325 +6,293 @@ from typing import Optional # For type hinting LLM | None
 # List to store initialization statuses
 llm_initialization_statuses = []
 
-# Define new primary model strings
-NEW_PRO_MODEL = "gemini/gemini-2.5-pro-preview-06-05"
-NEW_FLASH_MODEL = "gemini/gemini-2.5-flash-preview-05-20"
-PRO_MODEL_PRIMARY = "gemini/gemini-1.5-pro-002"  # Assuming this is a valid identifier for the latest Pro
-FLASH_STABLE_ALIAS = "gemini/gemini-1.5-flash"    # Alias for latest stable Flash
-FLASH_OLDER_STABLE = "gemini/gemini-2.0-flash"   # Older stable Flash (example, use actual if different)
+# Define New User-Provided Gemini Model Constants
+GEMINI_1_5_PRO = "gemini/gemini-1.5-pro"
+GEMINI_1_5_FLASH = "gemini/gemini-1.5-flash"
+GEMINI_2_0_FLASH = "gemini/gemini-2.0-flash"
+GEMINI_2_0_FLASH_LITE_001 = "gemini/gemini-2.0-flash-lite-001"
+GEMINI_2_5_FLASH_PREVIEW_04_17 = "gemini/gemini-2.5-flash-preview-04-17"
+GEMINI_2_5_PRO_EXP_03_25 = "gemini/gemini-2.5-pro-exp-03-25"
+
+# Comment out or remove old Gemini constants
+# NEW_PRO_MODEL = "gemini/gemini-2.5-pro-preview-06-05"
+# NEW_FLASH_MODEL = "gemini/gemini-2.5-flash-preview-05-20"
+# PRO_MODEL_PRIMARY = "gemini/gemini-1.5-pro-002"  # Assuming this is a valid identifier for the latest Pro
+# FLASH_STABLE_ALIAS = "gemini/gemini-1.5-flash"    # Alias for latest stable Flash
+# FLASH_OLDER_STABLE = "gemini/gemini-2.0-flash"   # Older stable Flash (example, use actual if different)
 
 # Old constants M1, M2, M3 are removed as their roles are superseded by the new constants and logic.
+
+# Create a Comprehensive List of New Gemini Models
+USER_SPECIFIED_GEMINI_MODELS = [
+    {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+    {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+    {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
+    {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7},
+    {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
+    {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+]
 
 # Define the mapping of agent identifiers to a list of model configurations (for fallback)
 MODEL_BY_AGENT = {
     # --- High-capability/Orchestration/Planning Agents ---
     "idea_interpreter_agent": [
-        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.7},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.7},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
     "project_architect_agent": [
-        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.7},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.7},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.7},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.7},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.7}
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7}
     ],
     "taskmaster_agent": [
-        {"model": NEW_PRO_MODEL, "max_tokens": 2000, "temperature": 0.7},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.7},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2000, "temperature": 0.7},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7}
     ],
     "final_assembler_agent": [
-        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.6},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.6},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.6},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.6}
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
     "execution_manager_agent": [
-        {"model": NEW_PRO_MODEL, "max_tokens": 2000, "temperature": 0.7},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.7},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2000, "temperature": 0.7},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7}
     ],
     "tech_vetting_council_agent": [
-        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.7},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.7},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7}
     ],
 
     # Lead Agents (Coordinators)
     "backend_project_coordinator_agent": [
-        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.7},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.7},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7}
     ],
     "devops_and_integration_coordinator_agent": [
-        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.7},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.7},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
     "mobile_project_coordinator_agent": [
-        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.7},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.7},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
     "offline_support_coordinator_agent": [
-        {"model": NEW_PRO_MODEL, "max_tokens": 2000, "temperature": 0.7},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.7},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2000, "temperature": 0.7},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
     ],
     "web_project_coordinator_agent": [
-        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.7},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.7},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.7},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.7},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.7}
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
     "auth_coordinator_agent": [
-        {"model": NEW_PRO_MODEL, "max_tokens": 2000, "temperature": 0.7},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.7},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2000, "temperature": 0.7},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7}
     ],
 
     # --- Specialized Implementation/Utility Agents ---
-    "otp_verifier_agent": [ # Gets NEW_FLASH_MODEL as primary
-        {"model": NEW_FLASH_MODEL, "max_tokens": 1000, "temperature": 0.4},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 1000, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 1000, "temperature": 0.4}
+    "otp_verifier_agent": [
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "api_creator_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
-        {"model": NEW_PRO_MODEL, "max_tokens": 3500, "temperature": 0.6}, # Coding tasks - temp 0.6 for Pro
-        {"model": NEW_FLASH_MODEL, "max_tokens": 3500, "temperature": 0.3},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3500, "temperature": 0.3}, # Assuming it should have had Pro
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3500, "temperature": 0.3},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 3500, "temperature": 0.3}
+    "api_creator_agent": [
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "auth_agent_backend": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
-        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6}, # Coding tasks - temp 0.6 for Pro
-        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.3},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.3}, # Assuming it should have had Pro
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.3},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.3}
+    "auth_agent_backend": [
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7}
     ],
-    "config_agent_backend": [ # Gets NEW_FLASH_MODEL as primary
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.4},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.4}
+    "config_agent_backend": [
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "data_model_agent_backend": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
-        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6}, # Coding tasks - temp 0.6 for Pro
-        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.4}, # Temp 0.4 for Flash as it's data model
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.4}, # Assuming it should have had Pro
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.4}
+    "data_model_agent_backend": [
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7}
     ],
-    "queue_agent_backend": [ # Gets NEW_FLASH_MODEL as primary
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.4},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
+    "queue_agent_backend": [
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
     ],
-    "storage_agent_backend": [ # Gets NEW_FLASH_MODEL as primary (was M3, but not listed for Pro)
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.4},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
+    "storage_agent_backend": [
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "sync_agent_backend": [ # Gets NEW_FLASH_MODEL as primary
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.4},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
+    "sync_agent_backend": [
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
     ],
-    "code_writer_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
-        {"model": NEW_PRO_MODEL, "max_tokens": 4000, "temperature": 0.3},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 4000, "temperature": 0.3},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 4000, "temperature": 0.3}, # Added PRO_MODEL_PRIMARY
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 4000, "temperature": 0.3},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 4000, "temperature": 0.3}
+    "code_writer_agent": [
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "debugger_agent": [ # Gets NEW_FLASH_MODEL as primary
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.5},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.5},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.5}
+    "debugger_agent": [
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "logger_agent_devutils": [ # Gets NEW_FLASH_MODEL as primary
-        {"model": NEW_FLASH_MODEL, "max_tokens": 1500, "temperature": 0.4},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 1500, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 1500, "temperature": 0.4}
+    "logger_agent_devutils": [
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "tester_agent_devutils": [ # Gets NEW_FLASH_MODEL as primary (was M3, but not listed for Pro)
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.5},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.5},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.5}
+    "tester_agent_devutils": [
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "devops_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
-        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6}, # Config/coding - temp 0.6 for Pro
-        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.4},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.4}, # Assuming it should have had Pro
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.4}
+    "devops_agent": [
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7}
     ],
-    "android_api_client_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
-        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6}, # Coding - temp 0.6 for Pro
-        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.3},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.3}, # Assuming it should have had Pro
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.3},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.3}
+    "android_api_client_agent": [
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "android_storage_agent": [ # Gets NEW_FLASH_MODEL as primary (was M3, but not listed for Pro)
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.4},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
+    "android_ui_agent": [
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "android_ui_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
-        {"model": NEW_PRO_MODEL, "max_tokens": 3500, "temperature": 0.6}, # Coding - temp 0.6 for Pro
-        {"model": NEW_FLASH_MODEL, "max_tokens": 3500, "temperature": 0.4},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3500, "temperature": 0.4}, # Assuming it should have had Pro
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3500, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 3500, "temperature": 0.4}
+    "ios_api_client_agent": [
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "ios_api_client_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
-        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6}, # Coding - temp 0.6 for Pro
-        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.3},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.3}, # Assuming it should have had Pro
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.3},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.3}
+    "ios_ui_agent": [
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "ios_storage_agent": [ # Gets NEW_FLASH_MODEL as primary (was M3, but not listed for Pro)
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.4},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
+    "android_storage_agent": [
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
     ],
-    "ios_ui_agent": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
-        {"model": NEW_PRO_MODEL, "max_tokens": 3500, "temperature": 0.6}, # Coding - temp 0.6 for Pro
-        {"model": NEW_FLASH_MODEL, "max_tokens": 3500, "temperature": 0.4},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3500, "temperature": 0.4}, # Assuming it should have had Pro
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3500, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 3500, "temperature": 0.4}
+    "ios_storage_agent": [
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
     ],
-    "local_storage_agent_offline": [ # Gets NEW_FLASH_MODEL as primary
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.4},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.4}
+    "local_storage_agent_offline": [
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
     ],
-    "sync_agent_offline": [ # Gets NEW_FLASH_MODEL as primary (was M3, but not listed for Pro)
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.4},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.4}
+    "sync_agent_offline": [
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
     ],
-    "asset_manager_agent_web": [ # Gets NEW_FLASH_MODEL as primary
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.4},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.4}
+    "asset_manager_agent_web": [
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "dynamic_page_builder_agent_web": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
-        {"model": NEW_PRO_MODEL, "max_tokens": 3500, "temperature": 0.6}, # Coding - temp 0.6 for Pro
-        {"model": NEW_FLASH_MODEL, "max_tokens": 3500, "temperature": 0.4},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3500, "temperature": 0.4}, # Assuming it should have had Pro
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3500, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 3500, "temperature": 0.4}
+    "dynamic_page_builder_agent_web": [
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "static_page_builder_agent_web": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
-        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.6}, # Coding - temp 0.6 for Pro
-        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.4},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.4}, # Assuming it should have had Pro
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.4},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.4}
+    "static_page_builder_agent_web": [
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "constraint_checker_agent_tech_committee": [ # Gets NEW_FLASH_MODEL as primary
-        {"model": NEW_FLASH_MODEL, "max_tokens": 1500, "temperature": 0.6},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 1500, "temperature": 0.6},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 1500, "temperature": 0.6}
+    "constraint_checker_agent_tech_committee": [
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "documentation_writer_agent_tech_committee": [ # Gets NEW_PRO_MODEL and NEW_FLASH_MODEL
-        {"model": NEW_PRO_MODEL, "max_tokens": 3000, "temperature": 0.7}, # High quality text - temp 0.7 for Pro
-        {"model": NEW_FLASH_MODEL, "max_tokens": 3000, "temperature": 0.7},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 3000, "temperature": 0.7}, # Assuming it should have had Pro
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 3000, "temperature": 0.7},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 3000, "temperature": 0.7}
+    "documentation_writer_agent_tech_committee": [
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
-    "stack_advisor_agent_tech_committee": [ # Gets NEW_FLASH_MODEL as primary
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.7},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.7},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.7}
+    "stack_advisor_agent_tech_committee": [
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7}
     ],
-    "knowledge_base_tool_summarizer": [ # Gets NEW_FLASH_MODEL as primary
-        {"model": NEW_FLASH_MODEL, "max_tokens": 1500, "temperature": 0.6},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 1500, "temperature": 0.6},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 1500, "temperature": 0.6}
+    "knowledge_base_tool_summarizer": [
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
     ],
 
     # --- Crew-level LLMs ---
     "final_assembly_crew": [
-        {"model": NEW_PRO_MODEL, "max_tokens": 2500, "temperature": 0.6},
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2500, "temperature": 0.6},
-        {"model": PRO_MODEL_PRIMARY, "max_tokens": 2500, "temperature": 0.6},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2500, "temperature": 0.6},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2500, "temperature": 0.6}
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
     "backend_development_crew": [
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7}
     ],
     "devops_crew": [
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
     "full_stack_crew": [
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
     "mobile_development_crew": [
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
     "offline_support_crew": [
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
     ],
     "code_writing_crew": [
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
     "web_development_crew": [
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
 
     # --- Default LLMs ---
     "default_crew_llm": [
-        {"model": NEW_FLASH_MODEL, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 2000, "temperature": 0.6},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 2000, "temperature": 0.6}
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
     ],
     "default_agent_llm": [
-        {"model": NEW_FLASH_MODEL, "max_tokens": 1500, "temperature": 0.5},
-        {"model": FLASH_STABLE_ALIAS, "max_tokens": 1500, "temperature": 0.5},
-        {"model": FLASH_OLDER_STABLE, "max_tokens": 1500, "temperature": 0.5}
+        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
     ]
 }
 
