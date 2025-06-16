@@ -9,7 +9,7 @@ import os
 from crewai_tools import (
     CodeInterpreterTool,
     FileReadTool,
-    FileWriteTool,
+    FileWriterTool, # Changed FileWriteTool to FileWriterTool
     CodeDocsSearchTool,
     GithubSearchTool,
     DirectoryReadTool,
@@ -36,7 +36,7 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 # For now, instantiating as per crewai_tools standard.
 code_interpreter_tool = CodeInterpreterTool() # Standard instantiation
 file_read_tool = FileReadTool()
-file_write_tool = FileWriteTool()
+file_write_tool = FileWriterTool() # Changed FileWriteTool to FileWriterTool
 directory_read_tool = DirectoryReadTool()
 directory_search_tool = DirectorySearchTool()
 code_docs_search_tool = CodeDocsSearchTool() # Standard, specific docs can be set via source property or method if available
