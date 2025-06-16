@@ -1,3 +1,4 @@
+import logging
 from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
@@ -57,11 +58,29 @@ class DevOpsCrew:
         )
 
     @crew
-    def crew(self) -> ValidatedCrew: # Return type changed
+    def crew(self, job_scope: str | list[str]) -> ValidatedCrew: # Return type changed
         """Creates the DevOps crew"""
+        if isinstance(job_scope, str):
+            job_scope = [job_scope]
+
+        all_agents = [self.cicd_specialist]
+        active_agents = [
+            agt for agt in all_agents if hasattr(agt, 'type') and (agt.type == "common" or agt.type in job_scope)
+        ]
+
+        all_tasks = self.tasks
+        filtered_tasks = [
+            tsk for tsk in all_tasks if tsk.agent in active_agents
+        ]
+
+        if not active_agents:
+            logging.warning(f"No active agents for job_scope '{job_scope}' in DevOpsCrew. Crew will have no agents.")
+        if not filtered_tasks:
+            logging.warning(f"No tasks were matched for the active agents with job_scope '{job_scope}' in DevOpsCrew. Crew will have no tasks.")
+
         created_crew = ValidatedCrew( # Changed to ValidatedCrew
-            agents=[self.cicd_specialist], # Using the property name
-            tasks=self.tasks, # From @task decorator
+            agents=active_agents, # Using the property name
+            tasks=filtered_tasks, # From @task decorator
             process=Process.sequential,
             verbose=True,
             llm=default_llm

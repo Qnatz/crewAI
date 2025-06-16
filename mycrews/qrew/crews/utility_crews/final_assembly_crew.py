@@ -1,3 +1,4 @@
+import logging
 from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
@@ -73,11 +74,32 @@ class FinalAssemblyCrew:
         )
 
     @crew
-    def crew(self) -> ValidatedCrew: # Return type changed
+    def crew(self, job_scope: str | list[str]) -> ValidatedCrew: # Return type changed
         """Creates the Final Assembly Utility crew"""
+        if isinstance(job_scope, str):
+            job_scope = [job_scope]
+
+        all_agents = [self.assembler, self.documenter, self.reviewer]
+        active_agents = []
+        for agt in all_agents:
+            # Default to 'common' if type attribute is missing, as per subtask instructions
+            agt_type = getattr(agt, 'type', 'common')
+            if agt_type == "common" or agt_type in job_scope:
+                active_agents.append(agt)
+
+        all_tasks = self.tasks
+        filtered_tasks = [
+            tsk for tsk in all_tasks if tsk.agent in active_agents
+        ]
+
+        if not active_agents:
+            logging.warning(f"No active agents for job_scope '{job_scope}' in FinalAssemblyCrew. Crew will have no agents.")
+        if not filtered_tasks:
+            logging.warning(f"No tasks were matched for the active agents with job_scope '{job_scope}' in FinalAssemblyCrew. Crew will have no tasks.")
+
         created_crew = ValidatedCrew( # Changed to ValidatedCrew
-            agents=[self.assembler, self.documenter, self.reviewer],
-            tasks=self.tasks,
+            agents=active_agents,
+            tasks=filtered_tasks,
             process=Process.sequential, # Assembly, Ddcing, then Review is a logical sequence
             verbose=True,
             llm=default_llm

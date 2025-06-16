@@ -1,3 +1,4 @@
+import logging
 from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
@@ -73,11 +74,29 @@ class CodeWritingCrew:
         )
 
     @crew
-    def crew(self) -> ValidatedCrew: # Return type changed
+    def crew(self, job_scope: str | list[str]) -> ValidatedCrew: # Return type changed
         """Creates the Code Writing Utility crew"""
+        if isinstance(job_scope, str):
+            job_scope = [job_scope]
+
+        all_agents = [self.writer, self.debugger, self.tester]
+        active_agents = [
+            agt for agt in all_agents if hasattr(agt, 'type') and (agt.type == "common" or agt.type in job_scope)
+        ]
+
+        all_tasks = self.tasks
+        filtered_tasks = [
+            tsk for tsk in all_tasks if tsk.agent in active_agents
+        ]
+
+        if not active_agents:
+            logging.warning(f"No active agents for job_scope '{job_scope}' in CodeWritingCrew. Crew will have no agents.")
+        if not filtered_tasks:
+            logging.warning(f"No tasks were matched for the active agents with job_scope '{job_scope}' in CodeWritingCrew. Crew will have no tasks.")
+
         created_crew = ValidatedCrew( # Changed to ValidatedCrew
-            agents=[self.writer, self.debugger, self.tester],
-            tasks=self.tasks,
+            agents=active_agents,
+            tasks=filtered_tasks,
             process=Process.sequential, # These tasks often follow a sequence
             verbose=True,
             llm=default_llm

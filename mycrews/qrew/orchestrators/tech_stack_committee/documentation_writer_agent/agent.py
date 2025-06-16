@@ -16,6 +16,7 @@ documentation_writer_agent = Agent(
               "Focuses on accuracy, clarity, and maintainability of documentation.",
     llm=specific_llm, # Assign the fetched LLM
     tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
+    type="common",
     allow_delegation=False,
     verbose=True
 )

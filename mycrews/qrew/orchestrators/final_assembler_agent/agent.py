@@ -17,6 +17,7 @@ final_assembler_agent = Agent(
               "Has a strong understanding of build processes and deployment packaging.",
     llm=specific_llm, # Assign the fetched LLM
     tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
+    type="common",
     allow_delegation=True, # May delegate specific packaging or verification tasks
     verbose=True
 )
