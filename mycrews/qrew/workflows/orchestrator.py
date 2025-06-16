@@ -4,7 +4,7 @@ from typing import Any, Optional
 from crewai import Crew, Task
 from crewai.tasks.task_output import TaskOutput
 # from ..orchestrators.idea_interpreter_agent.agent import idea_interpreter_agent # Removed
-from .idea_to_architecture_flow import run_idea_to_architecture_flow
+# from .idea_to_architecture_flow import run_idea_to_architecture_flow # Moved to __init__
 from .crew_lead_workflow import run_crew_lead_workflow
 from .subagent_execution_workflow import run_subagent_execution_workflow
 from .final_assembly_workflow import run_final_assembly_workflow
@@ -69,13 +69,16 @@ class WorkflowOrchestrator:
         else:
             self.state = None # Will be initialized after taskmaster runs
 
+        # Import moved here to attempt to resolve circular dependency
+        from .idea_to_architecture_flow import run_idea_to_architecture_flow
+
         # The workflow functions themselves are expected to handle their inputs
         # and interact with ProjectStateManager if they need to load/save intermediate artifacts
         # specific to their internal steps, or check if they can be skipped.
         self.workflows = {
             "taskmaster": self.run_taskmaster_workflow,
             "tech_vetting": run_tech_vetting_workflow, # Added tech_vetting
-            "architecture": run_idea_to_architecture_workflow,
+            "architecture": run_idea_to_architecture_flow,
             "crew_assignment": run_crew_lead_workflow,
             "subagent_execution": run_subagent_execution_workflow,
             "final_assembly": run_final_assembly_workflow,
