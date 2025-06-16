@@ -6,22 +6,33 @@ from typing import Optional # For type hinting LLM | None
 # List to store initialization statuses
 llm_initialization_statuses = []
 
+# Comment out all previous Gemini model constant definitions
 # Define New User-Provided Gemini Model Constants
-GEMINI_1_5_PRO = "gemini/gemini-1.5-pro"
-GEMINI_1_5_FLASH = "gemini/gemini-1.5-flash"
-GEMINI_2_0_FLASH = "gemini/gemini-2.0-flash"
-GEMINI_2_0_FLASH_LITE_001 = "gemini/gemini-2.0-flash-lite-001"
-GEMINI_2_5_FLASH_PREVIEW_04_17 = "gemini/gemini-2.5-flash-preview-04-17"
-GEMINI_2_5_PRO_EXP_03_25 = "gemini/gemini-2.5-pro-exp-03-25"
+# GEMINI_1_5_PRO = "gemini/gemini-1.5-pro"
+# GEMINI_1_5_FLASH = "gemini/gemini-1.5-flash"
+# GEMINI_2_0_FLASH = "gemini/gemini-2.0-flash"
+# GEMINI_2_0_FLASH_LITE_001 = "gemini/gemini-2.0-flash-lite-001"
+# GEMINI_2_5_FLASH_PREVIEW_04_17 = "gemini/gemini-2.5-flash-preview-04-17"
+# GEMINI_2_5_PRO_EXP_03_25 = "gemini/gemini-2.5-pro-exp-03-25"
 
 # Comment out or remove old Gemini constants
 # NEW_PRO_MODEL = "gemini/gemini-2.5-pro-preview-06-05"
 # NEW_FLASH_MODEL = "gemini/gemini-2.5-flash-preview-05-20"
-# PRO_MODEL_PRIMARY = "gemini/gemini-1.5-pro-002"  # Assuming this is a valid identifier for the latest Pro
-# FLASH_STABLE_ALIAS = "gemini/gemini-1.5-flash"    # Alias for latest stable Flash
-# FLASH_OLDER_STABLE = "gemini/gemini-2.0-flash"   # Older stable Flash (example, use actual if different)
+# PRO_MODEL_PRIMARY = "gemini/gemini-1.5-pro-002"
+# FLASH_STABLE_ALIAS = "gemini/gemini-1.5-flash"
+# FLASH_OLDER_STABLE = "gemini/gemini-2.0-flash"
 
 # Old constants M1, M2, M3 are removed as their roles are superseded by the new constants and logic.
+
+# Verified working models based on user testing
+VERIFIED_GEMINI_1_5_FLASH = "gemini/gemini-1.5-flash"
+VERIFIED_GEMINI_1_5_FLASH_8B = "gemini/gemini-1.5-flash-8b"
+VERIFIED_GEMINI_2_0_FLASH = "gemini/gemini-2.0-flash"
+VERIFIED_GEMINI_2_0_FLASH_LITE = "gemini/gemini-2.0-flash-lite-001"
+VERIFIED_GEMINI_2_5_FLASH_PREVIEW = "gemini/gemini-2.5-flash-preview-04-17"
+# VERIFIED_GEMINI_2_0_FLASH_THINKING_EXP = "gemini/gemini-2.0-flash-thinking-exp-01-21" # Keep available if needed
+# VERIFIED_GEMINI_2_0_FLASH_001 = "gemini/gemini-2.0-flash-001" # Likely same as VERIFIED_GEMINI_2_0_FLASH
+
 
 # Create a Comprehensive List of New Gemini Models
 # USER_SPECIFIED_GEMINI_MODELS = [
@@ -34,275 +45,93 @@ GEMINI_2_5_PRO_EXP_03_25 = "gemini/gemini-2.5-pro-exp-03-25"
 # ]
 
 # Create a Comprehensive List of Verified Working Gemini Models
-VERIFIED_GEMINI_MODELS_CONFIG = [
-    {"model": VERIFIED_GEMINI_2_5_FLASH_PREVIEW, "max_tokens": 3000, "temperature": 0.7}, # Good for higher capability tasks
-    {"model": VERIFIED_GEMINI_1_5_FLASH, "max_tokens": 2800, "temperature": 0.7},       # Solid general purpose
-    {"model": VERIFIED_GEMINI_1_5_FLASH_8B, "max_tokens": 2800, "temperature": 0.7},    # 8B variant of 1.5 flash
-    {"model": VERIFIED_GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},       # Another general purpose option
-    {"model": VERIFIED_GEMINI_2_0_FLASH_LITE, "max_tokens": 2000, "temperature": 0.7}  # For lighter tasks
-]
+# VERIFIED_GEMINI_MODELS_CONFIG = [
+#     {"model": VERIFIED_GEMINI_2_5_FLASH_PREVIEW, "max_tokens": 3000, "temperature": 0.7}, # Good for higher capability tasks
+#     {"model": VERIFIED_GEMINI_1_5_FLASH, "max_tokens": 2800, "temperature": 0.7},       # Solid general purpose
+#     {"model": VERIFIED_GEMINI_1_5_FLASH_8B, "max_tokens": 2800, "temperature": 0.7},    # 8B variant of 1.5 flash
+#     {"model": VERIFIED_GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},       # Another general purpose option
+#     {"model": VERIFIED_GEMINI_2_0_FLASH_LITE, "max_tokens": 2000, "temperature": 0.7}  # For lighter tasks
+# ]
+
+# Define specific model configuration objects from VERIFIED_ constants for clarity
+CFG_2_5_FLASH_PREVIEW = {"model": VERIFIED_GEMINI_2_5_FLASH_PREVIEW, "max_tokens": 3000, "temperature": 0.7}
+CFG_1_5_FLASH = {"model": VERIFIED_GEMINI_1_5_FLASH, "max_tokens": 2800, "temperature": 0.7}
+CFG_1_5_FLASH_8B = {"model": VERIFIED_GEMINI_1_5_FLASH_8B, "max_tokens": 2800, "temperature": 0.7}
+CFG_2_0_FLASH = {"model": VERIFIED_GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
+CFG_2_0_FLASH_LITE = {"model": VERIFIED_GEMINI_2_0_FLASH_LITE, "max_tokens": 2000, "temperature": 0.7}
+
+# Template model lists by capability
+HIGH_CAPABILITY_MODELS_A = [CFG_2_5_FLASH_PREVIEW, CFG_1_5_FLASH, CFG_1_5_FLASH_8B]
+HIGH_CAPABILITY_MODELS_B = [CFG_1_5_FLASH, CFG_2_5_FLASH_PREVIEW, CFG_2_0_FLASH]
+
+STANDARD_CAPABILITY_MODELS_A = [CFG_1_5_FLASH, CFG_2_0_FLASH, CFG_2_5_FLASH_PREVIEW]
+STANDARD_CAPABILITY_MODELS_B = [CFG_2_0_FLASH, CFG_1_5_FLASH_8B, CFG_2_5_FLASH_PREVIEW]
+
+UTILITY_CAPABILITY_MODELS_A = [CFG_2_0_FLASH_LITE, CFG_2_0_FLASH, CFG_1_5_FLASH]
+UTILITY_CAPABILITY_MODELS_B = [CFG_2_0_FLASH, CFG_2_0_FLASH_LITE, CFG_1_5_FLASH_8B]
+
 
 # Define the mapping of agent identifiers to a list of model configurations (for fallback)
 MODEL_BY_AGENT = {
     # --- High-capability/Orchestration/Planning Agents ---
-    "idea_interpreter_agent": [
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "project_architect_agent": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "taskmaster_agent": [
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7}
-    ],
-    "final_assembler_agent": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "execution_manager_agent": [
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7}
-    ],
-    "tech_vetting_council_agent": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7}
-    ],
+    "idea_interpreter_agent": HIGH_CAPABILITY_MODELS_A,
+    "project_architect_agent": HIGH_CAPABILITY_MODELS_B,
+    "taskmaster_agent": HIGH_CAPABILITY_MODELS_A,
+    "final_assembler_agent": HIGH_CAPABILITY_MODELS_B,
+    "execution_manager_agent": HIGH_CAPABILITY_MODELS_A,
+    "tech_vetting_council_agent": HIGH_CAPABILITY_MODELS_B,
 
     # Lead Agents (Coordinators)
-    "backend_project_coordinator_agent": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "devops_and_integration_coordinator_agent": [
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "mobile_project_coordinator_agent": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "offline_support_coordinator_agent": [
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
-    ],
-    "web_project_coordinator_agent": [
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "auth_coordinator_agent": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7}
-    ],
+    "backend_project_coordinator_agent": STANDARD_CAPABILITY_MODELS_A,
+    "devops_and_integration_coordinator_agent": STANDARD_CAPABILITY_MODELS_B,
+    "mobile_project_coordinator_agent": STANDARD_CAPABILITY_MODELS_A,
+    "offline_support_coordinator_agent": UTILITY_CAPABILITY_MODELS_A,
+    "web_project_coordinator_agent": STANDARD_CAPABILITY_MODELS_B,
+    "auth_coordinator_agent": STANDARD_CAPABILITY_MODELS_A,
 
     # --- Specialized Implementation/Utility Agents ---
-    "otp_verifier_agent": [
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "api_creator_agent": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "auth_agent_backend": [
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7}
-    ],
-    "config_agent_backend": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "data_model_agent_backend": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7}
-    ],
-    "queue_agent_backend": [
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
-    ],
-    "storage_agent_backend": [
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "sync_agent_backend": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
-    ],
-    "code_writer_agent": [
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "debugger_agent": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "logger_agent_devutils": [
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "tester_agent_devutils": [
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "devops_agent": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7}
-    ],
-    "android_api_client_agent": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "android_ui_agent": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "ios_api_client_agent": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "ios_ui_agent": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "android_storage_agent": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
-    ],
-    "ios_storage_agent": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
-    ],
-    "local_storage_agent_offline": [
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
-    ],
-    "sync_agent_offline": [
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
-    ],
-    "asset_manager_agent_web": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "dynamic_page_builder_agent_web": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "static_page_builder_agent_web": [
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "constraint_checker_agent_tech_committee": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "documentation_writer_agent_tech_committee": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "stack_advisor_agent_tech_committee": [
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7}
-    ],
-    "knowledge_base_tool_summarizer": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
-    ],
+    "otp_verifier_agent": UTILITY_CAPABILITY_MODELS_A,
+    "api_creator_agent": HIGH_CAPABILITY_MODELS_A,
+    "auth_agent_backend": HIGH_CAPABILITY_MODELS_B,
+    "config_agent_backend": UTILITY_CAPABILITY_MODELS_B,
+    "data_model_agent_backend": HIGH_CAPABILITY_MODELS_A,
+    "queue_agent_backend": UTILITY_CAPABILITY_MODELS_A,
+    "storage_agent_backend": STANDARD_CAPABILITY_MODELS_A,
+    "sync_agent_backend": UTILITY_CAPABILITY_MODELS_B,
+    "code_writer_agent": HIGH_CAPABILITY_MODELS_B,
+    "debugger_agent": STANDARD_CAPABILITY_MODELS_B,
+    "logger_agent_devutils": UTILITY_CAPABILITY_MODELS_A,
+    "tester_agent_devutils": STANDARD_CAPABILITY_MODELS_A,
+    "devops_agent": HIGH_CAPABILITY_MODELS_A,
+    "android_api_client_agent": HIGH_CAPABILITY_MODELS_B,
+    "android_ui_agent": HIGH_CAPABILITY_MODELS_A,
+    "ios_api_client_agent": HIGH_CAPABILITY_MODELS_B,
+    "ios_ui_agent": HIGH_CAPABILITY_MODELS_A,
+    "android_storage_agent": UTILITY_CAPABILITY_MODELS_B,
+    "ios_storage_agent": UTILITY_CAPABILITY_MODELS_A,
+    "local_storage_agent_offline": UTILITY_CAPABILITY_MODELS_B,
+    "sync_agent_offline": UTILITY_CAPABILITY_MODELS_A,
+    "asset_manager_agent_web": UTILITY_CAPABILITY_MODELS_B,
+    "dynamic_page_builder_agent_web": HIGH_CAPABILITY_MODELS_A,
+    "static_page_builder_agent_web": HIGH_CAPABILITY_MODELS_B,
+    "constraint_checker_agent_tech_committee": STANDARD_CAPABILITY_MODELS_A,
+    "documentation_writer_agent_tech_committee": HIGH_CAPABILITY_MODELS_A,
+    "stack_advisor_agent_tech_committee": HIGH_CAPABILITY_MODELS_B,
+    "knowledge_base_tool_summarizer": STANDARD_CAPABILITY_MODELS_B,
 
     # --- Crew-level LLMs ---
-    "final_assembly_crew": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "backend_development_crew": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "devops_crew": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "full_stack_crew": [
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "mobile_development_crew": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "offline_support_crew": [
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
-    ],
-    "code_writing_crew": [
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "web_development_crew": [
-        {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
+    "final_assembly_crew": HIGH_CAPABILITY_MODELS_A,
+    "backend_development_crew": STANDARD_CAPABILITY_MODELS_A,
+    "devops_crew": STANDARD_CAPABILITY_MODELS_A, # Using A for variety from backend
+    "full_stack_crew": STANDARD_CAPABILITY_MODELS_B, # Using B for variety
+    "mobile_development_crew": STANDARD_CAPABILITY_MODELS_A,
+    "offline_support_crew": UTILITY_CAPABILITY_MODELS_A,
+    "code_writing_crew": HIGH_CAPABILITY_MODELS_A, # Should be capable
+    "web_development_crew": STANDARD_CAPABILITY_MODELS_B, # Using B for variety
 
     # --- Default LLMs ---
-    "default_crew_llm": [
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7}
-    ],
-    "default_agent_llm": [
-        {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-        {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7}
-    ]
+    "default_crew_llm": STANDARD_CAPABILITY_MODELS_A,
+    "default_agent_llm": UTILITY_CAPABILITY_MODELS_A
 }
 
 def get_llm_for_agent(agent_identifier: str, default_model_key: str = "default_agent_llm") -> Optional[LLM]:
