@@ -169,20 +169,20 @@ def _perform_architecture_generation(inputs: dict):
         # "system_diagrams": {"placeholder_diagram": "To be extracted or linked from Markdown"}
     }
 
-def run_idea_to_architecture_workflow(inputs: dict):
-    print(f"DEBUG: Entering run_idea_to_architecture_workflow with inputs: {inputs.get('project_name', 'N/A')} scope: {inputs.get('taskmaster', {}).get('project_scope', 'N/A')}")
+def run_idea_to_architecture_flow(inputs: dict):
+    print(f"DEBUG: Entering run_idea_to_architecture_flow with inputs: {inputs.get('project_name', 'N/A')} scope: {inputs.get('taskmaster', {}).get('project_scope', 'N/A')}")
     project_name = inputs.get("project_name")
     if not project_name:
         # Fallback or raise error if project_name is critical and not found
         # For now, let's try to get it from a potential taskmaster artifact if this flow
         # expects to run after a taskmaster stage that might not explicitly pass project_name.
         # However, the new orchestrator should be passing project_name in initial_inputs.
-        print("Warning: project_name not found directly in inputs for idea_to_architecture_flow.")
+        print("Warning: project_name not found directly in inputs for run_idea_to_architecture_flow.")
         # Attempt to find it in a common artifact location if this is a sub-flow context
         project_name = inputs.get("taskmaster", {}).get("project_name", "default_project_temp_name")
         if project_name == "default_project_temp_name":
              print("Critical Error: Project name could not be determined for state management in architecture flow.")
-             raise ValueError("Project name is required for ProjectStateManager in idea_to_architecture_flow")
+             raise ValueError("Project name is required for ProjectStateManager in run_idea_to_architecture_flow")
 
     state = ProjectStateManager(project_name) # Initialize with project_name
 
@@ -195,7 +195,7 @@ def run_idea_to_architecture_workflow(inputs: dict):
     # The issue example shows this check.
     if state.is_completed("architecture"):
         print(f"'{project_name}': Using cached architecture artifacts for stage 'architecture'")
-        print(f"DEBUG: Exiting run_idea_to_architecture_workflow")
+        print(f"DEBUG: Exiting run_idea_to_architecture_flow")
         return state.get_artifacts("architecture")
 
     print(f"'{project_name}': Running main logic for 'architecture' stage.")
@@ -218,12 +218,12 @@ def run_idea_to_architecture_workflow(inputs: dict):
         # The issue example returns the artifacts directly. The orchestrator handles calling complete_stage.
 
         print(f"'{project_name}': Architecture stage completed successfully. Returning artifacts.")
-        print(f"DEBUG: Exiting run_idea_to_architecture_workflow")
+        print(f"DEBUG: Exiting run_idea_to_architecture_flow")
         return generated_artifacts # Orchestrator will call state.complete_stage with this
 
     except Exception as e:
         print(f"'{project_name}': Error during architecture stage: {str(e)}")
         # Log failure with the state manager. Orchestrator will also catch and log.
-        state.fail_stage("architecture", f"Error in run_idea_to_architecture_workflow: {str(e)}")
-        print(f"DEBUG: Exiting run_idea_to_architecture_workflow with error")
+        state.fail_stage("architecture", f"Error in run_idea_to_architecture_flow: {str(e)}")
+        print(f"DEBUG: Exiting run_idea_to_architecture_flow with error")
         raise # Re-raise for the orchestrator to handle
