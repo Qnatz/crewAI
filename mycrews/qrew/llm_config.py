@@ -74,6 +74,14 @@ CFG_2_0_FLASH_SCAFFOLD = {"model": VERIFIED_GEMINI_2_0_FLASH, "temperature": 0.4
 CFG_2_0_FLASH_LITE_UTILITY = {"model": VERIFIED_GEMINI_2_0_FLASH_LITE, "temperature": 0.3, "max_tokens": 768}
 CFG_2_5_FLASH_PREVIEW_E2E = {"model": VERIFIED_GEMINI_2_5_FLASH_PREVIEW, "temperature": 0.3, "max_tokens": 3000}
 
+# New config for code_writer_agent
+CFG_2_0_FLASH_CODE_WRITER = {"model": VERIFIED_GEMINI_2_0_FLASH, "temperature": 0.1, "max_tokens": 2000}
+
+# New CFG objects for code generation with larger context
+CFG_1_5_FLASH_8B_CODE_WRITER_LARGE = {"model": VERIFIED_GEMINI_1_5_FLASH_8B, "temperature": 0.2, "max_tokens": 8192}
+CFG_1_5_FLASH_8B_MODULE = {"model": VERIFIED_GEMINI_1_5_FLASH_8B, "temperature": 0.2, "max_tokens": 4096}
+CFG_2_0_FLASH_MODULE_DETERMINISTIC = {"model": VERIFIED_GEMINI_2_0_FLASH, "temperature": 0.2, "max_tokens": 4096}
+
 # New config for coordinators
 CFG_1_5_FLASH_COORD = {"model": VERIFIED_GEMINI_1_5_FLASH, "temperature": 0.3, "max_tokens": 1500}
 
@@ -101,6 +109,18 @@ FINAL_ASSEMBLER_AGENT_MODELS = [
     {"model": VERIFIED_GEMINI_1_5_FLASH, "temperature": 0.1, "max_tokens": 2800}          # Fallback, temp 0.1
 ]
 
+# Specific model list for Code Writer Agent to mitigate rate limiting
+CODE_WRITER_AGENT_MODELS_ALT = [
+    CFG_2_0_FLASH_CODE_WRITER,    # Primary: gemini/gemini-2.0-flash, temp 0.1
+    CFG_1_5_FLASH_8B_BASIC        # Fallback 1: gemini/gemini-1.5-flash-8b, temp 0.2
+]
+
+# New Model Lists for updated code generation strategy
+GENERIC_CODE_WRITER_MODELS = [CFG_1_5_FLASH_8B_CODE_WRITER_LARGE, CFG_2_0_FLASH_CODE_WRITER]
+BACKEND_MODULE_MODELS = [CFG_1_5_FLASH_8B_MODULE, CFG_2_0_FLASH_MODULE_DETERMINISTIC]
+WEB_PAGE_MODELS = BACKEND_MODULE_MODELS # Reusing BACKEND_MODULE_MODELS
+MOBILE_COMPONENT_MODELS = BACKEND_MODULE_MODELS # Reusing BACKEND_MODULE_MODELS
+
 # Define the mapping of agent identifiers to a list of model configurations (for fallback)
 MODEL_BY_AGENT = {
     # --- High-capability/Orchestration/Planning Agents ---
@@ -121,30 +141,36 @@ MODEL_BY_AGENT = {
     "auth_coordinator_agent": COORDINATOR_MODELS_A,
 
     # --- Specialized Implementation/Utility Agents ---
+    "software_engineer_agent": GENERIC_CODE_WRITER_MODELS, # If it's used for large coding tasks
+
     "otp_verifier_agent": DOCS_UTILITY_MODELS_A,
-    "api_creator_agent": SCAFFOLDING_API_MODELS,
-    "auth_agent_backend": DETERMINISTIC_CODE_MODELS, # Security-sensitive code
+    "api_creator_agent": BACKEND_MODULE_MODELS,
+    "auth_agent_backend": BACKEND_MODULE_MODELS, # Security-sensitive code
     "config_agent_backend": DOCS_UTILITY_MODELS_B, # Often simpler, structured files
-    "data_model_agent_backend": DETERMINISTIC_CODE_MODELS, # Needs precision
+    "data_model_agent_backend": BACKEND_MODULE_MODELS, # Needs precision
     "queue_agent_backend": DOCS_UTILITY_MODELS_A,
-    "storage_agent_backend": DETERMINISTIC_CODE_MODELS, # Logic for DB interaction
+    "storage_agent_backend": BACKEND_MODULE_MODELS, # Logic for DB interaction
     "sync_agent_backend": DOCS_UTILITY_MODELS_B,
-    "code_writer_agent": DETERMINISTIC_CODE_MODELS, # Core coding task
+    "code_writer_agent": GENERIC_CODE_WRITER_MODELS, # Dev utilities generic code writer
     "debugger_agent": DETERMINISTIC_CODE_MODELS, # Needs to understand code precisely
     "logger_agent_devutils": DOCS_UTILITY_MODELS_A,
     "tester_agent_devutils": DOCS_UTILITY_MODELS_B, # Test generation can be creative but also structured
     "devops_agent": SCAFFOLDING_API_MODELS, # Scripts, configs
-    "android_api_client_agent": SCAFFOLDING_API_MODELS,
-    "android_ui_agent": UI_GEN_MODELS,
-    "ios_api_client_agent": SCAFFOLDING_API_MODELS,
-    "ios_ui_agent": UI_GEN_MODELS,
+
+    "android_api_client_agent": MOBILE_COMPONENT_MODELS,
+    "android_ui_agent": MOBILE_COMPONENT_MODELS,
+    "ios_api_client_agent": MOBILE_COMPONENT_MODELS,
+    "ios_ui_agent": MOBILE_COMPONENT_MODELS,
     "android_storage_agent": DOCS_UTILITY_MODELS_B, # Simpler file/DB interactions
     "ios_storage_agent": DOCS_UTILITY_MODELS_A,
+
     "local_storage_agent_offline": DOCS_UTILITY_MODELS_B,
     "sync_agent_offline": DOCS_UTILITY_MODELS_A,
+
     "asset_manager_agent_web": DOCS_UTILITY_MODELS_B,
-    "dynamic_page_builder_agent_web": UI_GEN_MODELS,
-    "static_page_builder_agent_web": DETERMINISTIC_CODE_MODELS, # Template-heavy
+    "dynamic_page_builder_agent_web": WEB_PAGE_MODELS,
+    "static_page_builder_agent_web": WEB_PAGE_MODELS, # Template-heavy
+
     "constraint_checker_agent_tech_committee": DOCS_UTILITY_MODELS_A, # Analysis, not generation
     "documentation_writer_agent_tech_committee": DOCS_UTILITY_MODELS_B, # Text generation focus
     "knowledge_base_tool_summarizer": DOCS_UTILITY_MODELS_A,
