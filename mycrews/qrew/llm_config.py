@@ -24,13 +24,22 @@ GEMINI_2_5_PRO_EXP_03_25 = "gemini/gemini-2.5-pro-exp-03-25"
 # Old constants M1, M2, M3 are removed as their roles are superseded by the new constants and logic.
 
 # Create a Comprehensive List of New Gemini Models
-USER_SPECIFIED_GEMINI_MODELS = [
-    {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
-    {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
-    {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
-    {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7},
-    {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
-    {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+# USER_SPECIFIED_GEMINI_MODELS = [
+#     {"model": GEMINI_1_5_PRO, "max_tokens": 3000, "temperature": 0.7},
+#     {"model": GEMINI_1_5_FLASH, "max_tokens": 2500, "temperature": 0.7},
+#     {"model": GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},
+#     {"model": GEMINI_2_0_FLASH_LITE_001, "max_tokens": 2000, "temperature": 0.7},
+#     {"model": GEMINI_2_5_FLASH_PREVIEW_04_17, "max_tokens": 2500, "temperature": 0.7},
+#     {"model": GEMINI_2_5_PRO_EXP_03_25, "max_tokens": 3000, "temperature": 0.7},
+# ]
+
+# Create a Comprehensive List of Verified Working Gemini Models
+VERIFIED_GEMINI_MODELS_CONFIG = [
+    {"model": VERIFIED_GEMINI_2_5_FLASH_PREVIEW, "max_tokens": 3000, "temperature": 0.7}, # Good for higher capability tasks
+    {"model": VERIFIED_GEMINI_1_5_FLASH, "max_tokens": 2800, "temperature": 0.7},       # Solid general purpose
+    {"model": VERIFIED_GEMINI_1_5_FLASH_8B, "max_tokens": 2800, "temperature": 0.7},    # 8B variant of 1.5 flash
+    {"model": VERIFIED_GEMINI_2_0_FLASH, "max_tokens": 2500, "temperature": 0.7},       # Another general purpose option
+    {"model": VERIFIED_GEMINI_2_0_FLASH_LITE, "max_tokens": 2000, "temperature": 0.7}  # For lighter tasks
 ]
 
 # Define the mapping of agent identifiers to a list of model configurations (for fallback)
