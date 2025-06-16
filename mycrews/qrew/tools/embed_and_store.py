@@ -3,23 +3,16 @@ from tokenizers import Tokenizer
 import numpy as np
 import os  # Add this for CPU count
 
-from objectbox import Store
-from objectbox.model import Entity, Id, Property, Model
+# from objectbox import Store # No longer directly used here
+# from objectbox.model import Entity, Id, Property, Model # No longer directly used here
+# Keep local Entity and build_model if other local funcs depend on them,
+# otherwise, they are managed by ONNXObjectBoxMemory.
+# For this refactor, we'll assume they are no longer needed for the main script logic.
+from .onnx_objectbox_memory import ONNXObjectBoxMemory, KnowledgeEntry as ONNXKnowledgeEntry
 
-# ----------------------------
-# Define Entity Properly
-# ----------------------------
-
-@Entity()
-class KnowledgeEntry:
-    id = Id()
-    text = Property(str)
-    embedding = Property(bytes)
-
-def build_model():
-    model = Model()
-    model.entity(KnowledgeEntry)
-    return model
+# Local KnowledgeEntry and build_model are no longer needed as ONNXObjectBoxMemory handles its own.
+# Keeping them would require importing Entity, Id, Property, Model from objectbox.model.
+# Removing them makes the script cleaner.
 
 # ----------------------------
 # ONNX & Tokenizer Setup
@@ -60,27 +53,26 @@ def cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
 if __name__ == "__main__":
     # Rebuild store from scratch for dev/testing
     import shutil
-    shutil.rmtree("objectbox-data", ignore_errors=True)
+    # Using the class method from ONNXObjectBoxMemory for removal is cleaner
+    ONNXObjectBoxMemory.remove_store_files("objectbox-data")
+    # shutil.rmtree("objectbox-data", ignore_errors=True) # Old way
 
-    store = None
+    onnx_memory = ONNXObjectBoxMemory(store_path="objectbox-data") # New
+
     try:
-        store = Store(build_model(), directory="objectbox-data")
-        box = store.box(KnowledgeEntry)
+        # Local embed_text is used for generating embeddings
+        def add_knowledge(text): # Modified function
+            vec = embed_text(text).astype(np.float32) # Uses local embed_text
+            onnx_memory.add_knowledge(text, vec) # New: use the memory class method
 
-        def add_knowledge(text):
-            vec = embed_text(text).astype(np.float32)
-            entry = KnowledgeEntry()
-            entry.text = text
-            entry.embedding = vec.tobytes()
-            box.put(entry)
-
-        def search(query, top_k=3):
-            q_vec = embed_text(query).astype(np.float32)
-            scored = []
-            for entry in box.get_all():
-                vec = np.frombuffer(entry.embedding, dtype=np.float32)
-                scored.append((cosine_sim(q_vec, vec), entry.text))
-            return sorted(scored, key=lambda x: x[0], reverse=True)[:top_k]
+        def search(query, top_k=3): # Modified function
+            q_vec = embed_text(query).astype(np.float32) # Uses local embed_text
+            # Use the public vector_query method from ONNXObjectBoxMemory
+            results = onnx_memory.vector_query(query_vector=q_vec, limit=top_k)
+            # vector_query returns a list of dicts: [{'content': str, 'score': float}, ...]
+            # Adapt this to the old return format if needed, or use it directly.
+            # For this script, let's print directly from the new format.
+            return results # Return the list of dicts
 
         # Demo entries
         add_knowledge("Python is a programming language.")
@@ -88,9 +80,11 @@ if __name__ == "__main__":
         add_knowledge("ObjectBox is a NoSQL database for mobile apps.")
 
         print("\nSearch results for 'What is used for mobile databases?'")
-        for score, txt in search("What is used for mobile databases?"):
-            print(f"{score:.4f} → {txt}")
+        # search now returns list of dicts [{'content': str, 'score': float}, ...]
+        results = search("What is used for mobile databases?")
+        for res in results:
+            print(f"{res['score']:.4f} → {res['content']}")
             
     finally:
-        if store:
-            store.close()
+        # Use the class method from ONNXObjectBoxMemory to close the specific store instance
+        ONNXObjectBoxMemory.close_store_instance("objectbox-data")
