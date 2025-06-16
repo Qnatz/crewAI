@@ -1,5 +1,6 @@
 from crewai import Agent
 from ....llm_config import get_llm_for_agent
+from mycrews.qrew.tools.knowledge_base_tool import KnowledgeBaseTool
 
 # Use the agent's role or a unique key for the lookup
 agent_identifier = "data_model_agent_backend" # Matching the key in MODEL_BY_AGENT
@@ -8,8 +9,11 @@ specific_llm = get_llm_for_agent(agent_identifier)
 data_model_agent = Agent(
     role="Backend Data Modeler",
     goal="Design and maintain data models for backend databases and applications",
-    backstory="A data-centric agent specializing in creating efficient and scalable data models to support backend application requirements.",
+    backstory="A data-centric agent specializing in creating efficient and scalable data models to support backend application requirements."
+              " This modeler leverages the project's knowledge base to understand existing data structures, apply established modeling conventions, and ensure new schemas are consistent and well-integrated.",
     llm=specific_llm, # Assign the fetched LLM
+    tools=[KnowledgeBaseTool()],
+    knowledge_sources=[], # Added as per instruction
     allow_delegation=False,
     verbose=True
 )
