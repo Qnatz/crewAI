@@ -12,6 +12,7 @@ devops_agent = Agent(
     backstory="An experienced DevOps professional focused on building and maintaining CI/CD pipelines, managing infrastructure, and ensuring system reliability.",
     llm=specific_llm, # Assign the fetched LLM
     tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
+    type="devops",
     allow_delegation=False,
     verbose=True
 )

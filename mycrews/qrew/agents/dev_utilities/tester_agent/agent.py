@@ -12,6 +12,7 @@ tester_agent = Agent(
     backstory="A dedicated quality assurance professional committed to identifying and reporting software defects through rigorous testing.",
     llm=specific_llm, # Assign the fetched LLM
     tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
+    type="common",
     allow_delegation=False,
     verbose=True
 )

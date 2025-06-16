@@ -14,6 +14,7 @@ code_writer_agent = Agent(
     llm=specific_llm, # Assign the fetched LLM
     tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
     knowledge_sources=[], # Added as per instruction
+    type="common",
     allow_delegation=False,
     verbose=True
 )

@@ -10,6 +10,7 @@ otp_verifier_agent = Agent(
     goal="Verify one-time passwords (OTPs) for user authentication",
     backstory="A specialized agent focused on verifying OTPs to enhance the security of user accounts during login and other sensitive operations.",
     llm=specific_llm, # Assign the fetched LLM
+    type="auth",
     allow_delegation=False,
     verbose=True
 )

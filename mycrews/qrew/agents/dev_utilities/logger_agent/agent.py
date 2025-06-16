@@ -10,6 +10,7 @@ logger_agent = Agent(
     goal="Implement and manage logging functionality for applications",
     backstory="An agent focused on ensuring comprehensive and effective logging to facilitate debugging, monitoring, and auditing.",
     llm=specific_llm, # Assign the fetched LLM
+    type="common",
     allow_delegation=False,
     verbose=True
 )

@@ -14,6 +14,7 @@ data_model_agent = Agent(
     llm=specific_llm, # Assign the fetched LLM
     tools=[KnowledgeBaseTool()],
     knowledge_sources=[], # Added as per instruction
+    type="backend",
     allow_delegation=False,
     verbose=True
 )

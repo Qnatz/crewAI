@@ -10,6 +10,7 @@ sync_agent = Agent(
     goal="Ensure data consistency and synchronization across multiple backend services and databases",
     backstory="An agent dedicated to maintaining data integrity by synchronizing data across distributed backend systems.",
     llm=specific_llm, # Assign the fetched LLM
+    type="backend",
     allow_delegation=False,
     verbose=True
 )

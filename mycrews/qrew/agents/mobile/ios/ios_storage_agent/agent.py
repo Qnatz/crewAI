@@ -10,6 +10,7 @@ ios_storage_agent = Agent(
     goal="Manage data storage and retrieval for iOS applications, including local databases and file systems",
     backstory="An agent specializing in iOS data storage solutions, ensuring data persistence, integrity, and performance on mobile devices.",
     llm=specific_llm, # Assign the fetched LLM
+    type="mobile",
     allow_delegation=False,
     verbose=True
 )

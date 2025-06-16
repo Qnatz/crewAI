@@ -10,6 +10,7 @@ android_ui_agent = Agent(
     goal="Design and implement user interfaces for Android applications, focusing on usability and user experience",
     backstory="A creative Android developer dedicated to crafting intuitive and visually appealing user interfaces that enhance user engagement.",
     llm=specific_llm, # Assign the fetched LLM
+    type="mobile",
     allow_delegation=False,
     verbose=True
 )

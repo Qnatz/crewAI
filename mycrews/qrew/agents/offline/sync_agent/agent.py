@@ -10,6 +10,7 @@ offline_sync_agent = Agent(
     goal="Manage data synchronization between local storage and remote servers when an internet connection is available",
     backstory="An agent dedicated to ensuring data consistency between offline local storage and online backend systems by managing data synchronization processes.",
     llm=specific_llm, # Assign the fetched LLM
+    type="offline",
     allow_delegation=False,
     verbose=True
 )

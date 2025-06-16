@@ -10,6 +10,7 @@ ios_api_client_agent = Agent(
     goal="Develop and maintain API client code for iOS applications to interact with backend services",
     backstory="A specialized iOS developer focused on creating efficient and reliable API client implementations for seamless data communication.",
     llm=specific_llm, # Assign the fetched LLM
+    type="mobile",
     allow_delegation=False,
     verbose=True
 )

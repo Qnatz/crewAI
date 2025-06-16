@@ -1,3 +1,4 @@
+import logging
 from crewai import Process, Agent, Task # Crew removed
 from crewai.project import CrewBase, agent, crew, task
 
@@ -113,17 +114,43 @@ class FullStackCrew:
         )
 
     @crew
-    def crew(self) -> ValidatedCrew: # Return type changed
+    def crew(self, job_scope: str | list[str]) -> ValidatedCrew: # Return type changed
         """Creates the Full Stack Development crew"""
+        if isinstance(job_scope, str):
+            job_scope = [job_scope]
+
+        all_agents = [
+            self.backend_api_dev,
+            self.backend_data_modeler,
+            self.frontend_web_dev,
+            self.general_code_writer,
+            self.quality_assurer
+        ]
+        active_agents = [
+            agt for agt in all_agents if hasattr(agt, 'type') and (agt.type == "common" or agt.type in job_scope)
+        ]
+
+        # Log active agents (optional, for debugging)
+        # logging.info(f"Active agents for job_scope '{job_scope}': {[a.role for a in active_agents]}")
+
+
+        all_tasks = self.tasks # self.tasks is already populated by the @task decorator
+        filtered_tasks = [
+            tsk for tsk in all_tasks if tsk.agent in active_agents
+        ]
+
+        # Log filtered tasks (optional, for debugging)
+        # logging.info(f"Filtered tasks for job_scope '{job_scope}': {[t.description for t in filtered_tasks]}")
+
+        if not active_agents:
+            logging.warning(f"No active agents found for job_scope: {job_scope}. Crew will have no agents.")
+        if not filtered_tasks:
+            logging.warning(f"No tasks were matched for the active agents with job_scope: {job_scope}. Crew will have no tasks.")
+
+
         created_crew = ValidatedCrew( # Changed to ValidatedCrew
-            agents=[
-                self.backend_api_dev,
-                self.backend_data_modeler,
-                self.frontend_web_dev,
-                self.general_code_writer,
-                self.quality_assurer
-            ],
-            tasks=self.tasks,    # Automatically populated by @task decorator
+            agents=active_agents,
+            tasks=filtered_tasks,    # Use filtered tasks
             process=Process.sequential, # Default, can be hierarchical if manager agent is added
             verbose=True,
             llm=default_llm

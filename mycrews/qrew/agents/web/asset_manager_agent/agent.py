@@ -10,6 +10,7 @@ asset_manager_agent = Agent(
     goal="Manage and optimize static assets (images, CSS, JavaScript) for web applications",
     backstory="An agent focused on efficient asset management, ensuring fast loading times and optimal performance for web applications.",
     llm=specific_llm, # Assign the fetched LLM
+    type="web",
     allow_delegation=False,
     verbose=True
 )

@@ -10,6 +10,7 @@ dynamic_page_builder_agent = Agent(
     goal="Develop and maintain dynamic web pages and user interfaces using server-side and client-side technologies",
     backstory="A skilled web developer specializing in creating interactive and data-driven web pages that provide engaging user experiences.",
     llm=specific_llm, # Assign the fetched LLM
+    type="web",
     allow_delegation=False,
     verbose=True
 )

@@ -10,6 +10,7 @@ storage_agent = Agent(
     goal="Manage data storage and retrieval for backend applications, including databases and file systems",
     backstory="An agent specializing in data storage solutions, ensuring data integrity, availability, and performance for backend systems.",
     llm=specific_llm, # Assign the fetched LLM
+    type="backend",
     allow_delegation=False,
     verbose=True
 )

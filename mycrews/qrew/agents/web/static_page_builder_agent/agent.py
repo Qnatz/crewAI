@@ -10,6 +10,7 @@ static_page_builder_agent = Agent(
     goal="Develop and maintain static web pages using HTML, CSS, and JavaScript",
     backstory="A web developer focused on creating fast, secure, and reliable static websites.",
     llm=specific_llm, # Assign the fetched LLM
+    type="web",
     allow_delegation=False,
     verbose=True
 )

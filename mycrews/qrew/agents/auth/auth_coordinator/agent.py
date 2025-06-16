@@ -12,6 +12,7 @@ auth_coordinator_agent = Agent(
     backstory="An experienced agent responsible for overseeing all aspects of user authentication and authorization, ensuring secure and efficient access control.",
     llm=specific_llm, # Assign the fetched LLM
     tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
+    type="auth",
     allow_delegation=False,
     verbose=True
 )

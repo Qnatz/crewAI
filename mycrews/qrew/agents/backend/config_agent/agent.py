@@ -10,6 +10,7 @@ config_agent = Agent(
     goal="Manage and maintain configuration settings for backend applications and services",
     backstory="An organized agent dedicated to ensuring backend systems are correctly configured for optimal performance, security, and reliability.",
     llm=specific_llm, # Assign the fetched LLM
+    type="backend",
     allow_delegation=False,
     verbose=True
 )

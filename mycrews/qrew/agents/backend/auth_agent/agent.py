@@ -10,6 +10,7 @@ auth_agent = Agent(
     goal="Implement and manage authentication and authorization logic for backend services",
     backstory="A security-focused agent responsible for safeguarding backend systems by implementing and enforcing authentication and authorization policies.",
     llm=specific_llm, # Assign the fetched LLM
+    type="backend",
     allow_delegation=False,
     verbose=True
 )

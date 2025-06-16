@@ -17,6 +17,7 @@ software_engineer_agent = Agent(
     llm=specific_llm,
     tools=[KnowledgeBaseTool()], # Initialize with empty knowledge_sources
     knowledge_sources=[], # Added as per instruction
+    type="common",
     allow_delegation=False, # This agent executes tasks, does not delegate them further
     verbose=True
 )

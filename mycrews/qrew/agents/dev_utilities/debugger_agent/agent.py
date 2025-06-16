@@ -10,6 +10,7 @@ debugger_agent = Agent(
     goal="Identify, analyze, and resolve bugs and issues in code",
     backstory="A meticulous troubleshooter with a keen eye for detail, adept at finding and fixing software defects.",
     llm=specific_llm, # Assign the fetched LLM
+    type="common",
     allow_delegation=False,
     verbose=True
 )

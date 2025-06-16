@@ -10,6 +10,7 @@ queue_agent = Agent(
     goal="Manage and process asynchronous tasks and message queues for backend services",
     backstory="An agent focused on ensuring reliable and efficient task processing by managing message queues and handling asynchronous operations in the backend.",
     llm=specific_llm, # Assign the fetched LLM
+    type="backend",
     allow_delegation=False,
     verbose=True
 )

@@ -10,6 +10,7 @@ local_storage_agent = Agent(
     goal="Manage local data storage for offline application functionality",
     backstory="An agent specializing in local data persistence, enabling applications to function effectively even without an internet connection.",
     llm=specific_llm, # Assign the fetched LLM
+    type="offline",
     allow_delegation=False,
     verbose=True
 )
