@@ -94,13 +94,20 @@ TASKMASTER_AGENT_MODELS = [
     {"model": VERIFIED_GEMINI_1_5_FLASH_8B, "max_tokens": 2800, "temperature": 0.3}
 ]
 
+# Specific model list for Final Assembler Agent with stricter temperature
+FINAL_ASSEMBLER_AGENT_MODELS = [
+    {"model": VERIFIED_GEMINI_2_0_FLASH, "temperature": 0.0, "max_tokens": 2500},       # Now primary, temp 0.0
+    {"model": VERIFIED_GEMINI_2_5_FLASH_PREVIEW, "temperature": 0.1, "max_tokens": 3000}, # Fallback, temp 0.1
+    {"model": VERIFIED_GEMINI_1_5_FLASH, "temperature": 0.1, "max_tokens": 2800}          # Fallback, temp 0.1
+]
+
 # Define the mapping of agent identifiers to a list of model configurations (for fallback)
 MODEL_BY_AGENT = {
     # --- High-capability/Orchestration/Planning Agents ---
     "idea_interpreter_agent": PLANNING_DESIGN_MODELS,
     "project_architect_agent": PLANNING_DESIGN_MODELS,
     "taskmaster_agent": TASKMASTER_AGENT_MODELS, # Special case with lower temp
-    "final_assembler_agent": PLANNING_DESIGN_MODELS,
+    "final_assembler_agent": FINAL_ASSEMBLER_AGENT_MODELS, # Updated for stricter temperature
     "execution_manager_agent": PLANNING_DESIGN_MODELS,
     "tech_vetting_council_agent": PLANNING_DESIGN_MODELS,
     "stack_advisor_agent_tech_committee": PLANNING_DESIGN_MODELS,

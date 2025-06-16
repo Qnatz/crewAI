@@ -99,11 +99,31 @@ def validate_integration_plan_output(task_output: TaskOutput) -> tuple[bool, Any
     search_area_for_manifest = output_str[manifest_start_index + len(manifest_heading):]
     manifest_match = json_block_pattern.search(search_area_for_manifest)
 
-    if not manifest_match:
-        print("GUARDRAIL_INTEGRATION_PLAN: Could not find a JSON code block for the File Manifest.")
-        return False, "File Manifest section found, but it does not contain a ```json ... ``` block for the list of files."
+    manifest_json_str = None
+    if manifest_match:
+        manifest_json_str = manifest_match.group(1).strip()
+        print("GUARDRAIL_INTEGRATION_PLAN: Found fenced JSON block for File Manifest.")
+    else:
+        print("GUARDRAIL_INTEGRATION_PLAN: Fenced JSON block not found. Attempting lenient extraction of unfenced JSON array.")
+        stripped_search_area = search_area_for_manifest.strip()
+        if stripped_search_area.startswith('[') and stripped_search_area.endswith(']'):
+            # Use regex to capture content within brackets, allowing for leading/trailing whitespace around the array.
+            potential_json_array_match = re.match(r"\s*(\[.*?\])\s*", stripped_search_area, re.DOTALL)
+            if potential_json_array_match:
+                manifest_json_str = potential_json_array_match.group(1) # Get the content within brackets
+                print("GUARDRAIL_INTEGRATION_PLAN: Found potential unfenced JSON array.")
+            else:
+                # This case might occur if stripped_search_area starts with [ and ends with ]
+                # but has non-whitespace chars outside them, which re.match would fail.
+                # Or if the content isn't actually a valid array structure for the regex.
+                print("GUARDRAIL_INTEGRATION_PLAN: Potential unfenced JSON array started with '[' and ended with ']' but regex match failed (e.g. unexpected surrounding characters or invalid structure).")
+        else:
+            print("GUARDRAIL_INTEGRATION_PLAN: Lenient extraction failed: content does not start with '[' and end with ']'.")
 
-    manifest_json_str = manifest_match.group(1).strip()
+    if manifest_json_str is None:
+        print("GUARDRAIL_INTEGRATION_PLAN: Could not find a JSON code block (fenced or unfenced) for the File Manifest.")
+        return False, "File Manifest section found, but it does not contain a ```json ... ``` block or a valid unfenced JSON array for the list of files."
+
     try:
         file_manifest = json.loads(manifest_json_str)
         if not isinstance(file_manifest, list):
