@@ -179,89 +179,93 @@ class ProjectStateManager:
 
     @staticmethod
     def list_projects():
-        if not PROJECTS_INDEX.exists():
+        projects_list = []
+        if not PROJECTS_ROOT.exists() or not PROJECTS_ROOT.is_dir():
             return []
 
-        try:
-            index_data = json.loads(PROJECTS_INDEX.read_text())
-        except json.JSONDecodeError:
-            return [] # Index is corrupted
+        for item in PROJECTS_ROOT.iterdir():
+            if item.is_dir():
+                project_key = item.name # directory name is the key
+                project_path = item
+                state_file_path = project_path / "state.json"
 
-        projects_list = []
-        for project_key, project_info in index_data.items():
-            project_name = project_info.get("name", "Unknown Project")
-            project_id = project_info.get("id", project_key) # Use key if id is missing
-            project_path_str = project_info.get("path")
-            error_message_str = None
-            rich_name_prefix = ""
-            state_data = None # Initialize state_data
-
-            if not project_path_str:
-                status = "Error - Path missing"
+                # Default values
+                status = "Error - State file missing"
+                # Default project name from key, can be overridden by state.json
+                project_name_from_state = project_key.replace('_', ' ').title()
                 last_updated = "N/A"
-                # No state_data, so error_message_str remains None, rich_name_prefix empty
-            else:
-                state_file_path = Path(project_path_str) / "state.json"
-                if state_file_path.exists():
+                error_message_str = None
+                rich_name_prefix = "" # Default to no prefix
+
+                if state_file_path.exists() and state_file_path.is_file():
                     try:
-                        state_data = json.loads(state_file_path.read_text())
-                        status = state_data.get("status", "Unknown")
-                        last_updated = state_data.get("updated_at", state_data.get("created_at", "N/A"))
-                        # Attempt to parse and reformat last_updated
-                        try:
-                            if isinstance(last_updated, str):
-                                 dt_obj = datetime.fromisoformat(last_updated.replace("Z", "+00:00"))
-                                 last_updated = dt_obj.strftime("%Y-%m-%d %H:%M:%S %Z")
-                        except (ValueError, AttributeError):
-                            pass # Keep original last_updated string
+                        state_json = json.loads(state_file_path.read_text())
+                        status = state_json.get("status", "Unknown")
+                        project_name_from_state = state_json.get("project_name", project_name_from_state)
+
+                        # Get last updated time, fallback to created_at
+                        raw_last_updated = state_json.get("updated_at", state_json.get("created_at", "N/A"))
+                        if isinstance(raw_last_updated, str) and raw_last_updated != "N/A":
+                            try:
+                                dt_obj = datetime.fromisoformat(raw_last_updated.replace("Z", "+00:00"))
+                                last_updated = dt_obj.strftime("%Y-%m-%d %H:%M:%S %Z").strip()
+                            except ValueError:
+                                last_updated = raw_last_updated # Keep as is if parsing fails
+                        else:
+                            last_updated = "N/A"
+
+                        if status == "failed":
+                            error_summary_list = state_json.get("error_summary", [])
+                            if isinstance(error_summary_list, list) and error_summary_list:
+                                for record in reversed(error_summary_list): # Get the latest error
+                                    if isinstance(record, dict) and not record.get("success", True):
+                                        error_message_str = record.get("message", "No specific error message found.")
+                                        break
+                                if error_message_str is None:
+                                     error_message_str = "Failed, but no specific error message recorded in summary."
+                            else:
+                                error_message_str = "Failed, error summary not available or empty."
+
                     except json.JSONDecodeError:
                         status = "Error - State file corrupted"
-                        last_updated = "N/A" # Reset last_updated as state is corrupt
-                else:
-                    status = "Error - State file missing"
-                    last_updated = "N/A" # Reset last_updated as state is missing
-
-            # Determine rich_name_prefix and error_message_str based on status and state_data
-            if status == "completed":
-                rich_name_prefix = "✅ "
-            elif status == "failed":
-                rich_name_prefix = "❌ "
-                if state_data and "error_summary" in state_data:
-                    error_summary_list = state_data["error_summary"]
-                    if isinstance(error_summary_list, list) and error_summary_list:
-                        for record in reversed(error_summary_list):
-                            if isinstance(record, dict) and not record.get("success", True):
-                                error_message_str = record.get("message", "No specific error message found.")
-                                break
-                        if error_message_str is None: # No failure message found in list
-                            error_message_str = "Failed, but no specific error message recorded in summary."
-                    else: # Empty or malformed error_summary
-                        error_message_str = "Failed, error summary not available or empty."
-                elif status == "failed": # Ensure message if state_data was problematic but status is 'failed'
-                    error_message_str = "Failed, error summary not found in state file or state file issue."
+                        error_message_str = "State.json is corrupted."
+                        last_updated = "N/A" # Reset as state is corrupt
+                else: # State file does not exist
+                    error_message_str = "State.json is missing for this project."
 
 
-            projects_list.append({
-                "key": project_id,
-                "name": project_name,
-                "status": status,
-                "rich_name": f"{rich_name_prefix}{project_name}",
-                "last_updated": last_updated,
-                "path": project_path_str if project_path_str else "N/A",
-                "error_message": error_message_str
-            })
+                # Set rich_name_prefix based on status
+                if status == "completed":
+                    rich_name_prefix = "✅ "
+                elif status == "failed":
+                    rich_name_prefix = "❌ "
+                elif status.startswith("Error -") or status == "Unknown":
+                    rich_name_prefix = "⚠️ "
+                # else: in_progress or other statuses might not need a prefix or could have a different one
 
-        # Sort projects: failed first, then completed, then others, then by name
+                projects_list.append({
+                    "key": project_key,
+                    "name": project_name_from_state,
+                    "status": status,
+                    "rich_name": f"{rich_name_prefix}{project_name_from_state}",
+                    "last_updated": last_updated,
+                    "path": str(project_path.resolve()),
+                    "error_message": error_message_str
+                })
+
+        # Sort projects: failed first, then error statuses, then completed, then others, then by name
         def sort_key_func(p):
-            if p['status'] == 'failed':
+            status_lower = p['status'].lower()
+            if 'failed' in status_lower: # Catches "failed"
                 return 0
-            elif p['status'] == 'completed':
+            elif status_lower.startswith('error -'): # Catches "Error - State file missing/corrupted"
                 return 1
-            # Group error statuses (like missing path/corrupted file) after 'other' normal statuses
-            elif 'Error -' in p['status']:
-                return 3
-            else: # For "in_progress", "Unknown", etc.
+            elif 'completed' in status_lower: # Catches "completed"
                 return 2
+            elif 'unknown' in status_lower : # Catches "Unknown"
+                return 3
+            else: # For "in_progress", etc.
+                return 4
 
         projects_list.sort(key=lambda p: (sort_key_func(p), p['name']))
         return projects_list
