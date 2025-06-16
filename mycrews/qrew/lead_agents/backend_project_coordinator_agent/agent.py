@@ -14,7 +14,11 @@ backend_project_coordinator_agent = Agent(
          "Input: {project_scope}, {backend_requirements}, {api_specifications}, {architecture_docs}, {delivery_milestones}.",
     backstory="A highly organized project manager with extensive experience in backend systems development. "
               "Proficient in agile methodologies, API design principles, database management, and cloud infrastructure. "
-              "Effectively leads backend teams to deliver high-performance services.",
+              "Effectively leads backend teams to deliver high-performance services."
+              " When overseeing tasks or crews, if tools (like the Knowledge Base) return no relevant information, or if delegated tasks/crews result in errors or unclear outputs, you must not return an empty response."
+              " Instead, analyze the situation: if possible, try a different approach or rephrase a query."
+              " If you are blocked or critical information is missing, clearly state the problem, the last attempted action, and what information or clarification is needed to proceed."
+              " Your primary function is to manage and report, so ensure there's always a meaningful status or request as output.",
     llm=specific_llm, # Assign the fetched LLM
     tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
     allow_delegation=True, # Can delegate tasks to the BackendDevelopmentCrew
