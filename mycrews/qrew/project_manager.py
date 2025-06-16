@@ -1,4 +1,10 @@
 import os
+import traceback
+import sys
+from typing import Optional, Dict, Any
+import numpy as np
+from .knowledge_base_tool import knowledge_base_tool_instance
+from .onnx_objectbox_memory import ONNXObjectBoxMemory, KnowledgeEntry # Assuming KnowledgeEntry is here for now
 import json
 import hashlib
 from pathlib import Path
@@ -9,12 +15,171 @@ PROJECTS_INDEX = Path(__file__).parent / "projects_index.json"
 PROJECTS_ROOT = Path(__file__).parent / "projects/"
 
 class ProjectStateManager:
-    def __init__(self, project_name):
+    def __init__(self, project_name, config: Optional[Dict[str, bool]] = None):
         PROJECTS_ROOT.mkdir(parents=True, exist_ok=True)
         self.project_info = self._get_or_create_project(project_name)
+
+        default_config = {
+            "enable_kb_logging": os.getenv("ENABLE_KB_LOGGING", "true").lower() == "true",
+            "enable_db_logging": os.getenv("ENABLE_DB_LOGGING", "true").lower() == "true",
+            "enable_auto_resume": os.getenv("ENABLE_AUTO_RESUME", "true").lower() == "true"
+        }
+        self.config = default_config
+        if config: # Apply user-provided config over defaults and env vars
+            self.config.update(config)
+
+        self.kb_tool = knowledge_base_tool_instance if self.config.get("enable_kb_logging") else None
+        self.objectbox_memory = ONNXObjectBoxMemory() if self.config.get("enable_db_logging") else None
+        self.resume_attempts = {}
+
         self.state_file = Path(self.project_info['path']) / "state.json"
         self.error_summary = ErrorSummary()
         self.load_state()
+
+    def update_config(self, new_config: Dict[str, bool]):
+        """Updates the project's configuration and re-initializes related components."""
+        self.config.update(new_config)
+
+        # Re-initialize components based on the new config
+        if "enable_kb_logging" in new_config:
+            self.kb_tool = knowledge_base_tool_instance if self.config.get("enable_kb_logging") else None
+        if "enable_db_logging" in new_config:
+            self.objectbox_memory = ONNXObjectBoxMemory() if self.config.get("enable_db_logging") else None
+
+        # Note: enable_auto_resume is used directly, so no specific re-initialization needed here
+        # for self.resume_attempts, it's managed per stage.
+        print(f"Project config updated: {self.config}")
+
+    def _log_to_knowledge_base(self, error_details: Dict[str, Any]):
+        """Logs error details to the knowledge base if enabled."""
+        if self.kb_tool:
+            try:
+                # Construct a meaningful summary/title for the KB entry
+                kb_title = f"Error in stage {error_details.get('stage', 'Unknown')} for project {self.project_info.get('name', 'N/A')}"
+
+                # Serialize the error_details to a JSON string for the content
+                kb_content = json.dumps(error_details, indent=2)
+
+                # Add to knowledge base
+                self.kb_tool.add_to_knowledge_base([{"title": kb_title, "content": kb_content}])
+                print(f"Logged error to knowledge base: {kb_title}")
+            except Exception as e:
+                print(f"Failed to log error to knowledge base: {e}")
+                # Optionally, log this failure to the primary error summary or system logs
+                self.error_summary.add("knowledge_base_logging", False, f"KB Logging Failed: {e}")
+
+
+    def _log_to_objectbox(self, error_details: Dict[str, Any]):
+        """Logs error details to ObjectBox memory if enabled."""
+        if self.objectbox_memory:
+            try:
+                entry_content = f"Error in stage {error_details.get('stage', 'Unknown')}: {error_details.get('error', 'No error message')}"
+                # Create embedding for the error content
+                embedding = self._embed_text(entry_content)
+
+                # Create KnowledgeEntry - Assuming KnowledgeEntry can be instantiated like this
+                # and that self.project_info["id"] is the project_id
+                entry = KnowledgeEntry(
+                    project_id=self.project_info.get("id", "unknown_project"),
+                    entry_type="error_log",
+                    content=entry_content,
+                    embedding=embedding.tobytes(), # Store embedding as bytes
+                    metadata=json.dumps(error_details) # Store full details as JSON metadata
+                )
+                self.objectbox_memory.add_entry(entry)
+                print(f"Logged error to ObjectBox for project {self.project_info.get('id')}")
+            except Exception as e:
+                print(f"Failed to log error to ObjectBox: {e}")
+                self.error_summary.add("objectbox_logging", False, f"ObjectBox Logging Failed: {e}")
+
+    def _prepare_auto_resume(self, stage_name: str, error_details: Dict[str, Any]):
+        """Prepares context for auto-resume if enabled."""
+        if self.config.get("enable_auto_resume"):
+            timestamp = datetime.utcnow().isoformat()
+            self.resume_attempts.setdefault(stage_name, []).append({
+                "timestamp": timestamp,
+                "error": str(error_details.get("error", "Unknown error")),
+                "traceback": error_details.get("traceback", "No traceback"),
+                "attempt_count": len(self.resume_attempts[stage_name]) + 1
+            })
+            # Persist resume_attempts to state for durability across sessions
+            self.state["resume_attempts"] = self.resume_attempts
+            self.save_state() # Ensure state is saved with resume attempts
+            print(f"Prepared auto-resume context for stage {stage_name} (Attempt {len(self.resume_attempts[stage_name])})")
+
+    def get_resume_context(self, stage_name: str) -> Optional[Dict[str, Any]]:
+        """Retrieves the latest resume context for a given stage."""
+        if self.config.get("enable_auto_resume"):
+            # Ensure resume_attempts is loaded from state if not already in memory
+            if not self.resume_attempts and "resume_attempts" in self.state:
+                self.resume_attempts = self.state["resume_attempts"]
+
+            stage_attempts = self.resume_attempts.get(stage_name, [])
+            if stage_attempts:
+                return stage_attempts[-1] # Return the latest attempt's context
+        return None
+
+    def clear_resume_context(self, stage_name: str):
+        """Clears resume context for a stage, typically after successful completion."""
+        if stage_name in self.resume_attempts:
+            del self.resume_attempts[stage_name]
+            # Update state
+            self.state["resume_attempts"] = self.resume_attempts
+            self.save_state()
+            print(f"Cleared auto-resume context for stage {stage_name}")
+
+    def auto_resume_stage(self, stage_name: str, executor: callable):
+        """
+        Attempts to automatically resume a failed stage using the provided executor.
+        The executor function is expected to take `resume_context` as a keyword argument.
+        """
+        if not self.config.get("enable_auto_resume"):
+            print(f"Auto-resume disabled. Skipping resume attempt for stage {stage_name}.")
+            return False # Auto-resume not enabled
+
+        resume_context = self.get_resume_context(stage_name)
+        if not resume_context:
+            print(f"No resume context found for stage {stage_name}. Cannot auto-resume.")
+            return False # No context to resume from
+
+        # Limit resume attempts (e.g., max 3 attempts)
+        MAX_RESUME_ATTEMPTS = self.config.get("max_resume_attempts", 3) # Default to 3 if not in config
+        if resume_context.get("attempt_count", 0) >= MAX_RESUME_ATTEMPTS:
+            print(f"Max resume attempts reached for stage {stage_name}. Manual intervention required.")
+            self.fail_stage(stage_name, f"Auto-resume failed after {MAX_RESUME_ATTEMPTS} attempts. Last error: {resume_context.get('error')}")
+            return False
+
+        print(f"Attempting auto-resume for stage {stage_name} (Attempt {resume_context.get('attempt_count', 0) + 1})")
+
+        try:
+            # The executor is called with the resume_context.
+            # It's the executor's responsibility to use this context to modify its behavior.
+            # For example, retrying with different parameters, or skipping certain initial steps.
+            # If the executor is a method of a class, it might need to be bound or passed with `self`.
+            # This example assumes executor is a standalone function or a bound method.
+            executor(resume_context=resume_context) # Pass resume_context to the executor
+
+            print(f"Stage {stage_name} resumed successfully.")
+            self.clear_resume_context(stage_name) # Clear context on success
+            # Assuming the executor calls complete_stage internally or it should be called here
+            return True
+        except Exception as e:
+            print(f"❌ Auto-resume failed: {str(e)}")
+            # Will be caught by fail_stage again
+            raise
+
+    def _embed_text(self, text: str) -> np.ndarray:
+        """Generates a dummy embedding for the given text."""
+        # In a real scenario, this would use a proper sentence transformer model.
+        # For now, using random embeddings for placeholder.
+        # Ensure this matches the expected embedding dimension if used with a real model later.
+        # Common dimension for sentence-transformers is 768.
+        print(f"Generating dummy embedding for text (first 50 chars): '{text[:50]}...'")
+        return np.random.rand(768).astype(np.float32)
+
+    def _get_current_traceback(self):
+        """Helper to get the current traceback as a string."""
+        return "".join(traceback.format_stack())
 
     def _slugify(self, name: str) -> str:
         safe = "".join(c if c.isalnum() else "_" for c in name).lower()
@@ -111,9 +276,39 @@ class ProjectStateManager:
         self.error_summary.add(stage_name, True, "Completed successfully")
         self.save_state()
 
-    def fail_stage(self, stage_name, error_message):
-        self.state["status"] = "failed" # Mark project status as failed
-        self.error_summary.add(stage_name, False, error_message)
+    def fail_stage(self, stage_name, error_message, exception_obj=None, input_context=None):
+        """Enhanced failure logging with configurable diagnostics"""
+        self.state["status"] = "failed"
+
+        # Capture detailed error info
+        error_details = {
+            "error_message": error_message,
+            "exception_type": str(type(exception_obj).__name__) if exception_obj else "N/A",
+            "stack_trace": traceback.format_exc() if exception_obj else self._get_current_traceback(),
+            "input_context": input_context,
+            "stage": stage_name,
+            "project": self.project_info["name"],
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+        # Add to error summary
+        # Ensure ErrorSummary can handle a JSON string or a more structured message.
+        # The original code had self.error_summary.add(stage_name, False, error_message)
+        # The new code from issue has: self.error_summary.add(stage_name, False, json.dumps(error_details, indent=2))
+        # Let's use the new version.
+        self.error_summary.add(stage_name, False, json.dumps(error_details, indent=2))
+
+        # Conditional logging
+        if self.config.get("enable_kb_logging"): # Use .get for safety, though defaults should exist
+            self._log_to_knowledge_base(error_details)
+
+        if self.config.get("enable_db_logging"): # Use .get for safety
+            self._log_to_objectbox(error_details)
+
+        # Auto-resume logic
+        if self.config.get("enable_auto_resume"): # Use .get for safety
+            self._prepare_auto_resume(stage_name, error_details)
+
         self.save_state()
 
     def get_artifacts(self, stage_name=None):
