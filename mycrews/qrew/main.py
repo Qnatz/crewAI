@@ -107,7 +107,30 @@ def run_qrew():
 
         for i, proj in enumerate(listed_projects):
             display_text = Text(f"{i+1}. ")
-            display_text.append(Text.from_markup(proj['rich_name']))
+
+            raw_rich_name = proj.get('rich_name', '') # Use .get for safety
+            if not isinstance(raw_rich_name, str): # Ensure it's a string
+                raw_rich_name = str(raw_rich_name)
+
+            prefix = ""
+            name_part = raw_rich_name
+            known_prefixes = ["✅ ", "❌ ", "⚠️ "] # Prefixes include a space
+
+            for p_prefix in known_prefixes: # Renamed p to p_prefix to avoid conflict with Panel
+                if raw_rich_name.startswith(p_prefix):
+                    prefix = p_prefix
+                    name_part = raw_rich_name[len(p_prefix):]
+                    break
+
+            if prefix:
+                # Append prefix (which is safe for Text.from_markup as it's just an emoji and space)
+                display_text.append(Text.from_markup(prefix))
+                # Append the rest of the name as plain text to avoid markup issues
+                display_text.append(Text(name_part))
+            else:
+                # If no known prefix, treat the whole rich_name as plain text
+                display_text.append(Text(name_part))
+
             display_text.append(Text(f" - Last updated: {proj['last_updated']}", style="dim"))
 
             if proj['status'] == 'failed' and proj.get('error_message'):
