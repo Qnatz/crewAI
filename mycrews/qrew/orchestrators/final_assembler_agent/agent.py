@@ -1,6 +1,7 @@
 from crewai import Agent
 from ...llm_config import get_llm_for_agent
-from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance
+# Removed: from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance
+from mycrews.qrew.tools.agenttools import get_tools_for_agent, AgentName
 # from crewAI.qrew.tools.file_io_tool import FileIOTool # Example
 
 # Use the agent's role or a unique key for the lookup
@@ -16,7 +17,7 @@ final_assembler_agent = Agent(
               "Ensures that all deliverables are present, correctly formatted, and organized according to specifications. "
               "Has a strong understanding of build processes and deployment packaging.",
     llm=specific_llm, # Assign the fetched LLM
-    tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
+    tools=get_tools_for_agent(AgentName.FINAL_ASSEMBLER),
     type="common",
     allow_delegation=True, # May delegate specific packaging or verification tasks
     verbose=True

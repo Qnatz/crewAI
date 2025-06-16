@@ -1,6 +1,7 @@
 from crewai import Agent
 from ...llm_config import get_llm_for_agent
-from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance
+# Removed: from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance
+from mycrews.qrew.tools.agenttools import get_tools_for_agent, AgentName
 # from crewAI.qrew.crews.web_development_crew import WebDevelopmentCrew # For delegation if needed
 
 # Use the agent's role or a unique key for the lookup
@@ -17,7 +18,7 @@ web_project_coordinator_agent = Agent(
               "and ensuring effective communication between stakeholders and the development crew. "
               "Understands the nuances of web technologies and agile methodologies.",
     llm=specific_llm, # Assign the fetched LLM
-    tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
+    tools=get_tools_for_agent(AgentName.WEB_PROJECT_COORDINATOR),
     allow_delegation=True, # Can delegate tasks to the WebDevelopmentCrew or specific agents within it
     verbose=True
     # tools=[...] # Potentially tools for project management, task tracking

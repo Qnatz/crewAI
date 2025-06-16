@@ -1,7 +1,8 @@
 from crewai import Agent
 # Import the specific instance of the KnowledgeBaseTool
-from ..tools import knowledge_base_tool_instance
+# Removed: from ..tools import knowledge_base_tool_instance
 from ..llm_config import get_llm_for_agent
+from mycrews.qrew.tools.agenttools import get_tools_for_agent, AgentName
 
 # Use the agent's role or a unique key for the lookup
 agent_identifier = "taskmaster_agent" # Matching the key in MODEL_BY_AGENT
@@ -18,7 +19,7 @@ taskmaster_agent = Agent(
               "The TaskMaster doesn't do the work itself but ensures that the right agents and crews are "
               "mobilized to achieve the user's objectives. It maintains a high-level view of ongoing projects "
               "and ensures that new requests are properly initiated and routed.",
-    tools=[knowledge_base_tool_instance], # Added the KnowledgeBaseTool instance here
+    tools=get_tools_for_agent(AgentName.EXECUTION_MANAGER),
     llm=specific_llm, # Assign the fetched LLM
     allow_delegation=True,
     verbose=True

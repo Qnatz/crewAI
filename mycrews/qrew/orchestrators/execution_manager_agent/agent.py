@@ -1,6 +1,7 @@
 from crewai import Agent
 from ...llm_config import get_llm_for_agent
-from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance
+# Removed: from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance
+from mycrews.qrew.tools.agenttools import get_tools_for_agent, AgentName
 
 # Use the agent's role or a unique key for the lookup
 agent_identifier = "execution_manager_agent" # Matching the key in MODEL_BY_AGENT
@@ -16,7 +17,7 @@ execution_manager_agent = Agent(
               "crews or lead agents, and monitoring progress to ensure objectives are met. "
               "Focuses on smooth execution and proactive problem-solving.",
     llm=specific_llm, # Assign the fetched LLM
-    tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
+    tools=get_tools_for_agent(AgentName.EXECUTION_MANAGER),
     allow_delegation=True, # Delegates phases/tasks to Lead Agents or specialized Crews
     verbose=True
     # tools=[...] # Tools for project tracking, Gantt chart generation, resource management

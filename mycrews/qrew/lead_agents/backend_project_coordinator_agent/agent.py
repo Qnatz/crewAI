@@ -1,6 +1,7 @@
 from crewai import Agent
 from ...llm_config import get_llm_for_agent
-from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance
+# Removed: from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance
+from mycrews.qrew.tools.agenttools import get_tools_for_agent, AgentName
 # from mycrews.qrew.crews.backend_development_crew import BackendDevelopmentCrew
 
 # Use the agent's role or a unique key for the lookup
@@ -20,7 +21,7 @@ backend_project_coordinator_agent = Agent(
               " If you are blocked or critical information is missing, clearly state the problem, the last attempted action, and what information or clarification is needed to proceed."
               " Your primary function is to manage and report, so ensure there's always a meaningful status or request as output.",
     llm=specific_llm, # Assign the fetched LLM
-    tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
+    tools=get_tools_for_agent(AgentName.BACKEND_PROJECT_COORDINATOR),
     allow_delegation=True, # Can delegate tasks to the BackendDevelopmentCrew
     verbose=True
     # tools=[...] # Tools for API testing, performance monitoring, task management

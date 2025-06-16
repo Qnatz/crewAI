@@ -21,6 +21,7 @@ if project_src_path not in sys.path:
 from .llm_config import default_llm, llm_initialization_statuses # Adjusted import
 from . import config as crew_config
 from .tools.knowledge_base_tool import ONNX_EMBEDDING_INITIALIZATION_STATUS as onnx_embedding_status
+from .tools.inbuilt_tools import configure_rag_tools # Added RAG config import
 
 # Initialize Rich Console
 console = Console()
@@ -77,6 +78,23 @@ def run_qrew():
     display_model_initialization_status("[bold cyan]--- ONNX Model Initialization ---[/bold cyan]", onnx_embedding_status)
     # Example with placeholder models:
     # display_model_initialization_status("[bold cyan]--- Other Model Initialization ---[/bold cyan]", [("Embedding Model", True), ("Another Model", False)])
+
+    # --- Configure RAG Tools ---
+    # Define knowledge base configurations
+    # Paths are relative and will be resolved based on the execution context.
+    knowledge_base_configs = {
+        'web_components': './knowledge/web_components',
+        'mobile_patterns': './knowledge/mobile_patterns',
+        'api_specs': './knowledge/api_specs',
+        'cloud_templates': './knowledge/cloud_templates'
+    }
+    try:
+        print("\nConfiguring RAG tools...")
+        configure_rag_tools(knowledge_base_configs)
+        print("RAG tools configuration process initiated.")
+    except Exception as e:
+        print(f"Error during RAG tool configuration: {e}")
+        # Decide if this should be a critical error or just a warning
 
     # Configure basic logging
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')

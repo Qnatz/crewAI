@@ -1,6 +1,7 @@
 from crewai import Agent
 from ....llm_config import get_llm_for_agent # Corrected relative import path
-from ....tools.knowledge_base_tool import knowledge_base_tool_instance
+# Removed: from ....tools.knowledge_base_tool import knowledge_base_tool_instance
+from mycrews.qrew.tools.agenttools import get_tools_for_agent, AgentName
 # from crewAI.qrew.tools.file_io_tool import FileIOTool # Example
 
 # Use the agent's role or a unique key for the lookup
@@ -15,7 +16,7 @@ documentation_writer_agent = Agent(
               "Ensures that all decisions and standards are well-understood and easily accessible. "
               "Focuses on accuracy, clarity, and maintainability of documentation.",
     llm=specific_llm, # Assign the fetched LLM
-    tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
+    tools=get_tools_for_agent(AgentName.CODE_WRITER), # Mapped to CODE_WRITER
     type="common",
     allow_delegation=False,
     verbose=True

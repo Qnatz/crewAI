@@ -1,6 +1,7 @@
 from crewai import Agent
 from ..llm_config import get_llm_for_agent # Adjusted import path
-from mycrews.qrew.tools.knowledge_base_tool import KnowledgeBaseTool
+# Removed: from mycrews.qrew.tools.knowledge_base_tool import KnowledgeBaseTool
+from mycrews.qrew.tools.agenttools import get_tools_for_agent, AgentName
 
 # Use the agent's role or a unique key for the lookup
 agent_identifier = "software_engineer_agent"
@@ -15,7 +16,7 @@ software_engineer_agent = Agent(
               "Comfortable working across the full stack and on various aspects of software development, from backend logic to frontend interfaces."
               " This engineer actively consults the project's knowledge base to ensure consistency with existing architectures, to reuse established patterns, and to leverage proven utility functions and API schemas, thereby enhancing the quality and efficiency of the development process.",
     llm=specific_llm,
-    tools=[KnowledgeBaseTool()], # Initialize with empty knowledge_sources
+    tools=get_tools_for_agent(AgentName.SOFTWARE_ENGINEER),
     knowledge_sources=[], # Added as per instruction
     type="common",
     allow_delegation=False, # This agent executes tasks, does not delegate them further

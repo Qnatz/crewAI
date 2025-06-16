@@ -1,5 +1,6 @@
 from crewai import Agent
 from ....llm_config import get_llm_for_agent # Further corrected relative import path
+from mycrews.qrew.tools.agenttools import get_tools_for_agent, AgentName
 # from crewAI.qrew.tools.network_request_tool import NetworkRequestTool # Example for research
 
 # Use the agent's role or a unique key for the lookup
@@ -16,7 +17,7 @@ stack_advisor_agent = Agent(
               "between different technologies and aligning recommendations with business objectives. "
               "Provides well-researched and justified advice.",
     llm=specific_llm, # Assign the fetched LLM
-    # tools=[NetworkRequestTool.search], # Example: for researching technology trends and comparisons
+    tools=get_tools_for_agent(AgentName.PROJECT_ARCHITECT), # Mapped to PROJECT_ARCHITECT
     allow_delegation=False, # Core advisory role
     verbose=True
 )

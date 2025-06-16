@@ -1,6 +1,7 @@
 from crewai import Agent
 from ...llm_config import get_llm_for_agent
-from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance
+# Removed: from mycrews.qrew.tools.knowledge_base_tool import knowledge_base_tool_instance
+from mycrews.qrew.tools.agenttools import get_tools_for_agent, AgentName
 # from crewAI.qrew.crews.offline_support_crew import OfflineSupportCrew
 
 # Use the agent's role or a unique key for the lookup
@@ -16,7 +17,7 @@ offline_support_coordinator_agent = Agent(
               "Understands the challenges of data consistency, local storage limitations, and network variability. "
               "Guides teams to build applications that provide a reliable user experience, even without an internet connection.",
     llm=specific_llm, # Assign the fetched LLM
-    tools=[knowledge_base_tool_instance], # Added KnowledgeBaseTool instance
+    tools=get_tools_for_agent(AgentName.OFFLINE_COORDINATOR),
     allow_delegation=True, # Can delegate tasks to OfflineSupportCrew
     verbose=True
     # tools=[...] # Tools for testing offline behavior, database management

@@ -1,5 +1,6 @@
 from crewai import Agent
 from ...llm_config import get_llm_for_agent # Path relative to mycrews/qrew/orchestrators/software_engineer_agent/agent.py
+from mycrews.qrew.tools.agenttools import get_tools_for_agent, AgentName
 
 agent_identifier = "software_engineer_agent"
 specific_llm = get_llm_for_agent(agent_identifier)
@@ -12,7 +13,7 @@ software_engineer_agent = Agent(
               "Adept at translating architectural blueprints into functional and efficient code, with a strong focus on quality, maintainability, and scalability. "
               "Comfortable working across the full stack and on various aspects of software development, from backend logic to frontend interfaces.",
     llm=specific_llm,
-    tools=[],
+    tools=get_tools_for_agent(AgentName.SOFTWARE_ENGINEER),
     allow_delegation=False,
     verbose=True
 )

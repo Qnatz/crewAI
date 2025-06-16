@@ -1,5 +1,6 @@
 from crewai import Agent
 from ....llm_config import get_llm_for_agent # Corrected relative import path
+from mycrews.qrew.tools.agenttools import get_tools_for_agent, AgentName
 
 # Use the agent's role or a unique key for the lookup
 agent_identifier = "constraint_checker_agent_tech_committee" # Matching the key in MODEL_BY_AGENT
@@ -13,6 +14,7 @@ constraint_checker_agent = Agent(
               "Ensures that all proposed solutions are viable and align with predefined limitations. "
               "Helps in avoiding costly rework by identifying constraint violations early.",
     llm=specific_llm, # Assign the fetched LLM
+    tools=get_tools_for_agent(AgentName.DEBUGGER), # Mapped to DEBUGGER
     allow_delegation=False,
     verbose=True
 )
