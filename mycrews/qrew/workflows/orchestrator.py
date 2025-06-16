@@ -206,12 +206,7 @@ class WorkflowOrchestrator:
                         f"Also, determine the primary scope of the project from the following options: 'web-only', 'mobile-only', 'backend-only', 'full-stack', 'documentation-only'. If ambiguous or not fitting these, use 'unknown'. "
                         "Your final response MUST be ONLY a single, valid JSON object that strictly adheres to the structure specified in the expected_output. Do not include any other text, explanations, or conversational remarks before or after the JSON object.",
             agent=taskmaster_agent,
-            expected_output="A JSON object containing: "
-                            "'project_name' (string, unique and descriptive for new projects), "
-                            "'refined_brief' (string, a concise summary and scope), "
-                            "'is_new_project' (boolean, True if this is identified as a new project, False otherwise), "
-                            "'recommended_next_stage' (string, either 'tech_vetting' or 'architecture'), "
-                            "and 'project_scope' (string, one of 'web-only', 'mobile-only', 'backend-only', 'full-stack', 'documentation-only', 'unknown').",
+            expected_output='A single, valid JSON object. Example: {"project_name": "example_project_name", "refined_brief": "A concise summary of the project...", "is_new_project": true, "recommended_next_stage": "architecture", "project_scope": "web-only"}',
             guardrail=validate_taskmaster_output,
             max_retries=1 # Keep retries low for faster failure if guardrail fails
         )

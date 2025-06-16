@@ -86,7 +86,7 @@ COORDINATOR_MODELS_B = [CFG_2_0_FLASH_SCAFFOLD, CFG_1_5_FLASH_8B_BASIC, CFG_2_5_
 
 # Specific model list for Taskmaster Agent with adjusted temperature (remains from previous step, uses VERIFIED constants)
 TASKMASTER_AGENT_MODELS = [
-    {"model": VERIFIED_GEMINI_2_5_FLASH_PREVIEW, "max_tokens": 3000, "temperature": 0.3},
+    {"model": VERIFIED_GEMINI_2_5_FLASH_PREVIEW, "max_tokens": 3000, "temperature": 0.1}, # Changed temperature
     {"model": VERIFIED_GEMINI_1_5_FLASH, "max_tokens": 2800, "temperature": 0.3},
     {"model": VERIFIED_GEMINI_1_5_FLASH_8B, "max_tokens": 2800, "temperature": 0.3}
 ]
