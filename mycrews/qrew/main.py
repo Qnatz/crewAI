@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import logging
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -28,7 +29,6 @@ console = Console()
 
 os.environ["LITELLM_DEBUG"] = "0" # Disabled debug for cleaner output, can be "1"
 
-from .workflows.orchestrator import WorkflowOrchestrator
 from .project_manager import ProjectStateManager # Added import
 
 def display_model_initialization_status(title: str, statuses: list[tuple[str, bool]]):
@@ -77,6 +77,17 @@ def run_qrew():
     # Example with placeholder models:
     # display_model_initialization_status("[bold cyan]--- Other Model Initialization ---[/bold cyan]", [("Embedding Model", True), ("Another Model", False)])
 
+    # Configure basic logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # Attempt to silence LiteLLM enterprise warnings
+    try:
+        logging.getLogger('litellm_enterprise').setLevel(logging.WARNING)
+        logging.getLogger('litellm.licensing').setLevel(logging.WARNING) # Add this for broader coverage
+    except Exception as e:
+        # Log this attempt, but don't let it crash the app
+        logging.warning(f"Attempt to set LiteLLM log levels failed: {e}")
+
     # The old "Initializing Qrew System..." print might be redundant or can be styled too.
     # For now, let's keep it or use console.print for consistency if desired.
     # console.print("\n[bold]Initializing Qrew System...[/bold]")
@@ -117,7 +128,7 @@ def run_qrew():
                     user_idea = Prompt.ask("[bold yellow]Please enter your new project idea or request[/bold yellow]")
                     pipeline_inputs = {"user_request": user_idea}
                     project_name_for_orchestrator = None # Taskmaster will handle naming for new projects
-                    console.print("Starting a new project...")
+                    logging.info("Starting a new project.")
                     break
 
                 chosen_idx = int(raw_choice) - 1
@@ -135,7 +146,7 @@ def run_qrew():
                     # just picks up from the saved state.
                     # For now, let's set it to indicate a resume if needed by later stages.
                     pipeline_inputs = {"project_name": project_name_for_orchestrator, "action": "resume"}
-                    console.print(f"Resuming project: [bold cyan]{project_name_for_orchestrator}[/bold cyan]")
+                    logging.info(f"Resuming project: {project_name_for_orchestrator}")
                     break
                 else:
                     console.print(f"[bold red]Invalid selection. Please choose a number between 1 and {new_project_option_num} or 'n'.[/bold red]")
@@ -153,6 +164,7 @@ def run_qrew():
     # Pass project_name_for_orchestrator to WorkflowOrchestrator constructor
     # This allows it to load the project state if a project name is provided.
     # For mocked run, project_name_for_orchestrator is None, so orchestrator.state will be None initially.
+    from .workflows.orchestrator import WorkflowOrchestrator
     orchestrator = WorkflowOrchestrator(project_name=project_name_for_orchestrator)
     try:
         # pipeline_inputs now contains the user's request.
@@ -163,67 +175,63 @@ def run_qrew():
         final_state_manager = orchestrator.state
 
         if not final_state_manager:
-            print("Critical Error: Orchestrator state not initialized after pipeline execution.")
-            print("Pipeline Results (if any):", json.dumps(results, indent=2))
+            logging.error("Critical Error: Orchestrator state not initialized after pipeline execution.")
+            logging.error(f"Pipeline Results (if any): {json.dumps(results, indent=2)}")
             # Early exit if state manager is None, means Taskmaster likely failed critically.
             # The orchestrator.execute_pipeline should return error details in 'results' in this case.
             if results and "error" in results:
-                 print(f"Taskmaster error details: {results.get('details')}")
+                 logging.error(f"Taskmaster error details: {results.get('details')}")
             return # Stop further processing
 
         actual_project_name = final_state_manager.project_info.get("name", "UnknownProject")
         project_path = final_state_manager.project_info.get("path", ".") # Default to current dir if path missing
 
-        print(f"\nProject '{actual_project_name}' Execution Summary:")
-        print("===================================================")
+        logging.info(f"Project '{actual_project_name}' Execution Summary:")
+        logging.info("===================================================")
 
         if final_state_manager.state.get("status") == "completed":
-            print(f"Project '{actual_project_name}' successfully completed and finalized.")
+            logging.info(f"Project '{actual_project_name}' successfully completed and finalized.")
             final_output_artifact = results.get("final_assembly", {})
             if not final_output_artifact and results:
                 final_output_artifact = results
 
-            print("Final Output Artifacts:", json.dumps(final_output_artifact, indent=2))
+            logging.info(f"Final Output Artifacts: {json.dumps(final_output_artifact, indent=2)}")
 
             output_file_path = os.path.join(project_path, "final_pipeline_output.json")
             try:
                 os.makedirs(project_path, exist_ok=True) # Ensure directory exists
                 with open(output_file_path, "w") as f:
                     json.dump(results, f, indent=2)
-                print(f"All pipeline artifacts saved to: {output_file_path}")
+                logging.info(f"All pipeline artifacts saved to: {output_file_path}")
             except OSError as e:
-                print(f"Error saving final output file: {e}. Path: {output_file_path}")
+                logging.error(f"Error saving final output file: {e}. Path: {output_file_path}")
 
 
         elif final_state_manager.state.get("status") == "failed":
-            print(f"Project '{actual_project_name}' execution failed at stage: {final_state_manager.state.get('current_stage')}")
-            print("Review the Workflow Summary printed by the orchestrator for error details.")
+            logging.warning(f"Project '{actual_project_name}' execution failed at stage: {final_state_manager.state.get('current_stage')}")
+            logging.warning("Review the Workflow Summary printed by the orchestrator for error details.")
         else:
-            print(f"Project '{actual_project_name}' execution finished with status: {final_state_manager.state.get('status')}. Not all stages may have completed.")
+            logging.info(f"Project '{actual_project_name}' execution finished with status: {final_state_manager.state.get('status')}. Not all stages may have completed.")
 
     except Exception as e:
-        print(f"\nAn unexpected error occurred during Qrew pipeline execution: {e}")
-        import traceback
-        traceback.print_exc()
+        logging.error(f"An unexpected error occurred during Qrew pipeline execution: {e}", exc_info=True)
         # Print error summary from orchestrator if available
         if 'orchestrator' in locals() and hasattr(orchestrator, 'state') and orchestrator.state is not None:
-            print("\nPartial Workflow Summary (on error):")
+            # This part uses Rich console, so it's not converted to logging
+            console.print("\n[bold red]Partial Workflow Summary (on error):[/bold red]")
             orchestrator.state.get_summary().print()
 
+        # These are user-facing troubleshooting tips, keep as print or convert to console.print
         print("\nTroubleshooting Tips from main.py:")
         print("------------------------------------")
-        # (Error handling tips like API keys can remain here as a general fallback)
         error_str = str(e).lower()
         litellm_model_env = os.environ.get("LITELLM_MODEL", "").lower()
         if "api_key" in error_str or "authentication" in error_str or "permission" in error_str:
             print("- The error suggests an API key issue or authentication failure.")
-            # ... (rest of the API key troubleshooting)
         elif "model_not_found" in error_str:
             print(f"- Model '{litellm_model_env}' not found.")
-            # ...
         else:
             print("- Ensure LLM configuration is correct.")
-        # ...
 
 if __name__ == "__main__":
     run_qrew()

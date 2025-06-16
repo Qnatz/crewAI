@@ -16,8 +16,8 @@ if project_src_path not in sys.path:
 from .llm_config import default_llm # llm_config.py is now in the same directory
 from . import config as crew_config # This will execute config.py and set Task.DEFAULT_SCHEMA
 
-# Enable LiteLLM debugging
-os.environ["LITELLM_DEBUG"] = "1" # Set to "0" or remove for less verbose output in production
+# LITELLM_DEBUG is now primarily managed by main.py or environment settings
+# os.environ["LITELLM_DEBUG"] = "1" # Set to "0" or remove for less verbose output in production
 
 from .workflows.orchestrator import WorkflowOrchestrator
 from .project_manager import ProjectStateManager

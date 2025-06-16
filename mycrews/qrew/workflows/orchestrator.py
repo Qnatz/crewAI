@@ -3,9 +3,8 @@ import os # Added for os.path.join, os.makedirs, etc.
 from typing import Any, Optional
 from crewai import Crew, Task
 from crewai.tasks.task_output import TaskOutput
-from ..taskmaster.taskmaster_agent import taskmaster_agent
 # from ..orchestrators.idea_interpreter_agent.agent import idea_interpreter_agent # Removed
-from .idea_to_architecture_flow import run_idea_to_architecture_workflow
+from .idea_to_architecture_flow import run_idea_to_architecture_flow
 from .crew_lead_workflow import run_crew_lead_workflow
 from .subagent_execution_workflow import run_subagent_execution_workflow
 from .final_assembly_workflow import run_final_assembly_workflow
@@ -175,6 +174,7 @@ class WorkflowOrchestrator:
 
     def run_taskmaster_workflow(self, inputs: dict):
         print("Executing Taskmaster workflow...")
+        from ..taskmaster.taskmaster_agent import taskmaster_agent
         user_request = inputs.get("user_request", "")
         if not user_request:
             # This case should ideally be handled before calling this workflow,
