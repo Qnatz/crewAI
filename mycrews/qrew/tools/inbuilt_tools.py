@@ -41,26 +41,45 @@ directory_read_tool = DirectoryReadTool()
 directory_search_tool = DirectorySearchTool()
 code_docs_search_tool = CodeDocsSearchTool() # Standard, specific docs can be set via source property or method if available
 
-# For GithubSearchTool, always pass gh_token.
-# If GITHUB_TOKEN is None (env var not set), the tool's validation will handle it if required.
-github_search_tool = GithubSearchTool(
-    gh_token=GITHUB_TOKEN,
-    content_types=['code', 'repo', 'issue']
-)
+# Robust initialization for GithubSearchTool
+if GITHUB_TOKEN:
+    try:
+        github_search_tool = GithubSearchTool(gh_token=GITHUB_TOKEN, content_types=['code', 'repo', 'issue'])
+        print("GithubSearchTool initialized successfully.")
+    except Exception as e:
+        print(f"Warning: Failed to initialize GithubSearchTool (Token was present but init failed): {e}. Tool will be disabled.")
+        github_search_tool = None
+else:
+    print("Warning: GITHUB_TOKEN not found in environment. GithubSearchTool will be disabled.")
+    github_search_tool = None
 
 txt_search_tool = TXTSearchTool() # If this specific tool exists and is used
 pdf_search_tool = PDFSearchTool() # If this specific tool exists and is used
 mdx_search_tool = MDXSearchTool() # If this specific tool exists and is used
 
-# For EXASearchTool, always pass api_key.
-# If EXA_API_KEY is None (env var not set), the tool's validation will handle it if required.
-exa_search_tool = EXASearchTool(api_key=EXA_API_KEY)
-
-# For SerperDevTool, if it takes api_key in constructor:
-if SERPER_API_KEY:
-    serper_dev_tool = SerperDevTool(api_key=SERPER_API_KEY)
+# Robust initialization for EXASearchTool
+if EXA_API_KEY:
+    try:
+        exa_search_tool = EXASearchTool(api_key=EXA_API_KEY)
+        print("EXASearchTool initialized successfully.")
+    except Exception as e:
+        print(f"Warning: Failed to initialize EXASearchTool (API key was present but init failed): {e}. Tool will be disabled.")
+        exa_search_tool = None
 else:
-    serper_dev_tool = SerperDevTool() # Or handle error if key is mandatory / tool might pick from env
+    print("Warning: EXA_API_KEY not found in environment. EXASearchTool will be disabled.")
+    exa_search_tool = None
+
+# Robust initialization for SerperDevTool
+if SERPER_API_KEY:
+    try:
+        serper_dev_tool = SerperDevTool(api_key=SERPER_API_KEY)
+        print("SerperDevTool initialized successfully.")
+    except Exception as e:
+        print(f"Warning: Failed to initialize SerperDevTool (API key was present but init failed): {e}. Tool will be disabled.")
+        serper_dev_tool = None
+else:
+    print("Warning: SERPER_API_KEY not found in environment. SerperDevTool will be disabled.")
+    serper_dev_tool = None
 
 website_search_tool = WebsiteSearchTool()
 

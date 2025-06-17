@@ -186,13 +186,18 @@ def get_tools_for_agent(agent_name: AgentName) -> list:
     if tools is None:
         print(f"Warning: No tools explicitly mapped for agent '{agent_name.value}'. Returning empty list.")
         return []
+
+    # Filter out any None values that might have resulted from conditional tool initializations
+    actual_tools = [tool for tool in tools if tool is not None]
+
     # Further check: ensure all items in the list are actual tool objects
     # This is mostly a sanity check; the construction should ensure this.
     valid_tools = []
-    for tool_item in tools:
+    for tool_item in actual_tools: # Iterate over the filtered list
         if hasattr(tool_item, 'run') and callable(getattr(tool_item, 'run')):
             valid_tools.append(tool_item)
         else:
+            # This case should ideally not be hit if all configured tools are valid objects or None
             print(f"Warning: Item '{tool_item}' for agent '{agent_name.value}' is not a valid tool object (missing run method). Skipping.")
     return valid_tools
 
