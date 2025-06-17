@@ -122,8 +122,7 @@ security_scanner = SecurityScannerToolPlaceholder()
 
 def ai_code_generator_func(task_description: str, framework: str):
     print(f"Placeholder: AI Code Generation for task: {task_description}, framework: {framework}")
-    return f"# Placeholder code for {task_description} in {framework}
-pass"
+    return f"# Placeholder code for {task_description} in {framework}\npass"
 
 class AICodeGeneratorArgs(BaseModel):
     task_description: str = Field(..., description="Description of the coding task.")
