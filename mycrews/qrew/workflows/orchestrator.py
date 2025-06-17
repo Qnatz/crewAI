@@ -228,16 +228,17 @@ class WorkflowOrchestrator:
             }
 
         taskmaster_task = Task(
-            description=f"Process the following user request: '{user_request}'. "
-                        f"Determine if this pertains to a new or existing project. "
-                        f"If it's a new project, generate a unique and descriptive project name (e.g., based on key themes from the request, and ensure it's filesystem-safe). "
-                        f"Then, create a refined project brief based on the request. "
-                        f"You MUST use the 'knowledge_base_tool_instance' to check for existing projects or ideas if applicable. "
-                        f"Focus on understanding the core needs and deliverables. "
-                        f"Based on the project's nature (e.g., complexity, use of new/unproven technologies, high uncertainty), recommend the next logical stage. "
-                        f"Valid recommendations are: 'tech_vetting' (if new/complex tech evaluation is needed) or 'architecture' (if project can proceed to design). "
-                        f"Also, determine the primary scope of the project from the following options: 'web-only', 'mobile-only', 'backend-only', 'full-stack', 'documentation-only'. If ambiguous or not fitting these, use 'unknown'. "
-                        "Your final response MUST be ONLY a single, valid JSON object that strictly adheres to the structure specified in the expected_output. Do not include any other text, explanations, or conversational remarks before or after the JSON object.",
+            description=f"Process the user request: '{user_request}'. Your primary goal is to determine if this is a new or existing project and then to define its initial parameters. "
+                        f"1. Analyze the request to understand its core needs and deliverables. "
+                        f"2. To check for existing relevant projects or context: "
+                        f"   - Prioritize using any available RAG search tools (e.g., for web components or other knowledge bases you have access to). "
+                        f"   - If you need to check for existing project directories by name on the filesystem, and you choose to use the 'Search a directory's content' tool (DirectorySearchTool), search within the specific directory 'mycrews/qrew/projects/'. For example, if looking for 'my_project', search for 'my_project' within 'mycrews/qrew/projects/'. Do NOT search a generic top-level 'projects' directory. "
+                        f"3. Based on your findings, determine if the request pertains to a new or existing project. "
+                        f"4. If it's a new project, generate a unique and descriptive project name (e.g., based on key themes from the request, ensuring it's filesystem-safe). "
+                        f"5. Create a refined project brief. "
+                        f"6. Recommend the next logical stage: 'tech_vetting' (if new/complex tech evaluation is needed) or 'architecture' (if project can proceed to design). "
+                        f"7. Determine the project scope from: 'web-only', 'mobile-only', 'backend-only', 'full-stack', 'documentation-only'. If ambiguous, use 'unknown'. "
+                        "Your final response MUST be ONLY a single, valid JSON object strictly adhering to the structure specified in the `expected_output` field of this task. Do not include any other text, explanations, or conversational remarks before or after the JSON object.",
             agent=taskmaster_agent,
             expected_output='A single, valid JSON object. Example: {"project_name": "example_project_name", "refined_brief": "A concise summary of the project...", "is_new_project": true, "recommended_next_stage": "architecture", "project_scope": "web-only"}',
             guardrail=validate_taskmaster_output,
@@ -254,26 +255,36 @@ class WorkflowOrchestrator:
             verbose=True # Or False, depending on desired logging level
         )
 
-        task_output = task_crew.kickoff() # Renamed 'result' to 'task_output' for clarity
+        crew_kickoff_result = task_crew.kickoff()
 
-        # The guardrail 'validate_taskmaster_output' returns a tuple: (bool, data_or_error_msg)
-        # CrewAI's Task object, after execution with a guardrail, will have the guardrail's
-        # returned data in its 'output.result' attribute if the guardrail evaluation was True.
-        # The 'output.raw' will still contain the original raw output from the LLM.
+        if not crew_kickoff_result or not crew_kickoff_result.tasks_output:
+            # Handle case where kickoff failed or tasks_output is empty
+            print("Taskmaster crew execution failed or produced no task outputs.")
+            return {
+                "project_name": "error_taskmaster_crew_failed",
+                "refined_brief": "Taskmaster crew execution failed or yielded no task outputs.",
+                "is_new_project": False,
+                "recommended_next_stage": "architecture",
+                "project_scope": "unknown",
+                "taskmaster_error": "Crew execution failed or no task outputs"
+            }
 
-        if task_output and task_output.is_successful:
+        # Assuming taskmaster_task is the only task in this crew
+        task_specific_output = crew_kickoff_result.tasks_output[0]
+
+        if task_specific_output and task_specific_output.is_successful:
             # If is_successful is True, it means the guardrail returned True.
-            # The actual processed data from the guardrail should be in task_output.result.
-            if isinstance(task_output.result, dict):
+            # The actual processed data from the guardrail should be in task_specific_output.result.
+            if isinstance(task_specific_output.result, dict):
                 # Guardrail validate_taskmaster_output returns the dictionary directly
-                print(f"Taskmaster workflow successful. Parsed output from guardrail: {task_output.result}")
-                return task_output.result
+                print(f"Taskmaster workflow successful. Parsed output from guardrail: {task_specific_output.result}")
+                return task_specific_output.result
             else:
                 # This case should ideally not happen if guardrail is (True, dict)
-                print(f"Taskmaster guardrail passed, but output.result is not a dict: {task_output.result}")
+                print(f"Taskmaster guardrail passed, but task_specific_output.result is not a dict: {task_specific_output.result}")
                 return {
                     "project_name": "error_guardrail_unexpected_type",
-                    "refined_brief": f"Taskmaster guardrail passed but returned unexpected data type. Result: {task_output.result}",
+                    "refined_brief": f"Taskmaster guardrail passed but returned unexpected data type. Result: {task_specific_output.result}",
                     "is_new_project": False,
                     "recommended_next_stage": "architecture",
                     "project_scope": "unknown",
@@ -281,25 +292,19 @@ class WorkflowOrchestrator:
                 }
         else:
             # Task was not successful, meaning guardrail returned False or an exception occurred.
-            # The raw output from the LLM is in task_output.raw
-            # The error message from the guardrail (or CrewAI) might be in task_output.result or part of its string representation.
-            raw_llm_output = task_output.raw if task_output else "No raw output available"
-            # error_message_from_guardrail = str(task_output.result) if task_output and task_output.result else "Guardrail failed or task error." # Original thought, refined below
+            raw_llm_output = task_specific_output.raw if task_specific_output else "No raw output available"
 
-            # Log the detailed error from the guardrail if available.
-            # The 'validate_taskmaster_output' function itself logs details on failure.
-            # We can use its returned error message.
-            # If task_output.result contains the error message from the guardrail:
-            if task_output and not task_output.is_successful and isinstance(task_output.result, str):
-                 # This is the error message from guardrail's (False, "error_msg")
-                error_detail = task_output.result
-            elif task_output and not task_output.is_successful and task_output.result is None:
-                # This can happen if the guardrail function itself had an unhandled exception
-                # before returning (False, "error_msg"). Or if the task failed before guardrail.
-                error_detail = "Guardrail or task execution possibly encountered an internal error. Raw output might be insightful."
-            else:
-                # Fallback if result is not a string or task_output is None
-                error_detail = "Guardrail validation failed or task execution error."
+            error_detail = "Guardrail validation failed or task execution error." # Default
+            if task_specific_output: # Ensure task_specific_output is not None
+                if not task_specific_output.is_successful and isinstance(task_specific_output.result, str) and task_specific_output.result:
+                    # This is the error message from guardrail's (False, "error_msg")
+                    error_detail = task_specific_output.result
+                elif hasattr(task_specific_output, 'error') and task_specific_output.error: # Check for an explicit error attribute on the task output
+                     error_detail = str(task_specific_output.error)
+                # Add other conditions if CrewAI populates error details differently for guardrail failures vs other task errors.
+                # For instance, if result is None but there's a message in another attribute.
+                elif task_specific_output.result is None and task_specific_output.raw: # Guardrail might have failed internally
+                     error_detail = "Guardrail validation failed; task output result was None. Raw output might provide clues."
 
 
             print(f"Taskmaster task failed validation or execution. Error: {error_detail}. Raw LLM output: {raw_llm_output}")
