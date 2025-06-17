@@ -4,26 +4,54 @@ import uuid
 import datetime
 import chromadb
 from chromadb.config import Settings
+from chromadb.utils.embedding_functions import OnnxEmbeddingFunction # Added import
 from typing import List, Optional, Dict, Any
 
 class ChromaLogger:
-    def __init__(self, collection_name: str = "qrew_system_logs", persist_directory: Optional[str] = None):
+    def __init__(self, collection_name: str = "qrew_system_logs", persist_directory: Optional[str] = None, onnx_model_dir_override: Optional[str] = None):
         if persist_directory is None:
             current_script_dir = os.path.dirname(os.path.abspath(__file__))
-            project_root = os.path.join(current_script_dir, "..", "..", "..") # tools -> qrew -> mycrews -> project_root
+            project_root = os.path.join(current_script_dir, "..", "..", "..")
             base_persist_dir = os.path.join(project_root, "db", "chroma_storage_logger")
         else:
             base_persist_dir = persist_directory
-
         self.persist_directory = os.path.abspath(base_persist_dir)
         os.makedirs(self.persist_directory, exist_ok=True)
+
+        self.onnx_embedding_function = None
+        # Determine ONNX model directory path
+        if onnx_model_dir_override:
+            onnx_model_path = os.path.abspath(onnx_model_dir_override)
+        else:
+            current_script_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.join(current_script_dir, "..", "..", "..")
+            onnx_model_path = os.path.join(project_root, "models", "onnx")
+
+        onnx_model_file_path = os.path.join(onnx_model_path, "model.onnx") # Path to the actual .onnx file
+        if not os.path.exists(onnx_model_file_path):
+             print(f"ChromaLogger: Warning - ONNX model file not found at {onnx_model_file_path}. Semantic log search may not work as expected.")
+        else:
+            try:
+                # OnnxEmbeddingFunction typically takes the model_name which can be a path to the directory.
+                self.onnx_embedding_function = OnnxEmbeddingFunction(model_name=onnx_model_path)
+                print(f"ChromaLogger: OnnxEmbeddingFunction initialized with model directory: {onnx_model_path}")
+            except Exception as e_ef:
+                print(f"ChromaLogger: Warning - Failed to initialize OnnxEmbeddingFunction with model directory {onnx_model_path}: {e_ef}")
+                self.onnx_embedding_function = None
 
         try:
             self.client = chromadb.PersistentClient(
                 path=self.persist_directory,
                 settings=Settings(allow_reset=False)
             )
-            self.collection = self.client.get_or_create_collection(name=collection_name)
+            if self.onnx_embedding_function:
+                self.collection = self.client.get_or_create_collection(
+                    name=collection_name,
+                    embedding_function=self.onnx_embedding_function
+                )
+            else:
+                self.collection = self.client.get_or_create_collection(name=collection_name)
+                print(f"ChromaLogger: Warning - Collection '{collection_name}' created without an embedding function. Semantic search on log content will not be available.")
             print(f"ChromaLogger: Initialized with collection '{collection_name}' at {self.persist_directory}")
         except Exception as e:
             print(f"ChromaLogger: CRITICAL - Failed to initialize ChromaDB client or collection: {e}")
