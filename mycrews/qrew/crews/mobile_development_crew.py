@@ -92,9 +92,20 @@ class MobileDevelopmentCrew:
             self.android_api_dev, self.android_storage_dev, self.android_ui_dev,
             self.ios_api_dev, self.ios_storage_dev, self.ios_ui_dev
         ]
-        active_agents = [
-            agt for agt in all_agents if hasattr(agt, 'type') and (agt.type == "common" or agt.type in job_scope)
-        ]
+
+        active_agents_set = set() # Use a set to handle potential duplicates gracefully
+        is_general_mobile_scope = "mobile-only" in job_scope
+
+        for agt in all_agents:
+            if hasattr(agt, 'type') and agt.type: # Ensure agt.type is not None or empty
+                if agt.type == "common":
+                    active_agents_set.add(agt)
+                elif is_general_mobile_scope and agt.type in ["mobile", "android", "ios"]:
+                    active_agents_set.add(agt)
+                elif not is_general_mobile_scope and agt.type in job_scope: # For specific platform scopes like "android"
+                    active_agents_set.add(agt)
+
+        active_agents = list(active_agents_set)
 
         all_tasks = self.tasks
         filtered_tasks = [
