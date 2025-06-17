@@ -1,4 +1,5 @@
 import json
+import logging # Added logging
 import os # Added for os.path.join, os.makedirs, etc.
 from typing import Any, Optional
 from crewai import Crew, Task
@@ -46,8 +47,10 @@ def validate_taskmaster_output(task_output: TaskOutput) -> tuple[bool, Any]: # C
 
         return True, data # Return parsed data on success
     except json.JSONDecodeError:
-        return False, "Output must be valid JSON." # output_str is not directly visible here, but implied
+        logging.error(f"Failed to decode JSON. Raw output: {output_str}") # Added logging
+        return False, "Output must be valid JSON."
     except Exception as e:
+        logging.error(f"Validation error during taskmaster output validation: {str(e)}. Raw output: {output_str}", exc_info=True) # Added logging and raw output here too
         return False, f"Validation error: {str(e)}"
 
 class WorkflowOrchestrator:

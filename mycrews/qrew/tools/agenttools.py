@@ -178,7 +178,7 @@ agent_tool_map = {
     AgentName.OFFLINE_COORDINATOR: _unique_tools(mobile_dev_tools, cloud_dev_tools, api_dev_tools),
 
     # Orchestrators
-    AgentName.EXECUTION_MANAGER: _unique_tools(coordinator_tools, enhanced_tools_groupings["file_system"]),
+    AgentName.EXECUTION_MANAGER: _unique_tools(coordinator_tools, enhanced_tools_groupings["file_system"], [get_rag_tool('web_components')]),
     AgentName.TECH_VETTING_COUNCIL: _unique_tools(enhanced_tools_groupings["serper"], enhanced_tools_groupings["exa"], enhanced_tools_groupings["search_code"]),
     AgentName.PROJECT_ARCHITECT: _unique_tools(enhanced_tools_groupings["ai_gen"], enhanced_tools_groupings["db_schema"], enhanced_tools_groupings["cloud"]),
     AgentName.FINAL_ASSEMBLER: _unique_tools(enhanced_tools_groupings["dir_read"], enhanced_tools_groupings["file_read"], enhanced_tools_groupings["security"]),
