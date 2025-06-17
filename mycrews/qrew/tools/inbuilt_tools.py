@@ -175,10 +175,7 @@ ai_code_generator = AICodeGeneratorToolWrapper()
 _configured_rag_tools = {}
 
 def configure_rag_tools(knowledge_bases: dict):
-    global _configured_rag_tools
-    _configured_rag_tools.clear()
-    for name, path_or_config in knowledge_bases.items():
-    global _configured_rag_tools, onnx_embedder_instance, chroma_client # Ensure globals are accessible
+    global _configured_rag_tools, onnx_embedder_instance, chroma_client # Ensure all needed globals here
     _configured_rag_tools.clear()
 
     for name, path_or_config in knowledge_bases.items():
