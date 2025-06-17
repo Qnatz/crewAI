@@ -13,6 +13,6 @@ android_storage_agent = Agent(
     llm=specific_llm, # Assign the fetched LLM
     tools=get_tools_for_agent(AgentName.MOBILE_STORAGE_AGENT),
     allow_delegation=False,
-    verbose=True
+    verbose=True,
+    metadata={"type": "android"}
 )
-android_storage_agent.type = "android"

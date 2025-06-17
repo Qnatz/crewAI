@@ -13,6 +13,6 @@ android_ui_agent = Agent(
     llm=specific_llm, # Assign the fetched LLM
     tools=get_tools_for_agent(AgentName.MOBILE_UI_AGENT),
     allow_delegation=False,
-    verbose=True
+    verbose=True,
+    metadata={"type": "android"}
 )
-android_ui_agent.type = "android"
