@@ -39,7 +39,7 @@ def validate_taskmaster_output(task_output: TaskOutput) -> tuple[bool, Any]: # C
 
     try:
         # It's important to log what string is being attempted for parsing
-        # print(f"Attempting to parse JSON from: {json_str}") # For debugging, can be removed
+        logging.info(f"Guardrail: Attempting to parse as JSON: '{json_str}'") # ADD THIS LINE
         data = json.loads(json_str)
         if not isinstance(data, dict):
             # Log the problematic string if it parsed but wasn't a dict
@@ -77,7 +77,8 @@ def validate_taskmaster_output(task_output: TaskOutput) -> tuple[bool, Any]: # C
 
         return True, data
     except json.JSONDecodeError as e:
-        logging.error(f"Failed to decode JSON. Error: {e}. Raw (cleaned) string was: {json_str}. Original output_str was: {output_str}")
+        # The existing logging.error here is good as it includes the json_str that failed.
+        logging.error(f"Guardrail: Failed to decode JSON. Error: {e}. Raw (cleaned) string was: '{json_str}'. Original output_str was: '{output_str}'")
         return False, "Output must be valid JSON."
     except Exception as e:
         logging.error(f"Validation error during taskmaster output validation: {str(e)}. Raw (cleaned) string was: {json_str}. Original output_str was: {output_str}", exc_info=True)
