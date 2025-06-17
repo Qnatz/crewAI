@@ -4,7 +4,7 @@ import sys
 from typing import Optional, Dict, Any
 import numpy as np
 from .tools.knowledge_base_tool import knowledge_base_tool_instance # Corrected path
-from .onnx_objectbox_memory import ONNXObjectBoxMemory, KnowledgeEntry # Assuming KnowledgeEntry is here for now
+from .tools.onnx_objectbox_memory import ONNXObjectBoxMemory, KnowledgeEntry # Corrected path
 import json
 import hashlib
 from pathlib import Path

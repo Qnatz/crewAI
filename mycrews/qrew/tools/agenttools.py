@@ -88,10 +88,28 @@ class AgentName(str, Enum):
 
 # Helper to combine tool lists and remove duplicates
 def _unique_tools(*tool_lists):
-    combined = []
+    # First, flatten the list of lists and filter out any None tool lists
+    combined_initial = []
     for lst in tool_lists:
-        combined.extend(lst)
-    return list(set(combined))
+        if lst:  # Ensure the list itself is not None before extending
+            combined_initial.extend(lst)
+
+    # Filter out None tool objects from the combined list
+    # This is important because tools like EXASearchTool, SerperDevTool, etc.,
+    # might be None if their API keys are not set.
+    combined_filtered_nones = [tool for tool in combined_initial if tool is not None]
+
+    # De-duplicate by object identity, preserving order
+    unique_list = []
+    seen_ids = set() # Store ids of objects already added
+    for tool_obj in combined_filtered_nones:
+        # It's possible a tool object might not be hashable if it doesn't implement __hash__
+        # However, we are hashing id(tool_obj) which is always hashable.
+        obj_id = id(tool_obj)
+        if obj_id not in seen_ids:
+            unique_list.append(tool_obj)
+            seen_ids.add(obj_id)
+    return unique_list
 
 
 enhanced_tools_groupings = {
