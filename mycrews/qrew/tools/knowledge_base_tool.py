@@ -25,7 +25,7 @@ class KnowledgeBaseTool(BaseTool): # Renamed from EnhancedKnowledgeBaseTool
     )
     embedding_session: Optional[ort.InferenceSession] = None
     tokenizer: Optional[Tokenizer] = None
-    kb_client: Optional[chromadb.API] = None # Added kb_client
+    kb_client: Optional[chromadb.ClientAPI] = None # Changed API to ClientAPI
     kb_collection: Optional[chromadb.Collection] = None # Added kb_collection
 
     def __init__(
