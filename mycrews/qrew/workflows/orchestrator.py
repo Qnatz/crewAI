@@ -263,40 +263,43 @@ class WorkflowOrchestrator:
 
         # If kickoff() completes without an exception, it means the task (and its guardrail) was successful.
         # The guardrail 'validate_taskmaster_output' returns (True, data_dict).
-        # This data_dict should be in task_specific_output.result.
+        # This data_dict should be in 'taskmaster_task.output' (the .output attribute of the original Task instance).
 
-        if not crew_kickoff_result or not crew_kickoff_result.tasks_output:
-            # This case handles if kickoff returns None or an empty tasks_output list,
-            # though a guardrail failure would typically raise an exception before this.
-            print("Taskmaster crew execution failed to produce task outputs or kickoff returned None.")
-            return {
-                "project_name": "error_taskmaster_crew_no_output",
-                "refined_brief": "Taskmaster crew execution failed to produce task outputs.",
-                "is_new_project": False,
-                "recommended_next_stage": "architecture",
-                "project_scope": "unknown",
-                "taskmaster_error": "Crew execution produced no task outputs"
-            }
+        # crew_kickoff_result is a CrewOutput object.
+        # crew_kickoff_result.tasks_output is a list of TaskOutput objects.
+        # We need to check the 'output' attribute of the 'taskmaster_task' (the Task instance itself).
 
-        task_specific_output = crew_kickoff_result.tasks_output[0]
-
-        if isinstance(task_specific_output.result, dict):
-            # Guardrail validate_taskmaster_output returns the dictionary directly in .result
-            print(f"Taskmaster workflow successful. Parsed output from guardrail: {task_specific_output.result}")
-            return task_specific_output.result
+        if hasattr(taskmaster_task, 'output') and isinstance(taskmaster_task.output, dict):
+            # The guardrail validate_taskmaster_output returned a dictionary,
+            # and CrewAI assigned it to taskmaster_task.output.
+            print(f"Taskmaster workflow successful. Parsed output from guardrail: {taskmaster_task.output}")
+            return taskmaster_task.output
         else:
-            # This case implies that kickoff() succeeded but the guardrail's output (now in .result)
-            # was not the expected dictionary. This would be a bug in the guardrail logic if it
-            # returned (True, non-dict_value).
-            raw_llm_output = task_specific_output.raw if task_specific_output else "No raw output available"
-            print(f"Taskmaster guardrail processing anomaly. Expected dict in result, got: {type(task_specific_output.result)}. Result: '{task_specific_output.result}'. Raw LLM output: '{raw_llm_output}'")
+            # This case implies that kickoff() succeeded but taskmaster_task.output is not a dict.
+            # This could happen if:
+            # 1. The guardrail succeeded but returned (True, non-dict_value) - a bug in guardrail.
+            # 2. CrewAI's behavior for storing guardrail output changed.
+            # 3. The task completed but produced no distinct 'output' (e.g. if guardrail was None and agent returned None).
+            #    However, our task has a guardrail that should always return a dict or fail the task.
+
+            # We can still get the raw output from the TaskOutput object for logging.
+            raw_llm_output = "Not available"
+            if crew_kickoff_result and crew_kickoff_result.tasks_output:
+                task_specific_output_for_log = crew_kickoff_result.tasks_output[0]
+                if task_specific_output_for_log:
+                    raw_llm_output = task_specific_output_for_log.raw
+
+            actual_output_type = type(taskmaster_task.output).__name__ if hasattr(taskmaster_task, 'output') else 'None (no output attribute)'
+            actual_output_value = taskmaster_task.output if hasattr(taskmaster_task, 'output') else 'N/A'
+
+            print(f"Taskmaster guardrail processing anomaly or unexpected output structure. Expected dict in task.output, got: {actual_output_type}. Value: '{actual_output_value}'. Raw LLM output: '{raw_llm_output}'")
             return {
-                "project_name": "error_guardrail_output_mismatch",
-                "refined_brief": f"Taskmaster guardrail processing anomaly. Expected dict, got {type(task_specific_output.result)}. Raw output: '{raw_llm_output}'. Processed result: '{task_specific_output.result}'",
+                "project_name": "error_task_output_mismatch",
+                "refined_brief": f"Taskmaster task output processing anomaly. Expected dict, got {actual_output_type}. Raw output: '{raw_llm_output}'. Processed output: '{actual_output_value}'",
                 "is_new_project": False,
                 "recommended_next_stage": "architecture",
                 "project_scope": "unknown",
-                "taskmaster_error": f"Guardrail output type mismatch: {type(task_specific_output.result)}"
+                "taskmaster_error": f"Task output type mismatch: {actual_output_type}"
             }
 
     def execute_pipeline(self, initial_inputs: dict, mock_taskmaster_output: Optional[dict] = None):
