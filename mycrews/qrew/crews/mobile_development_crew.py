@@ -85,49 +85,86 @@ class MobileDevelopmentCrew:
     @crew
     def crew(self, job_scope: str | list[str]) -> ValidatedCrew: # Return type changed
         """Creates the Mobile Development crew"""
+        print(f"--- [MobileDevelopmentCrew DEBUG] ---") # DEBUG
+        print(f"[MobileDevelopmentCrew DEBUG] Initial job_scope: {job_scope}") # DEBUG
         if isinstance(job_scope, str):
             job_scope = [job_scope]
+        print(f"[MobileDevelopmentCrew DEBUG] Processed job_scope list: {job_scope}") # DEBUG
 
         all_agents = [
             self.android_api_dev, self.android_storage_dev, self.android_ui_dev,
             self.ios_api_dev, self.ios_storage_dev, self.ios_ui_dev
         ]
 
-        active_agents_set = set() # Use a set to handle potential duplicates gracefully
+        print("[MobileDevelopmentCrew DEBUG] All available agents and their types:") # DEBUG
+        for i, agt in enumerate(all_agents):
+            agent_name_for_log = getattr(agt, 'role', f"Agent_{i}")
+            agent_type_for_log = getattr(agt, 'type', 'N/A_type_missing')
+            print(f"[MobileDevelopmentCrew DEBUG] - Agent: {agent_name_for_log}, Type: '{agent_type_for_log}'")
+
+        active_agents_set = set()
         is_general_mobile_scope = "mobile-only" in job_scope
+        print(f"[MobileDevelopmentCrew DEBUG] is_general_mobile_scope: {is_general_mobile_scope}")
 
         for agt in all_agents:
-            if hasattr(agt, 'type') and agt.type: # Ensure agt.type is not None or empty
-                if agt.type == "common":
+            agent_name_for_log = getattr(agt, 'role', "Unknown_Agent_Role")
+            agent_type_for_log = getattr(agt, 'type', None)
+            print(f"[MobileDevelopmentCrew DEBUG] Checking agent: {agent_name_for_log}, Type: '{agent_type_for_log}'")
+            if agent_type_for_log:
+                if agent_type_for_log == "common":
                     active_agents_set.add(agt)
-                elif is_general_mobile_scope and agt.type in ["mobile", "android", "ios"]:
+                    print(f"[MobileDevelopmentCrew DEBUG] Added common agent: {agent_name_for_log}")
+                elif is_general_mobile_scope and agent_type_for_log in ["mobile", "android", "ios"]:
                     active_agents_set.add(agt)
-                elif not is_general_mobile_scope and agt.type in job_scope: # For specific platform scopes like "android"
+                    print(f"[MobileDevelopmentCrew DEBUG] Added agent for 'mobile-only' scope: {agent_name_for_log}")
+                elif not is_general_mobile_scope and agent_type_for_log in job_scope:
                     active_agents_set.add(agt)
+                    print(f"[MobileDevelopmentCrew DEBUG] Added agent for specific scope '{job_scope}': {agent_name_for_log}")
+                else:
+                    print(f"[MobileDevelopmentCrew DEBUG] Agent NOT added (condition false): {agent_name_for_log}")
+            else:
+                print(f"[MobileDevelopmentCrew DEBUG] Agent SKIPPED (no type): {agent_name_for_log}")
 
         active_agents = list(active_agents_set)
+        print(f"[MobileDevelopmentCrew DEBUG] Final active_agents count: {len(active_agents)}")
+        # Log active agent roles
+        active_agent_roles = [getattr(a, 'role', 'N/A') for a in active_agents] # DEBUG
+        print(f"[MobileDevelopmentCrew DEBUG] Active agent roles: {active_agent_roles}") # DEBUG
+
 
         all_tasks = self.tasks
+        print(f"[MobileDevelopmentCrew DEBUG] All defined tasks count: {len(all_tasks)}")
+        # Log all task descriptions and their assigned agent roles
+        for i, tsk in enumerate(all_tasks): # DEBUG
+           assigned_agent_role = getattr(tsk.agent, 'role', 'N/A') if tsk.agent else 'None' # DEBUG
+           print(f"[MobileDevelopmentCrew DEBUG] Defined Task {i}: {tsk.description[:30]}... (Agent: {assigned_agent_role})") # DEBUG
+
         filtered_tasks = [
             tsk for tsk in all_tasks if tsk.agent in active_agents
         ]
+        print(f"[MobileDevelopmentCrew DEBUG] Filtered tasks count: {len(filtered_tasks)}")
+        # Log filtered task descriptions
+        filtered_task_descs = [t.description[:30] + "..." for t in filtered_tasks] # DEBUG
+        print(f"[MobileDevelopmentCrew DEBUG] Filtered task descs: {filtered_task_descs}") # DEBUG
+
 
         pruned_tasks = [task for task in all_tasks if task not in filtered_tasks]
         if pruned_tasks:
             pruned_task_descriptions = [task.description for task in pruned_tasks]
             logging.info(f"Pruned tasks for job_scope '{job_scope}' in MobileDevelopmentCrew: {pruned_task_descriptions}")
 
-        if not active_agents:
-            logging.warning(f"No active agents for job_scope '{job_scope}' in MobileDevelopmentCrew. Crew will have no agents.")
-        if not filtered_tasks:
-            logging.warning(f"No tasks were matched for the active agents with job_scope '{job_scope}' in MobileDevelopmentCrew. Crew will have no tasks.")
+        print(f"--- [MobileDevelopmentCrew DEBUG END] ---") # DEBUG
 
-        # Including all agents for now. Task routing would determine actual agent usage.
+        if not active_agents:
+            logging.warning(f"No active agents for job_scope '{job_scope}' in MobileDevelopmentCrew. Crew will have no agents.") # This warning is key
+        if not filtered_tasks:
+            logging.warning(f"No tasks were matched for the active agents with job_scope '{job_scope}' in MobileDevelopmentCrew. Crew will have no tasks.") # This warning is key
+
         created_crew = ValidatedCrew( # Changed to ValidatedCrew
             agents=active_agents,
             tasks=filtered_tasks, # From @task decorator
             process=Process.sequential, # Could be parallel if tasks are independent
-            verbose=True,
+            verbose=True, # Set to True for more crew execution details
             llm=default_llm
         )
         created_crew.configure_quality_gate(
