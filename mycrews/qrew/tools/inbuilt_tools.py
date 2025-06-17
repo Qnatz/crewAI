@@ -24,8 +24,8 @@ from crewai_tools import (
 )
 import os # Ensure os is imported
 import chromadb # Added chromadb import
-from chromadb.utils.embedding_functions import OnnxEmbeddingFunction # Added
-# from ..tools.onnx_embedder import ONNXEmbedder # Removed custom wrapper import
+# from chromadb.utils.embedding_functions import OnnxEmbeddingFunction # Removed
+from ..tools.onnx_embedder import ONNXEmbedder # Ensure this is present
 from crewai.tools.base_tool import BaseTool  # Updated import path
 from pydantic import BaseModel, Field  # Updated to use standard Pydantic v2 imports
 
@@ -118,22 +118,19 @@ except Exception as e:
     chroma_client = None
     print(f"Warning: Failed to initialize ChromaDB PersistentClient: {e}. RagTool setup will likely fail or use defaults.")
 
-onnx_embedding_function_for_rag = None
+# Instantiate our ONNXEmbedder for RAG tools
+onnx_embedder_for_rag: Optional[ONNXEmbedder] = None # Added type hint for clarity
 try:
-    # Determine ONNX model directory path relative to inbuilt_tools.py
-    # inbuilt_tools.py -> tools -> qrew -> mycrews -> (root) -> models/onnx
-    current_script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.join(current_script_dir, "..", "..", "..")
-    onnx_model_dir = os.path.join(project_root, "models", "onnx")
-
-    if not os.path.exists(os.path.join(onnx_model_dir, "model.onnx")):
-        print(f"inbuilt_tools.py: Warning - ONNX model file not found at {onnx_model_dir} for RagTool's OnnxEmbeddingFunction. RAG tools may not function correctly.")
-    else:
-        onnx_embedding_function_for_rag = OnnxEmbeddingFunction(model_name=onnx_model_dir)
-        print(f"inbuilt_tools.py: OnnxEmbeddingFunction for RAG tools initialized with model directory: {onnx_model_dir}")
+    onnx_embedder_for_rag = ONNXEmbedder() # Instance for RAG tools
+    if not onnx_embedder_for_rag.EMBEDDING_SYSTEM_IMPORTED_SUCCESSFULLY: # type: ignore
+        print(f"inbuilt_tools.py: Warning - ONNXEmbedder for RAG's underlying system in .embed_and_store is not ready. RAG tool embeddings may not work.")
+    print(f"inbuilt_tools.py: ONNXEmbedder for RAG tools created.")
+except ImportError as ie:
+    print(f"inbuilt_tools.py: CRITICAL - Failed to import or initialize ONNXEmbedder for RAG: {ie}. RAG tools will likely use default/no embeddings.")
+    onnx_embedder_for_rag = None
 except Exception as e:
-    print(f"inbuilt_tools.py: Warning - Failed to initialize OnnxEmbeddingFunction for RAG tools: {e}. RAG tools may not function correctly.")
-    onnx_embedding_function_for_rag = None
+    print(f"inbuilt_tools.py: Warning - Failed to initialize ONNXEmbedder for RAG: {e}. RAG tools will likely use default/no embeddings.")
+    onnx_embedder_for_rag = None
 
 # Custom/Placeholder Tool Definitions
 class UIConverterToolPlaceholder(BaseTool):
@@ -195,7 +192,7 @@ ai_code_generator = AICodeGeneratorToolWrapper()
 _configured_rag_tools = {}
 
 def configure_rag_tools(knowledge_bases: dict):
-    global _configured_rag_tools, chroma_client, onnx_embedding_function_for_rag # Removed onnx_embedder_instance
+    global _configured_rag_tools, chroma_client, onnx_embedder_for_rag # Updated global
     _configured_rag_tools.clear()
 
     for name, path_or_config in knowledge_bases.items():
@@ -204,48 +201,38 @@ def configure_rag_tools(knowledge_bases: dict):
             tool_description = f"Performs RAG search over the {name.replace('_', ' ')} knowledge base. Config: '{path_or_config}'."
 
             current_tool_instance = None
-            if chroma_client and onnx_embedding_function_for_rag: # Check if both are available
+            if chroma_client and onnx_embedder_for_rag and onnx_embedder_for_rag.EMBEDDING_SYSTEM_IMPORTED_SUCCESSFULLY: # type: ignore
                 try:
                     collection_name = f"qrew_kb_{name.replace('_', '-')}"
-                    # Get or create the collection with the ONNX embedding function
+                    # Get or create the collection with our ONNXEmbedder instance
                     chroma_collection = chroma_client.get_or_create_collection(
                         name=collection_name,
-                        embedding_function=onnx_embedding_function_for_rag
+                        embedding_function=onnx_embedder_for_rag # Pass our ONNXEmbedder instance
                     )
 
-                    current_tool_instance = RagTool(
-                        source=path_or_config, # Source for document loading
-                        name=tool_name,
-                        description=tool_description,
-                        vector_store=chroma_collection # Pass the pre-configured collection
-                        # OMITTING: embedder=...
-                        # OMITTING: db_path=..., collection_name=... (handled by vector_store)
-                    )
-                    print(f"Initialized RAG tool for '{name}' using source '{path_or_config}' and ChromaDB collection '{collection_name}' with OnnxEmbeddingFunction.")
-                except Exception as e_rag_chroma:
-                    print(f"Warning: Failed to initialize RagTool for '{name}' with ChromaDB collection and OnnxEmbeddingFunction: {e_rag_chroma}.")
-                    # Fallback: Instantiate RagTool without vector_store if above fails.
-                    # It might try to use its own defaults or fail. This is a degraded state.
                     current_tool_instance = RagTool(
                         source=path_or_config,
                         name=tool_name,
-                        description=tool_description
+                        description=tool_description,
+                        vector_store=chroma_collection # Pass the pre-configured collection
+                        # No 'embedder', 'db_path', or 'collection_name' params for RagTool directly
                     )
-                    print(f"Initialized RAG tool for '{name}' with source '{path_or_config}' (ChromaDB/ONNX EF setup failed, using RagTool default behavior).")
+                    print(f"Initialized RAG tool for '{name}' using source '{path_or_config}' and ChromaDB collection '{collection_name}' with project's ONNXEmbedder.")
+                except Exception as e_rag_chroma:
+                    print(f"Warning: Failed to initialize RagTool for '{name}' with ChromaDB collection and ONNXEmbedder: {e_rag_chroma}.")
+                    # Fallback if specific setup fails
+                    current_tool_instance = RagTool(source=path_or_config, name=tool_name, description=tool_description)
+                    print(f"Initialized RAG tool for '{name}' with source '{path_or_config}' (ChromaDB/ONNXEmbedder setup failed, using RagTool default behavior).")
             else:
-                # Fallback if chroma_client or onnx_embedding_function_for_rag is not available
-                current_tool_instance = RagTool(
-                    source=path_or_config,
-                    name=tool_name,
-                    description=tool_description
-                )
+                # Fallback if chroma_client or onnx_embedder_for_rag is not available/ready
+                current_tool_instance = RagTool(source=path_or_config, name=tool_name, description=tool_description)
                 if not chroma_client:
                     print(f"Initialized RAG tool for '{name}' (Chroma client not available).")
-                if not onnx_embedding_function_for_rag:
-                    print(f"Initialized RAG tool for '{name}' (ONNX EF for RAG not available).")
+                if not (onnx_embedder_for_rag and onnx_embedder_for_rag.EMBEDDING_SYSTEM_IMPORTED_SUCCESSFULLY): # type: ignore
+                    print(f"Initialized RAG tool for '{name}' (Project's ONNXEmbedder not available/ready).")
 
             if current_tool_instance:
-                 _configured_rag_tools[name] = current_tool_instance
+                _configured_rag_tools[name] = current_tool_instance
         except Exception as e:
             print(f"Failed to initialize RAG tool for '{name}' with '{path_or_config}': {e}")
             # _configured_rag_tools[name] will not be set for this tool
