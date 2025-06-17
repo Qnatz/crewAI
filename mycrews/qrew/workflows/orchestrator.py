@@ -232,8 +232,11 @@ class WorkflowOrchestrator:
             description=f"Process the user request: '{user_request}'. Your primary goal is to determine if this is a new or existing project and then to define its initial parameters. "
                         f"1. Analyze the request to understand its core needs and deliverables. "
                         f"2. To check for existing relevant projects or context: "
-                        f"   - Prioritize using any available RAG search tools (e.g., for web components or other knowledge bases you have access to). "
-                        f"   - If you need to check for existing project directories by name on the filesystem, and you choose to use the 'Search a directory's content' tool (DirectorySearchTool), search within the specific directory 'mycrews/qrew/projects/'. For example, if looking for 'my_project', search for 'my_project' within 'mycrews/qrew/projects/'. Do NOT search a generic top-level 'projects' directory. "
+                        f"   - Prioritize using any available RAG search tools (e.g., for web components or other knowledge bases you have access to) for contextual information. "
+                        f"   - To determine if a specific project *directory* already exists by name: "
+                        f"     - Consider using the 'List files in directory' tool (DirectoryReadTool) on the 'mycrews/qrew/projects/' directory. Examining the output can tell you if a subdirectory with a potential project name exists. "
+                        f"     - Alternatively, if you have a specific potential project name, you could try to read a known file from its expected directory (e.g., 'mycrews/qrew/projects/PROJECT_NAME/state.json') using the 'Read a file's content' tool (FileReadTool). If it fails, the project might not exist. "
+                        f"   - If you still choose to use the 'Search a directory's content' tool (DirectorySearchTool) for a deeper semantic search for related content within 'mycrews/qrew/projects/', be aware it has previously caused errors. Use it cautiously and ensure your query is specific. "
                         f"3. Based on your findings, determine if the request pertains to a new or existing project. "
                         f"4. If it's a new project, generate a unique and descriptive project name (e.g., based on key themes from the request, ensuring it's filesystem-safe). "
                         f"5. Create a refined project brief. "
@@ -256,66 +259,44 @@ class WorkflowOrchestrator:
             verbose=True # Or False, depending on desired logging level
         )
 
-        crew_kickoff_result = task_crew.kickoff()
+        crew_kickoff_result = task_crew.kickoff() # This line can raise an Exception if guardrail fails after retries
+
+        # If kickoff() completes without an exception, it means the task (and its guardrail) was successful.
+        # The guardrail 'validate_taskmaster_output' returns (True, data_dict).
+        # This data_dict should be in task_specific_output.result.
 
         if not crew_kickoff_result or not crew_kickoff_result.tasks_output:
-            # Handle case where kickoff failed or tasks_output is empty
-            print("Taskmaster crew execution failed or produced no task outputs.")
+            # This case handles if kickoff returns None or an empty tasks_output list,
+            # though a guardrail failure would typically raise an exception before this.
+            print("Taskmaster crew execution failed to produce task outputs or kickoff returned None.")
             return {
-                "project_name": "error_taskmaster_crew_failed",
-                "refined_brief": "Taskmaster crew execution failed or yielded no task outputs.",
+                "project_name": "error_taskmaster_crew_no_output",
+                "refined_brief": "Taskmaster crew execution failed to produce task outputs.",
                 "is_new_project": False,
                 "recommended_next_stage": "architecture",
                 "project_scope": "unknown",
-                "taskmaster_error": "Crew execution failed or no task outputs"
+                "taskmaster_error": "Crew execution produced no task outputs"
             }
 
-        # Assuming taskmaster_task is the only task in this crew
         task_specific_output = crew_kickoff_result.tasks_output[0]
 
-        if task_specific_output and task_specific_output.is_successful:
-            # If is_successful is True, it means the guardrail returned True.
-            # The actual processed data from the guardrail should be in task_specific_output.result.
-            if isinstance(task_specific_output.result, dict):
-                # Guardrail validate_taskmaster_output returns the dictionary directly
-                print(f"Taskmaster workflow successful. Parsed output from guardrail: {task_specific_output.result}")
-                return task_specific_output.result
-            else:
-                # This case should ideally not happen if guardrail is (True, dict)
-                print(f"Taskmaster guardrail passed, but task_specific_output.result is not a dict: {task_specific_output.result}")
-                return {
-                    "project_name": "error_guardrail_unexpected_type",
-                    "refined_brief": f"Taskmaster guardrail passed but returned unexpected data type. Result: {task_specific_output.result}",
-                    "is_new_project": False,
-                    "recommended_next_stage": "architecture",
-                    "project_scope": "unknown",
-                    "taskmaster_error": "Guardrail returned unexpected data type"
-                }
+        if isinstance(task_specific_output.result, dict):
+            # Guardrail validate_taskmaster_output returns the dictionary directly in .result
+            print(f"Taskmaster workflow successful. Parsed output from guardrail: {task_specific_output.result}")
+            return task_specific_output.result
         else:
-            # Task was not successful, meaning guardrail returned False or an exception occurred.
+            # This case implies that kickoff() succeeded but the guardrail's output (now in .result)
+            # was not the expected dictionary. This would be a bug in the guardrail logic if it
+            # returned (True, non-dict_value).
             raw_llm_output = task_specific_output.raw if task_specific_output else "No raw output available"
-
-            error_detail = "Guardrail validation failed or task execution error." # Default
-            if task_specific_output: # Ensure task_specific_output is not None
-                if not task_specific_output.is_successful and isinstance(task_specific_output.result, str) and task_specific_output.result:
-                    # This is the error message from guardrail's (False, "error_msg")
-                    error_detail = task_specific_output.result
-                elif hasattr(task_specific_output, 'error') and task_specific_output.error: # Check for an explicit error attribute on the task output
-                     error_detail = str(task_specific_output.error)
-                # Add other conditions if CrewAI populates error details differently for guardrail failures vs other task errors.
-                # For instance, if result is None but there's a message in another attribute.
-                elif task_specific_output.result is None and task_specific_output.raw: # Guardrail might have failed internally
-                     error_detail = "Guardrail validation failed; task output result was None. Raw output might provide clues."
-
-
-            print(f"Taskmaster task failed validation or execution. Error: {error_detail}. Raw LLM output: {raw_llm_output}")
+            print(f"Taskmaster guardrail processing anomaly. Expected dict in result, got: {type(task_specific_output.result)}. Result: '{task_specific_output.result}'. Raw LLM output: '{raw_llm_output}'")
             return {
-                "project_name": "error_taskmaster_validation_failed",
-                "refined_brief": f"Taskmaster output failed validation. Error: {error_detail}. Raw output: {raw_llm_output}",
+                "project_name": "error_guardrail_output_mismatch",
+                "refined_brief": f"Taskmaster guardrail processing anomaly. Expected dict, got {type(task_specific_output.result)}. Raw output: '{raw_llm_output}'. Processed result: '{task_specific_output.result}'",
                 "is_new_project": False,
                 "recommended_next_stage": "architecture",
                 "project_scope": "unknown",
-                "taskmaster_error": f"Validation failed: {error_detail}"
+                "taskmaster_error": f"Guardrail output type mismatch: {type(task_specific_output.result)}"
             }
 
     def execute_pipeline(self, initial_inputs: dict, mock_taskmaster_output: Optional[dict] = None):
