@@ -16,6 +16,7 @@ class KnowledgeEntry:
     id = Id()
     text = Property(str) # Property type is str
     embedding = Property(bytes) # Storing embedding as bytes
+    project_id = Property(str) # Added project_id
 
 def build_knowledge_entity_model(): # Renamed to be specific
     model = Model()
