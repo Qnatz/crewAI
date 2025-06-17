@@ -12,7 +12,7 @@ ios_api_client_agent = Agent(
     backstory="A specialized iOS developer focused on creating efficient and reliable API client implementations for seamless data communication.",
     llm=specific_llm, # Assign the fetched LLM
     tools=get_tools_for_agent(AgentName.MOBILE_API_CLIENT_AGENT),
-    type="mobile",
     allow_delegation=False,
     verbose=True
 )
+ios_api_client_agent.type = "ios"

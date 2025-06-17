@@ -12,7 +12,7 @@ ios_ui_agent = Agent(
     backstory="A creative iOS developer dedicated to crafting intuitive and visually appealing user interfaces that enhance user engagement.",
     llm=specific_llm, # Assign the fetched LLM
     tools=get_tools_for_agent(AgentName.MOBILE_UI_AGENT),
-    type="mobile",
     allow_delegation=False,
     verbose=True
 )
+ios_ui_agent.type = "ios"

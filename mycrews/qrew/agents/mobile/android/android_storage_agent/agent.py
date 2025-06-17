@@ -12,7 +12,7 @@ android_storage_agent = Agent(
     backstory="An agent specializing in Android data storage solutions, ensuring data persistence, integrity, and performance on mobile devices.",
     llm=specific_llm, # Assign the fetched LLM
     tools=get_tools_for_agent(AgentName.MOBILE_STORAGE_AGENT),
-    type="mobile",
     allow_delegation=False,
     verbose=True
 )
+android_storage_agent.type = "android"
