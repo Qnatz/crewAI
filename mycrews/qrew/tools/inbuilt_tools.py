@@ -22,7 +22,7 @@ from crewai_tools import (
     SerperDevTool,
     RagTool,
 )
-from ..tools.text_embedder_tool import TextEmbedderTool
+from ..tools.onnx_embedder import ONNXEmbedder # Replaced TextEmbedderTool with ONNXEmbedder
 from crewai.tools.base_tool import BaseTool  # Updated import path
 from pydantic import BaseModel, Field  # Updated to use standard Pydantic v2 imports
 
@@ -82,14 +82,25 @@ else:
 
 website_search_tool = WebsiteSearchTool()
 
-# Local Embedder for RAG
-try:
-    local_text_embedder = TextEmbedderTool()
-    print("Local TFLite TextEmbedderTool initialized successfully.")
-except Exception as e:
-    local_text_embedder = None
-    print(f"Warning: Failed to initialize Local TFLite TextEmbedderTool: {e}. RagTool might fall back to default or fail if it requires an embedder.")
+# Path to the ONNX model directory from inbuilt_tools.py
+# inbuilt_tools.py -> tools -> qrew -> mycrews -> (root) -> models/onnx
+# So, from tools directory: ../../../models/onnx
+# this_file_dir = os.path.dirname(os.path.abspath(__file__)) # No longer needed for direct model loading here
+# onnx_model_directory = os.path.join(this_file_dir, "..", "..", "..", "models", "onnx") # No longer needed
 
+try:
+    # ONNXEmbedder wrapper no longer takes model_dir directly.
+    # It relies on embed_and_store.py for model loading.
+    onnx_embedder_instance = ONNXEmbedder()
+    print("ONNXEmbedder instance (wrapper) created successfully.")
+# FileNotFoundError is less likely here unless embed_and_store.py itself is missing,
+# but ImportError for embed_and_store or its dependencies is the main concern.
+except ImportError as ie_e:
+    onnx_embedder_instance = None
+    print(f"Warning: Failed to import dependencies or embed_and_store for ONNXEmbedder (wrapper): {ie_e}. RagTool will use default embedding.")
+except Exception as e:
+    onnx_embedder_instance = None
+    print(f"Warning: Failed to initialize ONNXEmbedder (wrapper): {e}. RagTool will use default embedding.")
 
 # Custom/Placeholder Tool Definitions
 class UIConverterToolPlaceholder(BaseTool):
@@ -157,22 +168,22 @@ def configure_rag_tools(knowledge_bases: dict):
         try:
             tool_name = f"{name.replace('_', ' ').title()} RAG Search"
             tool_description = f"Performs RAG search over the {name.replace('_', ' ')} knowledge base. Config: '{path_or_config}'."
-            if local_text_embedder:
+            if onnx_embedder_instance:
                 tool_instance = RagTool(
                     source=path_or_config,
                     name=tool_name,
                     description=tool_description,
-                    embedder=local_text_embedder  # Attempt to pass the local embedder
+                    embedder=onnx_embedder_instance # Pass the ONNX embedder
                 )
-                print(f"Initialized RAG tool for '{name}' using source '{path_or_config}' with local TFLite embedder.")
+                print(f"Initialized RAG tool for '{name}' using source '{path_or_config}' with ONNXEmbedder.")
             else:
-                # Fallback to default RagTool instantiation if local_text_embedder failed
+                # Fallback to default RagTool instantiation if onnx_embedder_instance failed
                 tool_instance = RagTool(
                     source=path_or_config,
                     name=tool_name,
                     description=tool_description
                 )
-                print(f"Initialized RAG tool for '{name}' using source '{path_or_config}' (local embedder failed, using RagTool default behavior).")
+                print(f"Initialized RAG tool for '{name}' using source '{path_or_config}' (ONNX embedder failed, using RagTool default behavior).")
             _configured_rag_tools[name] = tool_instance
         except Exception as e:
             print(f"Failed to initialize RAG tool for '{name}' with '{path_or_config}': {e}")
