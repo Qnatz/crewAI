@@ -4,8 +4,8 @@ from models.schema import MemoryEntry, model # Import model, not store or box di
 from objectbox import Store # Import Store
 import os # Added os import
 from typing import Optional # Import Optional
-from tools.embedder import embed
 import numpy as np # For cosine similarity calculation
+from mycrews.qrew.tools.embed_and_store import embed_text # New import
 
 # Define the default store path consistently with schema.py
 _DEFAULT_STORE_PATH = ".db/objectbox"
@@ -14,6 +14,8 @@ class ObjectBoxMemory:
     _store = None # Class variable to hold the store instance
     _store_path = _DEFAULT_STORE_PATH # Class variable for store path, used by tests to override
     _current_store_actual_path = None # To store the actual path of the initialized store
+
+    # _placeholder_embed function removed
 
     def __init__(self, store_path_override: Optional[str] = None): # Allow override
         current_path = store_path_override if store_path_override else self.__class__._store_path
@@ -44,7 +46,15 @@ class ObjectBoxMemory:
         if not value:
             return
 
-        vec = embed([value])[0] # vec is a numpy array
+        # raw_vec will be a np.ndarray from embed_text, or a zero vector if embed_text had issues
+        raw_vec = embed_text(value)
+        norm = np.linalg.norm(raw_vec)
+        if norm == 0:
+            vec = raw_vec # Already a zero vector or a valid non-normalizable vector
+        else:
+            vec = raw_vec / norm
+        vec = vec.astype(np.float32) # Ensure correct dtype for storage
+
         meta_json = json.dumps(metadata or {})
 
         entry = MemoryEntry(
@@ -59,10 +69,17 @@ class ObjectBoxMemory:
         if not query_text:
             return []
 
-        qvec = embed([query_text])[0] # qvec is a numpy array, assumed to be L2 normalized by embed()
+        # raw_qvec will be a np.ndarray from embed_text, or a zero vector
+        raw_qvec = embed_text(query_text)
+        norm = np.linalg.norm(raw_qvec)
+        if norm == 0:
+            qvec = raw_qvec
+        else:
+            qvec = raw_qvec / norm
+        qvec = qvec.astype(np.float32) # Ensure correct dtype
 
         if qvec is None or qvec.size == 0:
-            print("Warning: Query vector is empty.")
+            print("Warning: Query vector is empty or embedding failed.") # Adjusted warning
             return []
 
         all_entries = self.box.get_all()

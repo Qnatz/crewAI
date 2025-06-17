@@ -52,21 +52,29 @@ class ProjectStateManager:
 
     def _log_to_knowledge_base(self, error_details: Dict[str, Any]):
         """Logs error details to the knowledge base if enabled."""
-        if self.kb_tool:
+        if self.kb_tool and hasattr(self.kb_tool, 'memory_instance') and hasattr(self.kb_tool, '_embed_text'):
             try:
-                # Construct a meaningful summary/title for the KB entry
-                kb_title = f"Error in stage {error_details.get('stage', 'Unknown')} for project {self.project_info.get('name', 'N/A')}"
+                # Construct a meaningful single text entry for the KB
+                full_entry_text = f"Project: {error_details.get('project', 'N/A')}, Stage: {error_details.get('stage', 'Unknown')}, Error: {error_details.get('error_message', 'N/A')}. Details: {json.dumps(error_details)}"
 
-                # Serialize the error_details to a JSON string for the content
-                kb_content = json.dumps(error_details, indent=2)
+                # Generate embedding using the kb_tool's own embedder
+                embedding_vector = self.kb_tool._embed_text(full_entry_text) # This should return np.ndarray
 
-                # Add to knowledge base
-                self.kb_tool.add_to_knowledge_base([{"title": kb_title, "content": kb_content}])
-                print(f"Logged error to knowledge base: {kb_title}")
+                if embedding_vector is not None and embedding_vector.size > 0 : # Check if embedding is valid
+                    # Add to knowledge base via its memory_instance
+                    # ONNXObjectBoxMemory.add_knowledge expects text and vector.
+                    # The full_entry_text already contains the JSON dump of error_details.
+                    self.kb_tool.memory_instance.add_knowledge(text=full_entry_text, vector=embedding_vector)
+                    print(f"Logged error to knowledge base via memory_instance. Project: {error_details.get('project', 'N/A')}, Stage: {error_details.get('stage', 'Unknown')}")
+                else:
+                    print(f"Warning: Failed to generate embedding for KB logging. Error for project {error_details.get('project', 'N/A')}, Stage: {error_details.get('stage', 'Unknown')} not logged to KB.")
+
             except Exception as e:
                 print(f"Failed to log error to knowledge base: {e}")
-                # Optionally, log this failure to the primary error summary or system logs
                 self.error_summary.add("knowledge_base_logging", False, f"KB Logging Failed: {e}")
+        elif self.kb_tool:
+            # This condition means kb_tool exists but doesn't have the expected structure.
+            print(f"Warning: kb_tool (type: {type(self.kb_tool)}) is missing 'memory_instance' or '_embed_text' method. Cannot log to KB for project {error_details.get('project', 'N/A')}.")
 
 
     def _log_to_objectbox(self, error_details: Dict[str, Any]):
