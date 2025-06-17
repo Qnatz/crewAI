@@ -6,6 +6,7 @@
 # - RAG tool configuration is a placeholder and depends on the specific RagTool API.
 
 import os
+from typing import Optional, List, Dict, Any # Added typing imports
 from crewai_tools import (
     CodeInterpreterTool,
     FileReadTool,
