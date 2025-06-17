@@ -52,12 +52,9 @@ txt_search_tool = TXTSearchTool() # If this specific tool exists and is used
 pdf_search_tool = PDFSearchTool() # If this specific tool exists and is used
 mdx_search_tool = MDXSearchTool() # If this specific tool exists and is used
 
-# For ExaSearchTool, if it takes api_key in constructor:
-if EXA_API_KEY:
-    exa_search_tool = EXASearchTool(api_key=EXA_API_KEY) # Changed ExaSearchTool to EXASearchTool
-else:
-    exa_search_tool = EXASearchTool() # Changed ExaSearchTool to EXASearchTool
-# Or handle error if key is mandatory / tool might pick from env
+# For EXASearchTool, always pass api_key.
+# If EXA_API_KEY is None (env var not set), the tool's validation will handle it if required.
+exa_search_tool = EXASearchTool(api_key=EXA_API_KEY)
 
 # For SerperDevTool, if it takes api_key in constructor:
 if SERPER_API_KEY:
