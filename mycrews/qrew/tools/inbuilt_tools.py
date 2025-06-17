@@ -41,11 +41,12 @@ directory_read_tool = DirectoryReadTool()
 directory_search_tool = DirectorySearchTool()
 code_docs_search_tool = CodeDocsSearchTool() # Standard, specific docs can be set via source property or method if available
 
-# For GithubSearchTool, if it takes github_token in constructor:
-if GITHUB_TOKEN:
-    github_search_tool = GithubSearchTool(github_token=GITHUB_TOKEN, content_types=['code', 'repo', 'issue'])
-else:
-    github_search_tool = GithubSearchTool(content_types=['code', 'repo', 'issue']) # Or handle error if token is mandatory
+# For GithubSearchTool, always pass gh_token.
+# If GITHUB_TOKEN is None (env var not set), the tool's validation will handle it if required.
+github_search_tool = GithubSearchTool(
+    gh_token=GITHUB_TOKEN,
+    content_types=['code', 'repo', 'issue']
+)
 
 txt_search_tool = TXTSearchTool() # If this specific tool exists and is used
 pdf_search_tool = PDFSearchTool() # If this specific tool exists and is used
