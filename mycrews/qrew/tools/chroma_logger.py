@@ -10,8 +10,8 @@ class ChromaLogger:
     def __init__(self, collection_name: str = "qrew_system_logs", persist_directory: Optional[str] = None):
         if persist_directory is None:
             current_script_dir = os.path.dirname(os.path.abspath(__file__))
-            project_root_ предполагается = os.path.join(current_script_dir, "..", "..", "..") # tools -> qrew -> mycrews -> project_root
-            base_persist_dir = os.path.join(project_root_ предполагается, "db", "chroma_storage_logger")
+            project_root = os.path.join(current_script_dir, "..", "..", "..") # tools -> qrew -> mycrews -> project_root
+            base_persist_dir = os.path.join(project_root, "db", "chroma_storage_logger")
         else:
             base_persist_dir = persist_directory
 
