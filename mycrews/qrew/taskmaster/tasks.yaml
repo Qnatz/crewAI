@@ -5,11 +5,20 @@ tasks:
       Consult with the IdeaInterpreterAgent if the request is vague or needs significant refinement even after knowledge base consultation.
       Input: {user_request}, {project_goal_statement}, {priority_level}.
     expected_output: >
-      A clear and concise project brief, including:
-      - Defined scope and objectives.
-      - Key deliverables and success criteria.
-      - Initial assessment of complexity and potential challenges, informed by knowledge base lookup.
-      - Recommendation for which orchestrator (e.g., ProjectArchitect, ExecutionManager) or Lead Agent should take the next step.
+      A JSON object adhering to the following schema:
+      {
+        "project_name": "string (unique and descriptive, or existing project name if identified)",
+        "refined_brief": "string (a concise summary of the project's purpose and key objectives)",
+        "is_new_project": "boolean (true if the request is for a new project, false otherwise)",
+        "recommended_next_stage": "string (e.g., 'architecture', 'execution', 'clarification')",
+        "project_scope": "string (e.g., 'web-only', 'mobile-only', 'full-stack', 'unknown')",
+        "key_deliverables": ["string (list of key deliverables)"],
+        "success_criteria": ["string (list of success criteria)"],
+        "initial_complexity_assessment": "string (e.g., 'low', 'medium', 'high')",
+        "potential_challenges": ["string (list of potential challenges, can be empty)"]
+      }
+      Ensure all string values within the JSON are properly escaped.
+      The output MUST be only the JSON object itself, without any surrounding text or markdown code fences.
     agent: taskmaster_agent
 
   - description: > # This task remains unchanged

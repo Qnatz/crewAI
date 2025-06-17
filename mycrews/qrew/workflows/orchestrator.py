@@ -254,41 +254,62 @@ class WorkflowOrchestrator:
             verbose=True # Or False, depending on desired logging level
         )
 
-        result = task_crew.kickoff()
+        task_output = task_crew.kickoff() # Renamed 'result' to 'task_output' for clarity
 
-        if result and hasattr(result, 'raw') and result.raw:
-            # The guardrail `validate_taskmaster_output` returns the parsed data on success.
-            # However, the `result.raw` from crewAI task output is typically the raw string.
-            # We need to re-parse it here, or trust the guardrail completely.
-            # The guardrail is designed to ensure it's valid if the task succeeded.
-            try:
-                # If guardrail ran, result.raw should be the validated JSON string.
-                # If task failed after retries, result.raw might be an error or last attempt.
-                # The guardrail should prevent non-JSON from being in .raw if task is_successful.
-                # Let's assume if we are here, task was successful and .raw is the JSON string.
-                parsed_output = json.loads(result.raw)
-                return parsed_output
-            except json.JSONDecodeError:
-                print(f"Taskmaster output was not valid JSON despite guardrail: {result.raw}")
-                # Fallback to error structure
+        # The guardrail 'validate_taskmaster_output' returns a tuple: (bool, data_or_error_msg)
+        # CrewAI's Task object, after execution with a guardrail, will have the guardrail's
+        # returned data in its 'output.result' attribute if the guardrail evaluation was True.
+        # The 'output.raw' will still contain the original raw output from the LLM.
+
+        if task_output and task_output.is_successful:
+            # If is_successful is True, it means the guardrail returned True.
+            # The actual processed data from the guardrail should be in task_output.result.
+            if isinstance(task_output.result, dict):
+                # Guardrail validate_taskmaster_output returns the dictionary directly
+                print(f"Taskmaster workflow successful. Parsed output from guardrail: {task_output.result}")
+                return task_output.result
+            else:
+                # This case should ideally not happen if guardrail is (True, dict)
+                print(f"Taskmaster guardrail passed, but output.result is not a dict: {task_output.result}")
                 return {
-                    "project_name": "error_taskmaster_output_invalid",
-                    "refined_brief": f"Taskmaster failed to produce valid structured output. Raw output: {result.raw}",
+                    "project_name": "error_guardrail_unexpected_type",
+                    "refined_brief": f"Taskmaster guardrail passed but returned unexpected data type. Result: {task_output.result}",
                     "is_new_project": False,
                     "recommended_next_stage": "architecture",
-                    "project_scope": "unknown", # Default fallback
-                    "taskmaster_error": "Invalid JSON output from task"
+                    "project_scope": "unknown",
+                    "taskmaster_error": "Guardrail returned unexpected data type"
                 }
         else:
-            # Handle cases where the task execution failed or produced no raw output
-            print("Taskmaster task failed or produced no output.")
+            # Task was not successful, meaning guardrail returned False or an exception occurred.
+            # The raw output from the LLM is in task_output.raw
+            # The error message from the guardrail (or CrewAI) might be in task_output.result or part of its string representation.
+            raw_llm_output = task_output.raw if task_output else "No raw output available"
+            # error_message_from_guardrail = str(task_output.result) if task_output and task_output.result else "Guardrail failed or task error." # Original thought, refined below
+
+            # Log the detailed error from the guardrail if available.
+            # The 'validate_taskmaster_output' function itself logs details on failure.
+            # We can use its returned error message.
+            # If task_output.result contains the error message from the guardrail:
+            if task_output and not task_output.is_successful and isinstance(task_output.result, str):
+                 # This is the error message from guardrail's (False, "error_msg")
+                error_detail = task_output.result
+            elif task_output and not task_output.is_successful and task_output.result is None:
+                # This can happen if the guardrail function itself had an unhandled exception
+                # before returning (False, "error_msg"). Or if the task failed before guardrail.
+                error_detail = "Guardrail or task execution possibly encountered an internal error. Raw output might be insightful."
+            else:
+                # Fallback if result is not a string or task_output is None
+                error_detail = "Guardrail validation failed or task execution error."
+
+
+            print(f"Taskmaster task failed validation or execution. Error: {error_detail}. Raw LLM output: {raw_llm_output}")
             return {
-                "project_name": "error_taskmaster_failed",
-                "refined_brief": "Taskmaster task execution failed or yielded no output.",
+                "project_name": "error_taskmaster_validation_failed",
+                "refined_brief": f"Taskmaster output failed validation. Error: {error_detail}. Raw output: {raw_llm_output}",
                 "is_new_project": False,
                 "recommended_next_stage": "architecture",
-                "project_scope": "unknown", # Default fallback
-                "taskmaster_error": "Task execution failed or no output"
+                "project_scope": "unknown",
+                "taskmaster_error": f"Validation failed: {error_detail}"
             }
 
     def execute_pipeline(self, initial_inputs: dict, mock_taskmaster_output: Optional[dict] = None):

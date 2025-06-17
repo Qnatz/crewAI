@@ -1,6 +1,7 @@
 from crewai.tools import BaseTool
 from typing import Union, Any, Optional
-from .onnx_objectbox_memory import ONNXObjectBoxMemory # Changed import
+import chromadb # Added import
+from chromadb.config import Settings # Added import
 import numpy as np
 import onnxruntime as ort
 from tokenizers import Tokenizer
@@ -22,19 +23,33 @@ class KnowledgeBaseTool(BaseTool): # Renamed from EnhancedKnowledgeBaseTool
         "Input can be a simple string question or a dictionary with: "
         "{'question': 'your question', 'llm': llm_instance, 'max_context': 5}"
     )
-    memory_instance: Optional[ONNXObjectBoxMemory] = None # Changed type hint
     embedding_session: Optional[ort.InferenceSession] = None
     tokenizer: Optional[Tokenizer] = None
+    kb_client: Optional[chromadb.API] = None # Added kb_client
+    kb_collection: Optional[chromadb.Collection] = None # Added kb_collection
 
     def __init__(
         self,
-        memory_instance: Optional[ONNXObjectBoxMemory] = None, # Changed type hint
+        # memory_instance is removed
         onnx_model_path: str = "models/onnx/model.onnx", # Default path from new tool
         tokenizer_path: str = "models/onnx/tokenizer.json", # Default path from new tool
+        kb_persist_path: str = "kb_chroma_storage", # Added kb_persist_path
         **kwargs
     ):
         super().__init__(**kwargs)
-        self.memory_instance = memory_instance or ONNXObjectBoxMemory() # Changed instantiation
+        # self.memory_instance removed
+
+        # Initialize ChromaDB for Knowledge Base
+        try:
+            os.makedirs(kb_persist_path, exist_ok=True)
+            self.kb_client = chromadb.PersistentClient(path=kb_persist_path, settings=Settings(allow_reset=False))
+            # The embedding_function is set to self, so this class needs a __call__ method.
+            self.kb_collection = self.kb_client.get_or_create_collection(name="knowledge_base", embedding_function=self)
+            logger.info(f"ChromaDB client initialized for knowledge base at {kb_persist_path}")
+        except Exception as e:
+            logger.error(f"Failed to initialize ChromaDB for knowledge base: {str(e)}")
+            self.kb_client = None
+            self.kb_collection = None
 
         # Initialize embedding model
         try:
@@ -49,8 +64,50 @@ class KnowledgeBaseTool(BaseTool): # Renamed from EnhancedKnowledgeBaseTool
             self.embedding_session = None
             self.tokenizer = None
 
+    def __call__(self, texts: list[str]) -> list[list[float]]:
+        """Embedding function interface for ChromaDB."""
+        embeddings = []
+        # Determine embedding dimension dynamically if possible, or use a fixed known one.
+        # For this example, assuming 768 based on common models. This should be verified.
+        # embedding_dim = self.embedding_session.get_outputs()[0].shape[-1] if self.embedding_session else 768
+        # The above line is an example, actual way to get dim might vary or be fixed.
+        # Let's assume _embed_text returns an ndarray of shape (dim,)
+        # For now, using a placeholder dimension. This needs to be accurate.
+        # A more robust way is to inspect the model's output shape during initialization.
+        # However, self.embedding_session.run output shape is (1, sequence_length, dim)
+        # and _embed_text averages it to (dim,). So, we need that dim.
+        # If _embed_text fails, it returns None. We need to handle this.
+        # Let's assume the dimension is 768 as a fallback.
+        # A better approach would be to get this from the model metadata if possible,
+        # or by running a dummy embedding once.
+        # If self._embed_text("test") returns an array of shape (D,), then D is the dimension.
+        # For now, we'll use 768 as per instructions.
+        embedding_dim = 768 # Placeholder, verify this.
+
+        # Try to get embedding dimension from a dummy run if not already known
+        if self.embedding_session and self.tokenizer:
+            try:
+                dummy_emb = self._embed_text("test")
+                if dummy_emb is not None:
+                    embedding_dim = dummy_emb.shape[0]
+                else: # if dummy_emb is None, _embed_text failed.
+                    logger.warning(f"Dummy embedding failed, defaulting to dimension {embedding_dim}")
+            except Exception as e:
+                logger.warning(f"Could not determine embedding dimension dynamically: {e}, defaulting to {embedding_dim}")
+
+
+        for text in texts:
+            embedding = self._embed_text(text)
+            if embedding is not None:
+                embeddings.append(embedding.tolist())
+            else:
+                # Handle cases where embedding fails, e.g., add a zero vector
+                logger.warning(f"Embedding failed for text: '{text[:50]}...'. Using zero vector.")
+                embeddings.append([0.0] * embedding_dim)
+        return embeddings
+
     def _embed_text(self, text: str) -> Optional[np.ndarray]:
-        """Generate embedding for text using ONNX model"""
+        """Generate embedding for text using ONNX model. Returns np.ndarray."""
         if not self.tokenizer or not self.embedding_session:
             logger.warning("Tokenizer or embedding session not available for embedding text.")
             return None
@@ -90,28 +147,65 @@ class KnowledgeBaseTool(BaseTool): # Renamed from EnhancedKnowledgeBaseTool
 
         # Retrieve context using embeddings
         try:
-            if self.embedding_session and self.tokenizer: # Make sure tokenizer is also available
-                query_embedding = self._embed_text(question)
-                if query_embedding is not None:
+            if self.embedding_session and self.tokenizer and self.kb_collection:
+                query_embedding_array = self._embed_text(question)
+                if query_embedding_array is not None:
                     logger.info("Successfully generated query embedding.")
-                    context_results = self.memory_instance.vector_query(
-                        query_vector=query_embedding, # Pass ndarray directly
-                        limit=max_context
+                    # ChromaDB expects a list of lists for query_embeddings
+                    query_embedding_list = [query_embedding_array.tolist()]
+
+                    chroma_results = self.kb_collection.query(
+                        query_embeddings=query_embedding_list,
+                        n_results=max_context,
+                        # include=["documents", "metadatas", "distances"] # Optional: specify what to include
                     )
+
+                    # Process ChromaDB results
+                    # chroma_results is a dict with keys like 'ids', 'documents', 'metadatas', 'distances'
+                    # Each key maps to a list of lists (one inner list per query embedding)
+                    if not chroma_results or not chroma_results.get("documents") or not chroma_results["documents"][0]:
+                        return "No relevant information found in the knowledge base."
+
+                    # Assuming we are interested in the documents from the first query result
+                    # context_documents = [doc for doc in chroma_results["documents"][0] if doc is not None]
+                    # If you store full content in metadata, you might use that instead or combine.
+                    # For example, if metadata contains the original text or more structured info.
+                    # Let's assume the 'documents' field contains the text we need.
+
+                    # Check if metadatas are available and useful
+                    context_items = []
+                    if chroma_results.get("documents") and chroma_results["documents"][0]:
+                        docs = chroma_results["documents"][0]
+                        metas = chroma_results.get("metadatas", [[]])[0] if chroma_results.get("metadatas") else [None] * len(docs)
+                        dists = chroma_results.get("distances", [[]])[0] if chroma_results.get("distances") else [None] * len(docs)
+
+                        for i, doc_content in enumerate(docs):
+                            meta_info = metas[i] if i < len(metas) and metas[i] else {}
+                            dist_info = dists[i] if i < len(dists) and dists[i] is not None else "N/A"
+                            # Example: Constructing context string, adjust as needed
+                            # If 'doc_content' is what you need, use it. If metadata has the primary text, use that.
+                            # This example assumes 'doc_content' (from Chroma's 'documents') is the main text.
+                            context_items.append(f"Content: {doc_content} (Source: {meta_info.get('source', 'Unknown')}, Distance: {dist_info:.4f})")
+
+                    if not context_items:
+                         return "No relevant information found in the knowledge base (after processing results)."
+
+                    context_str = "\n\n".join([f"• {item}" for item in context_items])
+                    logger.info(f"Retrieved {len(context_items)} context items from ChromaDB.")
+
                 else:
                     logger.warning("Embedding generation failed. Cannot perform vector search without query embedding.")
-                    return "Embedding generation failed, cannot perform search." # Changed message
+                    return "Embedding generation failed, cannot perform search."
             else:
-                logger.warning("Embedding session/tokenizer not available. Cannot perform vector search.")
-                return "Embedding session/tokenizer not available, cannot perform search." # Changed message
-
-            if not context_results:
-                return "No relevant information found in the knowledge base."
-
-            context_str = "\n\n".join([f"• {res['content']}" for res in context_results])
-            logger.info(f"Retrieved {len(context_results)} context items")
+                missing_components = []
+                if not self.embedding_session: missing_components.append("Embedding session")
+                if not self.tokenizer: missing_components.append("Tokenizer")
+                if not self.kb_collection: missing_components.append("KB collection")
+                logger.warning(f"{', '.join(missing_components)} not available. Cannot perform vector search.")
+                return f"{', '.join(missing_components)} not available, cannot perform search."
         except Exception as e:
-            logger.error(f"Knowledge retrieval error: {str(e)}")
+            logger.error(f"Knowledge retrieval error from ChromaDB: {str(e)}")
+            traceback.print_exc() # Print traceback for debugging
             return f"Knowledge retrieval error: {str(e)}"
 
         # Generate answer with LLM if available
@@ -152,8 +246,5 @@ class KnowledgeBaseTool(BaseTool): # Renamed from EnhancedKnowledgeBaseTool
         logger.info("Async _arun called, currently wraps sync _run. For true async, implement I/O calls with await.")
         return self._run(input_data) # Consider using asyncio.to_thread for CPU bound sync code in async
 
-# Instantiation for mycrews/qrew/tools/__init__.py to pick up
-knowledge_base_tool_instance = KnowledgeBaseTool(
-    onnx_model_path="models/onnx/model.onnx",
-    tokenizer_path="models/onnx/tokenizer.json"
-)
+# Removed instantiation of knowledge_base_tool_instance
+# The tool should be instantiated by the agent/system that uses it.

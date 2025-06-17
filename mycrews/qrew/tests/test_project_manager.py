@@ -221,5 +221,175 @@ class TestProjectStateManagerListProjects(unittest.TestCase):
         self.assertEqual(proj["error_message"], "Failed, but no specific error message recorded in summary.")
 
 
+from unittest.mock import patch, MagicMock
+# ChromaLogger import might be needed if we were to directly interact with a real test instance,
+# but for mocking, it's not strictly necessary to import here unless type hinting or instanceof checks were used.
+# from mycrews.qrew.tools.chroma_logger import ChromaLogger
+
+class TestProjectStateManagerInstance(unittest.TestCase):
+
+    def setUp(self):
+        """Set up temporary directories and patch ProjectStateManager's dependencies."""
+        self.temp_test_base_dir = Path("temp_psm_instance_tests")
+        self.temp_test_base_dir.mkdir(parents=True, exist_ok=True)
+
+        self.temp_projects_root_path = self.temp_test_base_dir / "projects_root"
+        self.temp_projects_root_path.mkdir(parents=True, exist_ok=True)
+
+        # This path is for a ChromaLogger instance we might manage directly in tests,
+        # NOT for the one inside ProjectStateManager unless we specifically configure PSM to use it.
+        # For now, we'll mock the PSM's internal ChromaLogger.
+        self.temp_chroma_db_path = self.temp_test_base_dir / "test_chroma_psm"
+        self.temp_chroma_db_path.mkdir(parents=True, exist_ok=True)
+
+        self.temp_projects_index_file = self.temp_test_base_dir / "temp_projects_index.json"
+
+        # Monkeypatch global paths in the project_manager module (pm_module)
+        self.original_projects_root = pm_module.PROJECTS_ROOT
+        pm_module.PROJECTS_ROOT = self.temp_projects_root_path
+
+        self.original_projects_index = pm_module.PROJECTS_INDEX
+        pm_module.PROJECTS_INDEX = self.temp_projects_index_file
+
+        # If ProjectStateManager directly instantiated ChromaLogger without allowing path override,
+        # we'd have to either live with its default path or patch 'chromadb.PersistentClient'
+        # or the 'ChromaLogger' class itself within the scope of pm_module.
+        # For this subtask, we will mock methods on the psm.chroma_logger instance.
+
+    def tearDown(self):
+        """Clean up temporary directories and restore original paths."""
+        pm_module.PROJECTS_ROOT = self.original_projects_root
+        pm_module.PROJECTS_INDEX = self.original_projects_index
+
+        if self.temp_test_base_dir.exists():
+            shutil.rmtree(self.temp_test_base_dir)
+
+        # If we had a self.chroma_logger = ChromaLogger(...) instance for direct use, clear it.
+        # e.g., if hasattr(self, 'chroma_logger_instance_for_direct_use'):
+        #     self.chroma_logger_instance_for_direct_use.clear_logs() # Assuming such a method
+
+    @patch(f'{pm_module.__name__}.ChromaLogger') # Patch ChromaLogger in the project_manager module
+    def test_save_state_writes_to_json_and_calls_chroma(self, MockChromaLogger):
+        """Test that save_state writes to state.json and calls chroma_logger.save_project_state."""
+        mock_chroma_instance = MagicMock()
+        MockChromaLogger.return_value = mock_chroma_instance
+
+        psm = ProjectStateManager("test_project_save", config={"enable_db_logging": True})
+
+        # Ensure the internal chroma_logger is the mocked one
+        self.assertEqual(psm.chroma_logger, mock_chroma_instance)
+
+        psm.state["new_key"] = "new_value"
+        psm.state["current_stage"] = "test_stage" # Example state data
+        psm.save_state()
+
+        # 1. Assert state.json was written correctly
+        expected_state_file_path = self.temp_projects_root_path / psm.project_info["id"] / "state.json"
+        self.assertTrue(expected_state_file_path.exists())
+        with open(expected_state_file_path, 'r') as f:
+            saved_data = json.load(f)
+        self.assertEqual(saved_data["new_key"], "new_value")
+        self.assertEqual(saved_data["current_stage"], "test_stage")
+
+        # 2. Assert chroma_logger.save_project_state was called
+        mock_chroma_instance.save_project_state.assert_called_once_with(
+            psm.project_info["name"],
+            psm.state
+        )
+
+    @patch(f'{pm_module.__name__}.ChromaLogger')
+    def test_load_state_from_chroma_if_json_missing(self, MockChromaLogger):
+        """Test loading state from ChromaDB if state.json is missing."""
+        mock_chroma_instance = MagicMock()
+        MockChromaLogger.return_value = mock_chroma_instance
+
+        project_name = "test_project_load_chroma"
+        expected_state_from_chroma = {
+            "project_name": project_name,
+            "current_stage": "from_chroma",
+            "some_data": "chroma_value",
+            "error_summary": [], # Ensure error_summary is part of the state
+            "completed_stages": ["initial_setup_chroma"],
+            "artifacts": {"initial_setup_chroma": {"detail": "Loaded from Chroma"}}
+        }
+
+        # Configure the mock get_project_state to return our test state
+        mock_chroma_instance.get_project_state.return_value = expected_state_from_chroma
+
+        # Initialize ProjectStateManager. state.json will not exist for this new project.
+        # __init__ calls load_state().
+        psm = ProjectStateManager(project_name, config={"enable_db_logging": True})
+
+        # Assert that get_project_state was called
+        mock_chroma_instance.get_project_state.assert_called_once_with(project_name)
+
+        # Assert that the state was loaded from the mocked ChromaDB output
+        self.assertEqual(psm.state["current_stage"], "from_chroma")
+        self.assertEqual(psm.state["some_data"], "chroma_value")
+        self.assertEqual(psm.state["completed_stages"], ["initial_setup_chroma"])
+        # Check if error_summary was correctly initialized/rehydrated (should be empty from expected_state)
+        self.assertEqual(len(psm.error_summary.records), 0)
+
+
+    @patch(f'{pm_module.__name__}.ChromaLogger')
+    def test_load_state_initializes_if_json_and_chroma_missing(self, MockChromaLogger):
+        """Test that an initial state is created if both JSON and Chroma state are missing."""
+        mock_chroma_instance = MagicMock()
+        MockChromaLogger.return_value = mock_chroma_instance
+
+        project_name = "test_project_load_initial"
+
+        # Configure mock get_project_state to return None (no state in Chroma)
+        mock_chroma_instance.get_project_state.return_value = None
+
+        psm = ProjectStateManager(project_name, config={"enable_db_logging": True})
+
+        mock_chroma_instance.get_project_state.assert_called_once_with(project_name)
+
+        # Assert that the state is the initial state
+        self.assertEqual(psm.state["project_name"], project_name)
+        self.assertEqual(psm.state["current_stage"], "initialized")
+        self.assertEqual(len(psm.state["completed_stages"]), 0)
+        self.assertTrue("created_at" in psm.state)
+
+
+    @patch(f'{pm_module.__name__}.ChromaLogger')
+    def test_fail_stage_logs_to_chroma(self, MockChromaLogger):
+        """Test that fail_stage calls chroma_logger.log when DB logging is enabled."""
+        mock_chroma_instance = MagicMock()
+        MockChromaLogger.return_value = mock_chroma_instance
+
+        psm = ProjectStateManager("test_project_fail_log", config={"enable_db_logging": True})
+
+        self.assertEqual(psm.chroma_logger, mock_chroma_instance)
+
+        test_stage_name = "test_stage_failure"
+        test_error_message = "A dummy error occurred"
+
+        # Call fail_stage
+        psm.fail_stage(test_stage_name, test_error_message, exception_obj=ValueError("Test Exception"))
+
+        # Assert that chroma_logger.log was called
+        # We expect it to be called once.
+        mock_chroma_instance.log.assert_called_once()
+
+        # Verify the arguments of the call
+        # The first argument to assert_called_once_with is *args, the second is **kwargs
+        # We need to capture the actual call arguments to inspect them more easily
+        args, kwargs = mock_chroma_instance.log.call_args
+
+        # args[0] is 'content', args[1] is 'stage', args[2] is 'log_type', args[3] is 'metadata'
+        # In the implementation, these are passed as keyword arguments.
+        self.assertIn(test_error_message, kwargs.get("content", "")) # Check if error message is part of the logged content
+        self.assertEqual(kwargs.get("stage"), test_stage_name)
+        self.assertEqual(kwargs.get("log_type"), "error")
+
+        metadata_arg = kwargs.get("metadata", {})
+        self.assertEqual(metadata_arg.get("stage"), test_stage_name)
+        self.assertEqual(metadata_arg.get("error_message"), test_error_message)
+        self.assertEqual(metadata_arg.get("exception_type"), "ValueError")
+        self.assertTrue("stack_trace" in metadata_arg)
+
+
 if __name__ == '__main__':
     unittest.main()

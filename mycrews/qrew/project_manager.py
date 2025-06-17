@@ -4,7 +4,7 @@ import sys
 from typing import Optional, Dict, Any
 import numpy as np
 from .tools.knowledge_base_tool import knowledge_base_tool_instance # Corrected path
-from .tools.onnx_objectbox_memory import ONNXObjectBoxMemory, KnowledgeEntry # Corrected path
+from .tools.chroma_logger import ChromaLogger # Added import
 import json
 import hashlib
 from pathlib import Path
@@ -29,7 +29,7 @@ class ProjectStateManager:
             self.config.update(config)
 
         self.kb_tool = knowledge_base_tool_instance if self.config.get("enable_kb_logging") else None
-        self.objectbox_memory = ONNXObjectBoxMemory() if self.config.get("enable_db_logging") else None
+        self.chroma_logger = ChromaLogger() if self.config.get("enable_db_logging") else None # Changed to ChromaLogger
         self.resume_attempts = {}
 
         self.state_file = Path(self.project_info['path']) / "state.json"
@@ -44,7 +44,7 @@ class ProjectStateManager:
         if "enable_kb_logging" in new_config:
             self.kb_tool = knowledge_base_tool_instance if self.config.get("enable_kb_logging") else None
         if "enable_db_logging" in new_config:
-            self.objectbox_memory = ONNXObjectBoxMemory() if self.config.get("enable_db_logging") else None
+            self.chroma_logger = ChromaLogger() if self.config.get("enable_db_logging") else None # Changed to ChromaLogger
 
         # Note: enable_auto_resume is used directly, so no specific re-initialization needed here
         # for self.resume_attempts, it's managed per stage.
@@ -77,28 +77,24 @@ class ProjectStateManager:
             print(f"Warning: kb_tool (type: {type(self.kb_tool)}) is missing 'memory_instance' or '_embed_text' method. Cannot log to KB for project {error_details.get('project', 'N/A')}.")
 
 
-    def _log_to_objectbox(self, error_details: Dict[str, Any]):
-        """Logs error details to ObjectBox memory if enabled."""
-        if self.objectbox_memory:
+    def _log_to_chroma(self, error_details: Dict[str, Any]): # Renamed method
+        """Logs error details to ChromaDB if enabled."""
+        if self.chroma_logger:
             try:
-                entry_content = f"Error in stage {error_details.get('stage', 'Unknown')}: {error_details.get('error', 'No error message')}"
-                # Create embedding for the error content
-                embedding = self._embed_text(entry_content)
-
-                # Create KnowledgeEntry - Assuming KnowledgeEntry can be instantiated like this
-                # and that self.project_info["id"] is the project_id
-                entry = KnowledgeEntry(
-                    project_id=self.project_info.get("id", "unknown_project"),
-                    entry_type="error_log",
-                    content=entry_content,
-                    embedding=embedding.tobytes(), # Store embedding as bytes
-                    metadata=json.dumps(error_details) # Store full details as JSON metadata
+                log_content = f"Error in stage {error_details.get('stage', 'Unknown')}: {error_details.get('error', 'No error message')}"
+                # Metadata is the error_details dictionary itself
+                # log_type is "error"
+                self.chroma_logger.log(
+                    content=log_content,
+                    stage=error_details.get('stage', 'Unknown'), # Pass stage separately
+                    log_type="error",
+                    metadata=error_details
                 )
-                self.objectbox_memory.add_entry(entry)
-                print(f"Logged error to ObjectBox for project {self.project_info.get('id')}")
+                print(f"Logged error to ChromaDB for project {self.project_info.get('name')}, stage {error_details.get('stage', 'Unknown')}")
             except Exception as e:
-                print(f"Failed to log error to ObjectBox: {e}")
-                self.error_summary.add("objectbox_logging", False, f"ObjectBox Logging Failed: {e}")
+                print(f"Failed to log error to ChromaDB: {e}")
+                # Optionally, add to error_summary or handle as per project's error handling strategy
+                self.error_summary.add("chroma_logging", False, f"ChromaDB Logging Failed: {e}")
 
     def _prepare_auto_resume(self, stage_name: str, error_details: Dict[str, Any]):
         """Prepares context for auto-resume if enabled."""
@@ -176,15 +172,6 @@ class ProjectStateManager:
             # Will be caught by fail_stage again
             raise
 
-    def _embed_text(self, text: str) -> np.ndarray:
-        """Generates a dummy embedding for the given text."""
-        # In a real scenario, this would use a proper sentence transformer model.
-        # For now, using random embeddings for placeholder.
-        # Ensure this matches the expected embedding dimension if used with a real model later.
-        # Common dimension for sentence-transformers is 768.
-        print(f"Generating dummy embedding for text (first 50 chars): '{text[:50]}...'")
-        return np.random.rand(768).astype(np.float32)
-
     def _get_current_traceback(self):
         """Helper to get the current traceback as a string."""
         return "".join(traceback.format_stack())
@@ -224,21 +211,58 @@ class ProjectStateManager:
         return {"status": status, **proj_details}
 
     def load_state(self):
+        state_loaded_from_json = False
         if self.state_file.exists():
             try:
                 loaded_state = json.loads(self.state_file.read_text())
                 self.state = loaded_state
                 # When loading state, rehydrate ErrorSummary from the loaded records
-                self.error_summary.records = []
+                self.error_summary.records = [] # Clear existing records before loading
                 for record in self.state.get("error_summary", []):
                     # Ensure all components of the record are passed to add
                     self.error_summary.add(record["stage"], record["success"], record["message"])
+                state_loaded_from_json = True
             except json.JSONDecodeError:
-                self.state = self._initial_state()
+                print(f"Warning: state.json for project {self.project_info['name']} is corrupted.")
+                self.state = None # Mark state as None to trigger Chroma load or initial state
         else:
-            self.state = self._initial_state()
+            self.state = None # Mark state as None to trigger Chroma load or initial state
+
+        # If state couldn't be loaded from JSON (file not found or corrupted)
+        if not state_loaded_from_json:
+            if self.chroma_logger and self.config.get("enable_db_logging"):
+                print(f"Attempting to load state from ChromaDB for project {self.project_info['name']}...")
+                try:
+                    chroma_state = self.chroma_logger.get_project_state(self.project_info["name"])
+                    if chroma_state:
+                        self.state = chroma_state
+                        # Rehydrate ErrorSummary from the loaded state from Chroma
+                        self.error_summary.records = [] # Clear existing records
+                        for record in self.state.get("error_summary", []):
+                             self.error_summary.add(record["stage"], record["success"], record["message"])
+                        print(f"Successfully loaded state from ChromaDB for project {self.project_info['name']}.")
+                    else:
+                        print(f"No state found in ChromaDB for project {self.project_info['name']}. Initializing new state.")
+                        self.state = self._initial_state() # This will also re-init error_summary
+                except Exception as e:
+                    print(f"Error loading state from ChromaDB: {e}. Initializing new state.")
+                    self.state = self._initial_state() # This will also re-init error_summary
+            else:
+                # If JSON load failed and Chroma is not available/enabled, then initialize.
+                print(f"ChromaDB logging disabled or logger not available. Initializing new state for project {self.project_info['name']}.")
+                self.state = self._initial_state() # This will also re-init error_summary
+
+        # Final check to ensure error_summary is an ErrorSummary instance, especially if _initial_state wasn't called.
+        # This path is less likely now with _initial_state() re-initializing error_summary.
+        if not isinstance(self.error_summary, ErrorSummary):
+            self.error_summary = ErrorSummary()
+            if self.state and "error_summary" in self.state: # If state exists and has summary
+                 for record in self.state.get("error_summary", []):
+                    self.error_summary.add(record["stage"], record["success"], record["message"])
+
 
     def _initial_state(self):
+        self.error_summary = ErrorSummary() # Ensure a fresh ErrorSummary instance
         return {
             "project_name": self.project_info["name"],
             "created_at": datetime.utcnow().isoformat(),
@@ -255,9 +279,25 @@ class ProjectStateManager:
         self.state["updated_at"] = datetime.utcnow().isoformat()
 
         # Ensure the directory for the state file exists
-        self.state_file.parent.mkdir(parents=True, exist_ok=True) # Added line
+        self.state_file.parent.mkdir(parents=True, exist_ok=True)
 
-        self.state_file.write_text(json.dumps(self.state, indent=2))
+        try:
+            self.state_file.write_text(json.dumps(self.state, indent=2))
+        except Exception as e:
+            print(f"Error saving state to state.json: {e}")
+            # Optionally, log this error to error_summary or handle as critical
+
+        # Save state to ChromaDB if enabled
+        if self.chroma_logger and self.config.get("enable_db_logging"):
+            try:
+                print(f"Saving project state to ChromaDB for project {self.project_info['name']}...")
+                self.chroma_logger.save_project_state(self.project_info["name"], self.state)
+                print(f"Successfully saved project state to ChromaDB for project {self.project_info['name']}.")
+            except Exception as e:
+                print(f"Error saving project state to ChromaDB: {e}")
+                # Optionally, log this error to error_summary or a fallback mechanism
+                self.error_summary.add("chroma_state_save", False, f"ChromaDB State Save Failed: {e}")
+
 
     def start_stage(self, stage_name):
         self.state["current_stage"] = stage_name
@@ -311,7 +351,7 @@ class ProjectStateManager:
             self._log_to_knowledge_base(error_details)
 
         if self.config.get("enable_db_logging"): # Use .get for safety
-            self._log_to_objectbox(error_details)
+            self._log_to_chroma(error_details) # Changed to _log_to_chroma
 
         # Auto-resume logic
         if self.config.get("enable_auto_resume"): # Use .get for safety
