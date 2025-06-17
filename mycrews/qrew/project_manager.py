@@ -3,7 +3,7 @@ import traceback
 import sys
 from typing import Optional, Dict, Any
 import numpy as np
-from .tools.knowledge_base_tool import knowledge_base_tool_instance # Corrected path
+from .tools.knowledge_base_tool import KnowledgeBaseTool # Changed import
 from .tools.chroma_logger import ChromaLogger # Added import
 import json
 import hashlib
@@ -28,7 +28,7 @@ class ProjectStateManager:
         if config: # Apply user-provided config over defaults and env vars
             self.config.update(config)
 
-        self.kb_tool = knowledge_base_tool_instance if self.config.get("enable_kb_logging") else None
+        self.kb_tool = KnowledgeBaseTool() if self.config.get("enable_kb_logging") else None # Changed instantiation
         self.chroma_logger = ChromaLogger() if self.config.get("enable_db_logging") else None # Changed to ChromaLogger
         self.resume_attempts = {}
 
@@ -42,7 +42,7 @@ class ProjectStateManager:
 
         # Re-initialize components based on the new config
         if "enable_kb_logging" in new_config:
-            self.kb_tool = knowledge_base_tool_instance if self.config.get("enable_kb_logging") else None
+            self.kb_tool = KnowledgeBaseTool() if self.config.get("enable_kb_logging") else None # Changed instantiation
         if "enable_db_logging" in new_config:
             self.chroma_logger = ChromaLogger() if self.config.get("enable_db_logging") else None # Changed to ChromaLogger
 
@@ -52,29 +52,31 @@ class ProjectStateManager:
 
     def _log_to_knowledge_base(self, error_details: Dict[str, Any]):
         """Logs error details to the knowledge base if enabled."""
-        if self.kb_tool and hasattr(self.kb_tool, 'memory_instance') and hasattr(self.kb_tool, '_embed_text'):
-            try:
-                # Construct a meaningful single text entry for the KB
-                full_entry_text = f"Project: {error_details.get('project', 'N/A')}, Stage: {error_details.get('stage', 'Unknown')}, Error: {error_details.get('error_message', 'N/A')}. Details: {json.dumps(error_details)}"
+        # if self.kb_tool and hasattr(self.kb_tool, 'memory_instance') and hasattr(self.kb_tool, '_embed_text'):
+        #     try:
+        #         # Construct a meaningful single text entry for the KB
+        #         full_entry_text = f"Project: {error_details.get('project', 'N/A')}, Stage: {error_details.get('stage', 'Unknown')}, Error: {error_details.get('error_message', 'N/A')}. Details: {json.dumps(error_details)}"
 
-                # Generate embedding using the kb_tool's own embedder
-                embedding_vector = self.kb_tool._embed_text(full_entry_text) # This should return np.ndarray
+        #         # Generate embedding using the kb_tool's own embedder
+        #         embedding_vector = self.kb_tool._embed_text(full_entry_text) # This should return np.ndarray
 
-                if embedding_vector is not None and embedding_vector.size > 0 : # Check if embedding is valid
-                    # Add to knowledge base via its memory_instance
-                    # ONNXObjectBoxMemory.add_knowledge expects text and vector.
-                    # The full_entry_text already contains the JSON dump of error_details.
-                    self.kb_tool.memory_instance.add_knowledge(text=full_entry_text, vector=embedding_vector)
-                    print(f"Logged error to knowledge base via memory_instance. Project: {error_details.get('project', 'N/A')}, Stage: {error_details.get('stage', 'Unknown')}")
-                else:
-                    print(f"Warning: Failed to generate embedding for KB logging. Error for project {error_details.get('project', 'N/A')}, Stage: {error_details.get('stage', 'Unknown')} not logged to KB.")
+        #         if embedding_vector is not None and embedding_vector.size > 0 : # Check if embedding is valid
+        #             # Add to knowledge base via its memory_instance
+        #             # ONNXObjectBoxMemory.add_knowledge expects text and vector.
+        #             # The full_entry_text already contains the JSON dump of error_details.
+        #             self.kb_tool.memory_instance.add_knowledge(text=full_entry_text, vector=embedding_vector)
+        #             print(f"Logged error to knowledge base via memory_instance. Project: {error_details.get('project', 'N/A')}, Stage: {error_details.get('stage', 'Unknown')}")
+        #         else:
+        #             print(f"Warning: Failed to generate embedding for KB logging. Error for project {error_details.get('project', 'N/A')}, Stage: {error_details.get('stage', 'Unknown')} not logged to KB.")
 
-            except Exception as e:
-                print(f"Failed to log error to knowledge base: {e}")
-                self.error_summary.add("knowledge_base_logging", False, f"KB Logging Failed: {e}")
-        elif self.kb_tool:
-            # This condition means kb_tool exists but doesn't have the expected structure.
-            print(f"Warning: kb_tool (type: {type(self.kb_tool)}) is missing 'memory_instance' or '_embed_text' method. Cannot log to KB for project {error_details.get('project', 'N/A')}.")
+        #     except Exception as e:
+        #         print(f"Failed to log error to knowledge base: {e}")
+        #         self.error_summary.add("knowledge_base_logging", False, f"KB Logging Failed: {e}")
+        # elif self.kb_tool:
+        #     # This condition means kb_tool exists but doesn't have the expected structure.
+        #     print(f"Warning: kb_tool (type: {type(self.kb_tool)}) is missing 'memory_instance' or '_embed_text' method. Cannot log to KB for project {error_details.get('project', 'N/A')}.")
+        print(f"Warning: _log_to_knowledge_base is currently disabled pending review. Project: {error_details.get('project', 'N/A')}, Stage: {error_details.get('stage', 'Unknown')}")
+        pass # Signifies that this functionality is intentionally bypassed for now
 
 
     def _log_to_chroma(self, error_details: Dict[str, Any]): # Renamed method
