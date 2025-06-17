@@ -5,11 +5,11 @@
 # from .network_request_tool import NetworkRequestTool # NetworkRequestTool.py does not exist
 
 # Import the new KnowledgeBaseTool
-from .knowledge_base_tool import KnowledgeBaseTool, knowledge_base_tool_instance
+from .knowledge_base_tool import KnowledgeBaseTool # Removed knowledge_base_tool_instance
 
 __all__ = [
     # 'FileIOTool',
     # 'NetworkRequestTool',
     'KnowledgeBaseTool', # Export the class
-    'knowledge_base_tool_instance' # Export an instance for convenience
+    # 'knowledge_base_tool_instance' # Removed instance from __all__
 ]
