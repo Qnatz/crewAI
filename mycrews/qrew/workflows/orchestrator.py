@@ -242,7 +242,7 @@ class WorkflowOrchestrator:
                         f"5. Create a refined project brief. "
                         f"6. Recommend the next logical stage: 'tech_vetting' (if new/complex tech evaluation is needed) or 'architecture' (if project can proceed to design). "
                         f"7. Determine the project scope from: 'web-only', 'mobile-only', 'backend-only', 'full-stack', 'documentation-only'. If ambiguous, use 'unknown'. "
-                        "Your final response MUST be ONLY a single, valid JSON object strictly adhering to the structure specified in the `expected_output` field of this task. Do not include any other text, explanations, or conversational remarks before or after the JSON object.",
+                        "IMPORTANT: After gathering any necessary information using tools and forming your conclusions, your *actual final output for this task* MUST be ONLY the single, valid JSON object as specified in the `expected_output`. Do not output any of the tool results, intermediate thoughts, or any other text or conversational remarks directly as your final response. The JSON object is your sole deliverable for this task.",
             agent=taskmaster_agent,
             expected_output='A single, valid JSON object. Example: {"project_name": "example_project_name", "refined_brief": "A concise summary of the project...", "is_new_project": true, "recommended_next_stage": "architecture", "project_scope": "web-only"}',
             guardrail=validate_taskmaster_output,
