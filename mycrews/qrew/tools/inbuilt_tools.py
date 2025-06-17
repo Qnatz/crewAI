@@ -22,6 +22,7 @@ from crewai_tools import (
     SerperDevTool,
     RagTool,
 )
+from ..tools.text_embedder_tool import TextEmbedderTool
 from crewai.tools.base_tool import BaseTool  # Updated import path
 from pydantic import BaseModel, Field  # Updated to use standard Pydantic v2 imports
 
@@ -80,6 +81,14 @@ else:
     serper_dev_tool = None
 
 website_search_tool = WebsiteSearchTool()
+
+# Local Embedder for RAG
+try:
+    local_text_embedder = TextEmbedderTool()
+    print("Local TFLite TextEmbedderTool initialized successfully.")
+except Exception as e:
+    local_text_embedder = None
+    print(f"Warning: Failed to initialize Local TFLite TextEmbedderTool: {e}. RagTool might fall back to default or fail if it requires an embedder.")
 
 
 # Custom/Placeholder Tool Definitions
@@ -148,9 +157,23 @@ def configure_rag_tools(knowledge_bases: dict):
         try:
             tool_name = f"{name.replace('_', ' ').title()} RAG Search"
             tool_description = f"Performs RAG search over the {name.replace('_', ' ')} knowledge base. Config: '{path_or_config}'."
-            tool_instance = RagTool(source=path_or_config, name=tool_name, description=tool_description)
+            if local_text_embedder:
+                tool_instance = RagTool(
+                    source=path_or_config,
+                    name=tool_name,
+                    description=tool_description,
+                    embedder=local_text_embedder  # Attempt to pass the local embedder
+                )
+                print(f"Initialized RAG tool for '{name}' using source '{path_or_config}' with local TFLite embedder.")
+            else:
+                # Fallback to default RagTool instantiation if local_text_embedder failed
+                tool_instance = RagTool(
+                    source=path_or_config,
+                    name=tool_name,
+                    description=tool_description
+                )
+                print(f"Initialized RAG tool for '{name}' using source '{path_or_config}' (local embedder failed, using RagTool default behavior).")
             _configured_rag_tools[name] = tool_instance
-            print(f"Initialized RAG tool for '{name}' using source '{path_or_config}'.")
         except Exception as e:
             print(f"Failed to initialize RAG tool for '{name}' with '{path_or_config}': {e}")
     return _configured_rag_tools
