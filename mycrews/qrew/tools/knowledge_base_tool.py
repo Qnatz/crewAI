@@ -64,7 +64,7 @@ class KnowledgeBaseTool(BaseTool): # Renamed from EnhancedKnowledgeBaseTool
             self.embedding_session = None
             self.tokenizer = None
 
-    def __call__(self, texts: list[str]) -> list[list[float]]:
+    def __call__(self, input: list[str]) -> list[list[float]]: # Changed 'texts' to 'input'
         """Embedding function interface for ChromaDB."""
         embeddings = []
         # Determine embedding dimension dynamically if possible, or use a fixed known one.
@@ -96,7 +96,7 @@ class KnowledgeBaseTool(BaseTool): # Renamed from EnhancedKnowledgeBaseTool
                 logger.warning(f"Could not determine embedding dimension dynamically: {e}, defaulting to {embedding_dim}")
 
 
-        for text in texts:
+        for text in input: # Changed 'texts' to 'input'
             embedding = self._embed_text(text)
             if embedding is not None:
                 embeddings.append(embedding.tolist())

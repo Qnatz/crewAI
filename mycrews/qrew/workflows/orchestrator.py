@@ -262,44 +262,81 @@ class WorkflowOrchestrator:
         crew_kickoff_result = task_crew.kickoff() # This line can raise an Exception if guardrail fails after retries
 
         # If kickoff() completes without an exception, it means the task (and its guardrail) was successful.
-        # The guardrail 'validate_taskmaster_output' returns (True, data_dict).
-        # This data_dict should be in 'taskmaster_task.output' (the .output attribute of the original Task instance).
+        # The guardrail 'validate_taskmaster_output' validated the raw JSON string.
+        # The 'taskmaster_task.output' attribute should hold the TaskOutput object for this task.
+        # The raw JSON string that passed the guardrail should be on this TaskOutput object.
 
-        # crew_kickoff_result is a CrewOutput object.
-        # crew_kickoff_result.tasks_output is a list of TaskOutput objects.
-        # We need to check the 'output' attribute of the 'taskmaster_task' (the Task instance itself).
-
-        if hasattr(taskmaster_task, 'output') and isinstance(taskmaster_task.output, dict):
-            # The guardrail validate_taskmaster_output returned a dictionary,
-            # and CrewAI assigned it to taskmaster_task.output.
-            print(f"Taskmaster workflow successful. Parsed output from guardrail: {taskmaster_task.output}")
-            return taskmaster_task.output
-        else:
-            # This case implies that kickoff() succeeded but taskmaster_task.output is not a dict.
-            # This could happen if:
-            # 1. The guardrail succeeded but returned (True, non-dict_value) - a bug in guardrail.
-            # 2. CrewAI's behavior for storing guardrail output changed.
-            # 3. The task completed but produced no distinct 'output' (e.g. if guardrail was None and agent returned None).
-            #    However, our task has a guardrail that should always return a dict or fail the task.
-
-            # We can still get the raw output from the TaskOutput object for logging.
-            raw_llm_output = "Not available"
-            if crew_kickoff_result and crew_kickoff_result.tasks_output:
-                task_specific_output_for_log = crew_kickoff_result.tasks_output[0]
-                if task_specific_output_for_log:
-                    raw_llm_output = task_specific_output_for_log.raw
-
-            actual_output_type = type(taskmaster_task.output).__name__ if hasattr(taskmaster_task, 'output') else 'None (no output attribute)'
-            actual_output_value = taskmaster_task.output if hasattr(taskmaster_task, 'output') else 'N/A'
-
-            print(f"Taskmaster guardrail processing anomaly or unexpected output structure. Expected dict in task.output, got: {actual_output_type}. Value: '{actual_output_value}'. Raw LLM output: '{raw_llm_output}'")
+        if not (hasattr(taskmaster_task, 'output') and taskmaster_task.output is not None):
+            # This would be highly unexpected if kickoff() succeeded without error.
+            print(f"Taskmaster task completed kickoff but task.output is missing or None.")
             return {
-                "project_name": "error_task_output_mismatch",
-                "refined_brief": f"Taskmaster task output processing anomaly. Expected dict, got {actual_output_type}. Raw output: '{raw_llm_output}'. Processed output: '{actual_output_value}'",
+                "project_name": "error_task_no_output_attr",
+                "refined_brief": "Taskmaster task completed kickoff but its .output attribute was not set.",
                 "is_new_project": False,
                 "recommended_next_stage": "architecture",
                 "project_scope": "unknown",
-                "taskmaster_error": f"Task output type mismatch: {actual_output_type}"
+                "taskmaster_error": "Task .output attribute missing after kickoff"
+            }
+
+        # According to user log: `taskmaster_task.output` is a TaskOutput object.
+        # The "Value" in the log message `got: TaskOutput. Value: 'JSON_STRING'`
+        # suggests that the string representation of this TaskOutput object might be the JSON string,
+        # or more reliably, its `.raw` or `.exported_output` attribute.
+
+        final_json_string = None
+        if isinstance(taskmaster_task.output, str):
+            # This would be the ideal case if CrewAI directly placed the validated raw string here.
+            final_json_string = taskmaster_task.output
+            print(f"Taskmaster task.output is a string.")
+        elif hasattr(taskmaster_task.output, 'raw') and isinstance(taskmaster_task.output.raw, str):
+            # If taskmaster_task.output is a TaskOutput object, its .raw attribute should have the string.
+            final_json_string = taskmaster_task.output.raw
+            print(f"Taskmaster task.output is a TaskOutput object, using its .raw attribute.")
+        elif hasattr(taskmaster_task.output, 'exported_output') and isinstance(taskmaster_task.output.exported_output, str):
+            # Fallback to exported_output if raw isn't what we expect
+            final_json_string = taskmaster_task.output.exported_output
+            print(f"Taskmaster task.output is a TaskOutput object, using its .exported_output attribute.")
+        else:
+            # If it's neither a string, nor a TaskOutput object with a .raw/.exported_output string,
+            # then we have a problem.
+            actual_output_type = type(taskmaster_task.output).__name__
+            print(f"Taskmaster task.output is of unexpected type: {actual_output_type}. Value: '{str(taskmaster_task.output)}'")
+            return {
+                "project_name": "error_task_output_unexpected_structure",
+                "refined_brief": f"Taskmaster task.output was of an unexpected type or structure: {actual_output_type}. Value: '{str(taskmaster_task.output)}'",
+                "is_new_project": False,
+                "recommended_next_stage": "architecture",
+                "project_scope": "unknown",
+                "taskmaster_error": f"Task output unexpected structure: {actual_output_type}"
+            }
+
+        if final_json_string:
+            try:
+                # The guardrail already validated this string, so json.loads should succeed.
+                parsed_data = json.loads(final_json_string)
+                print(f"Taskmaster workflow successful. Parsed output from task.output's string content: {parsed_data}")
+                return parsed_data
+            except json.JSONDecodeError as e:
+                # This should ideally not happen if the guardrail worked.
+                print(f"Taskmaster: Failed to parse JSON from task.output's string content, even after guardrail. Error: {e}. String was: '{final_json_string}'")
+                return {
+                    "project_name": "error_final_json_parse_failed",
+                    "refined_brief": f"Taskmaster: Post-guardrail JSON parsing failed. String: '{final_json_string}'. Error: {e}",
+                    "is_new_project": False,
+                    "recommended_next_stage": "architecture",
+                    "project_scope": "unknown",
+                    "taskmaster_error": "Final JSON parsing failed after guardrail"
+                }
+        else:
+            # Should have been caught by the type checks above.
+            print(f"Taskmaster: Could not extract a final JSON string from task.output. Type was {type(taskmaster_task.output).__name__}.")
+            return {
+                "project_name": "error_no_final_json_string",
+                "refined_brief": "Taskmaster: Could not extract final JSON string from task output.",
+                "is_new_project": False,
+                "recommended_next_stage": "architecture",
+                "project_scope": "unknown",
+                "taskmaster_error": "No final JSON string extracted"
             }
 
     def execute_pipeline(self, initial_inputs: dict, mock_taskmaster_output: Optional[dict] = None):
