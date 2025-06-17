@@ -22,6 +22,9 @@ from .llm_config import default_llm, llm_initialization_statuses # Adjusted impo
 from . import config as crew_config
 from .tools.knowledge_base_tool import ONNX_EMBEDDING_INITIALIZATION_STATUS as onnx_embedding_status
 from .tools.inbuilt_tools import configure_rag_tools # Added RAG config import
+from .tools.chroma_logger import ChromaLogger
+from .tools.fallback_logger import fallback_log
+# os is already imported at the top of the file, so no need to add it here again.
 
 # Initialize Rich Console
 console = Console()
@@ -71,6 +74,57 @@ def display_model_initialization_status(title: str, statuses: list[tuple[str, bo
     console.print(panel)
 
 def run_qrew():
+    # --- Logger Instantiation Test ---
+    print("\n--- Testing Logger Initialization ---")
+
+    # Define test paths relative to main.py's location (mycrews/qrew/main.py)
+    # main.py -> qrew -> db -> ...
+    main_script_dir = os.path.dirname(os.path.abspath(__file__))
+    chroma_test_db_path = os.path.join(main_script_dir, "..", "db", "chroma_logger_initial_test")
+    fallback_test_log_dir_name = "fallback_logger_initial_test" # This will be created inside <project_root>/db/
+
+    try:
+        print(f"Attempting to initialize ChromaLogger at: {chroma_test_db_path}")
+        chroma_logger_instance = ChromaLogger(persist_directory=chroma_test_db_path, collection_name="initial_test_logs")
+        if chroma_logger_instance and chroma_logger_instance.collection:
+            print("ChromaLogger initialized successfully for initial test.")
+            chroma_logger_instance.log(content="ChromaLogger initial test log.", stage="main_test", log_type="debug")
+            print("Test log sent to ChromaLogger.")
+
+            # Test project state functions (optional, but good for early check)
+            test_project_name = "logger_init_test_project"
+            initial_state_save = chroma_logger_instance.save_project_state(test_project_name, {"status": "testing_init", "value": 123})
+            if initial_state_save:
+                print(f"ChromaLogger.save_project_state test successful for {test_project_name}.")
+                retrieved_state = chroma_logger_instance.get_project_state(test_project_name)
+                if retrieved_state and retrieved_state.get("value") == 123:
+                    print(f"ChromaLogger.get_project_state test successful: {retrieved_state}")
+                else:
+                    print(f"ChromaLogger.get_project_state test failed or state mismatch. Retrieved: {retrieved_state}")
+            else:
+                print(f"ChromaLogger.save_project_state test failed for {test_project_name}.")
+
+        else:
+            print("ChromaLogger initialization failed for initial test.")
+    except Exception as e_chroma_test:
+        print(f"Error during ChromaLogger initial test: {e_chroma_test}")
+
+    try:
+        # Fallback logger's path is relative to where Python is run from.
+        # For consistency, let's make it relative to project root/db like Chroma.
+        # Project root from main.py (mycrews/qrew/main.py) is two levels up.
+        project_root_dir = os.path.join(main_script_dir, "..", "..")
+        fallback_base_dir = os.path.join(project_root_dir, "db") # Base for fallback logs
+        actual_fallback_log_path = os.path.join(fallback_base_dir, fallback_test_log_dir_name)
+        print(f"Attempting to use fallback_log. Logs will be in: {actual_fallback_log_path}")
+
+        fallback_log(content="Fallback logger initial test log.", metadata={"stage": "main_test", "type": "debug"}, log_dir=actual_fallback_log_path)
+        print("Test log sent to fallback_logger.")
+    except Exception as e_fallback_test:
+        print(f"Error during fallback_logger initial test: {e_fallback_test}")
+
+    print("--- End of Logger Initialization Test ---\n")
+    # --- The rest of the run_qrew() function continues below ---
     # Display LLM initialization status first using Rich
     display_model_initialization_status("[bold cyan]--- LLM Initialization ---[/bold cyan]", llm_initialization_statuses)
 
