@@ -17,7 +17,7 @@ from crewai_tools import (
     TXTSearchTool, # Assuming this was meant if used, else remove. Previous plan did not list specific text search tools in groups.
     PDFSearchTool,   # Assuming this was meant if used, else remove.
     MDXSearchTool,   # Assuming this was meant if used, else remove.
-    ExaSearchTool,
+    EXASearchTool, # Changed ExaSearchTool to EXASearchTool
     WebsiteSearchTool,
     SerperDevTool,
     RagTool  # Added RagTool
@@ -53,9 +53,10 @@ mdx_search_tool = MDXSearchTool() # If this specific tool exists and is used
 
 # For ExaSearchTool, if it takes api_key in constructor:
 if EXA_API_KEY:
-    exa_search_tool = ExaSearchTool(api_key=EXA_API_KEY)
+    exa_search_tool = EXASearchTool(api_key=EXA_API_KEY) # Changed ExaSearchTool to EXASearchTool
 else:
-    exa_search_tool = ExaSearchTool() # Or handle error if key is mandatory / tool might pick from env
+    exa_search_tool = EXASearchTool() # Changed ExaSearchTool to EXASearchTool
+# Or handle error if key is mandatory / tool might pick from env
 
 # For SerperDevTool, if it takes api_key in constructor:
 if SERPER_API_KEY:
