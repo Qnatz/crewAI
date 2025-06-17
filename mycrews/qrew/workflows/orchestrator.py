@@ -1,6 +1,7 @@
 import json
 import logging # Added logging
 import os # Added for os.path.join, os.makedirs, etc.
+import re # Added import
 from typing import Any, Optional
 from crewai import Crew, Task
 from crewai.tasks.task_output import TaskOutput
@@ -17,40 +18,69 @@ from ..utils import RichProjectReporter # Added import
 def validate_taskmaster_output(task_output: TaskOutput) -> tuple[bool, Any]: # Changed signature
     if not hasattr(task_output, 'raw') or not isinstance(task_output.raw, str):
         return False, "Guardrail input (task_output.raw) must be a string and present."
-    output_str = task_output.raw # Added
+
+    output_str = task_output.raw.strip()
+
+    # Attempt to extract JSON from markdown code blocks
+    # Matches ```json ... ``` or ``` ... ```
+    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", output_str, re.DOTALL | re.IGNORECASE)
+    if match:
+        json_str = match.group(1)
+    else:
+        # Fallback: if no markdown block, try to find the first '{' and last '}'
+        # This is less robust and might grab incorrect parts if there's other text with braces.
+        first_brace = output_str.find('{')
+        last_brace = output_str.rfind('}')
+        if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+            json_str = output_str[first_brace:last_brace+1]
+        else:
+            # If no clear JSON structure is found, use the original string for the attempt
+            json_str = output_str
+
     try:
-        data = json.loads(output_str) # Changed to output_str
+        # It's important to log what string is being attempted for parsing
+        # print(f"Attempting to parse JSON from: {json_str}") # For debugging, can be removed
+        data = json.loads(json_str)
         if not isinstance(data, dict):
+            # Log the problematic string if it parsed but wasn't a dict
+            logging.warning(f"Parsed data is not a dictionary. Raw (cleaned) string was: {json_str}")
             return False, "Output must be a JSON dictionary."
-        # Added "project_scope" to required keys
+
         required_keys = ["project_name", "refined_brief", "is_new_project", "recommended_next_stage", "project_scope"]
         for key in required_keys:
             if key not in data:
+                logging.warning(f"Missing key '{key}' in parsed JSON. Raw (cleaned) string was: {json_str}")
                 return False, f"Missing key in output: {key}"
+        # ... (rest of the specific key validations for type) ...
         if not isinstance(data["project_name"], str) or not data["project_name"].strip():
+            logging.warning(f"Validation failed for 'project_name'. Raw (cleaned) string was: {json_str}")
             return False, "project_name must be a non-empty string."
         if not isinstance(data["refined_brief"], str) or not data["refined_brief"].strip():
+            logging.warning(f"Validation failed for 'refined_brief'. Raw (cleaned) string was: {json_str}")
             return False, "refined_brief must be a non-empty string."
         if not isinstance(data["is_new_project"], bool):
+            logging.warning(f"Validation failed for 'is_new_project'. Raw (cleaned) string was: {json_str}")
             return False, "is_new_project must be a boolean."
         if not isinstance(data["recommended_next_stage"], str) or not data["recommended_next_stage"].strip():
+            logging.warning(f"Validation failed for 'recommended_next_stage'. Raw (cleaned) string was: {json_str}")
             return False, "recommended_next_stage must be a non-empty string."
-        if not isinstance(data["project_scope"], str) or not data["project_scope"].strip(): # Validate project_scope
+        if not isinstance(data["project_scope"], str) or not data["project_scope"].strip():
+            logging.warning(f"Validation failed for 'project_scope'. Raw (cleaned) string was: {json_str}")
             return False, "project_scope must be a non-empty string."
 
-        # Optional: Validate project_scope against a list of known scopes
         known_scopes = ["web-only", "mobile-only", "backend-only", "full-stack", "documentation-only", "unknown"]
         if data["project_scope"] not in known_scopes:
-            # Allow unknown, but strict validation can be enabled if needed by removing "unknown" or raising error.
             print(f"Warning: Taskmaster output 'project_scope' ('{data['project_scope']}') is not in known scopes: {known_scopes}. Proceeding with the provided scope.")
+            # Depending on strictness, this could be a validation failure:
+            # logging.warning(f"Validation failed for 'project_scope' value. Raw (cleaned) string was: {json_str}")
             # return False, f"project_scope must be one of {known_scopes}."
 
-        return True, data # Return parsed data on success
-    except json.JSONDecodeError:
-        logging.error(f"Failed to decode JSON. Raw output: {output_str}") # Added logging
+        return True, data
+    except json.JSONDecodeError as e:
+        logging.error(f"Failed to decode JSON. Error: {e}. Raw (cleaned) string was: {json_str}. Original output_str was: {output_str}")
         return False, "Output must be valid JSON."
     except Exception as e:
-        logging.error(f"Validation error during taskmaster output validation: {str(e)}. Raw output: {output_str}", exc_info=True) # Added logging and raw output here too
+        logging.error(f"Validation error during taskmaster output validation: {str(e)}. Raw (cleaned) string was: {json_str}. Original output_str was: {output_str}", exc_info=True)
         return False, f"Validation error: {str(e)}"
 
 class WorkflowOrchestrator:

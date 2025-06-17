@@ -22,6 +22,8 @@ from crewai_tools import (
     SerperDevTool,
     RagTool,
 )
+import os # Ensure os is imported
+import chromadb # Added chromadb import
 from ..tools.onnx_embedder import ONNXEmbedder # Replaced TextEmbedderTool with ONNXEmbedder
 from crewai.tools.base_tool import BaseTool  # Updated import path
 from pydantic import BaseModel, Field  # Updated to use standard Pydantic v2 imports
@@ -102,6 +104,10 @@ except Exception as e:
     onnx_embedder_instance = None
     print(f"Warning: Failed to initialize ONNXEmbedder (wrapper): {e}. RagTool will use default embedding.")
 
+CHROMA_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "db", "chroma_db")
+os.makedirs(CHROMA_DB_PATH, exist_ok=True)
+print(f"ChromaDB persistence path set to: {CHROMA_DB_PATH}")
+
 # Custom/Placeholder Tool Definitions
 class UIConverterToolPlaceholder(BaseTool):
     name: str = "UI Converter Placeholder"
@@ -168,14 +174,32 @@ def configure_rag_tools(knowledge_bases: dict):
         try:
             tool_name = f"{name.replace('_', ' ').title()} RAG Search"
             tool_description = f"Performs RAG search over the {name.replace('_', ' ')} knowledge base. Config: '{path_or_config}'."
+
+            # --- Start of new/modified section for RagTool instantiation ---
             if onnx_embedder_instance:
-                tool_instance = RagTool(
-                    source=path_or_config,
-                    name=tool_name,
-                    description=tool_description,
-                    embedder=onnx_embedder_instance # Pass the ONNX embedder
-                )
-                print(f"Initialized RAG tool for '{name}' using source '{path_or_config}' with ONNXEmbedder.")
+                try:
+                    chroma_collection_name = f"qrew_kb_{name.replace('_', '-')}"
+
+                    tool_instance = RagTool(
+                        source=path_or_config, # Where to load documents from initially
+                        name=tool_name,
+                        description=tool_description,
+                        embedder=onnx_embedder_instance,
+                        db_path=CHROMA_DB_PATH, # Tell RagTool where to persist Chroma
+                        collection_name=chroma_collection_name # Tell RagTool which collection to use
+                    )
+                    print(f"Initialized RAG tool for '{name}' using source '{path_or_config}', ONNXEmbedder, and ChromaDB (collection: {chroma_collection_name}).")
+
+                except Exception as e_rag_chroma:
+                    print(f"Warning: Failed to initialize RagTool with explicit ChromaDB config for '{name}': {e_rag_chroma}. Falling back.")
+                    # Fallback to simpler RagTool instantiation (might try default RAG setup or fail if embedder is not enough)
+                    tool_instance = RagTool(
+                        source=path_or_config,
+                        name=tool_name,
+                        description=tool_description,
+                        embedder=onnx_embedder_instance
+                    )
+                    print(f"Initialized RAG tool for '{name}' with ONNXEmbedder (ChromaDB specific init failed, using RagTool with embedder only).")
             else:
                 # Fallback to default RagTool instantiation if onnx_embedder_instance failed
                 tool_instance = RagTool(
@@ -184,7 +208,9 @@ def configure_rag_tools(knowledge_bases: dict):
                     description=tool_description
                 )
                 print(f"Initialized RAG tool for '{name}' using source '{path_or_config}' (ONNX embedder failed, using RagTool default behavior).")
+
             _configured_rag_tools[name] = tool_instance
+            # --- End of new/modified section ---
         except Exception as e:
             print(f"Failed to initialize RAG tool for '{name}' with '{path_or_config}': {e}")
     return _configured_rag_tools
