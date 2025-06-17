@@ -3,7 +3,7 @@ import traceback
 import sys
 from typing import Optional, Dict, Any
 import numpy as np
-from .knowledge_base_tool import knowledge_base_tool_instance
+from .tools.knowledge_base_tool import knowledge_base_tool_instance # Corrected path
 from .onnx_objectbox_memory import ONNXObjectBoxMemory, KnowledgeEntry # Assuming KnowledgeEntry is here for now
 import json
 import hashlib
