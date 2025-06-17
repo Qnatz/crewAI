@@ -20,8 +20,10 @@ from crewai_tools import (
     EXASearchTool, # Changed ExaSearchTool to EXASearchTool
     WebsiteSearchTool,
     SerperDevTool,
-    RagTool  # Added RagTool
+    RagTool,  # Added RagTool
+    BaseTool # Added BaseTool for placeholder inheritance
 )
+from pydantic.v1 import BaseModel, Field # For args_schema
 
 # API Key Placeholders (using os.getenv)
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
@@ -85,50 +87,62 @@ website_search_tool = WebsiteSearchTool()
 
 
 # Custom/Placeholder Tool Definitions
-class UIConverterToolPlaceholder:
-    def __init__(self):
-        self.name = "UI Converter Placeholder"
-        self.description = "Converts UI descriptions or designs to code. Needs real implementation."
-        self.config = {} # To store any config from with_config
+class UIConverterToolPlaceholder(BaseTool):
+    name: str = "UI Converter Placeholder"
+    description: str = "Converts UI descriptions or designs to code. Needs real implementation."
+    config: dict = {}
 
-    def run(self, task_details: str, **kwargs): # Made 'run' more generic
-        # task_details might be a string like "Convert login screen mock_up.png to Android XML"
-        effective_kwargs = {**self.config, **kwargs} # Combine instance and runtime kwargs
-        print(f"Placeholder: UIConverterTool running for: {task_details}, with config {effective_kwargs}")
+    def _run(self, task_details: str) -> str:
+        effective_kwargs = self.config # Use stored config
+        print(f"Placeholder: UIConverterTool running for: {task_details}, with stored config {effective_kwargs}")
         return f"Placeholder: Converted UI for task: {task_details}"
 
-    def with_config(self, **kwargs):
-        # This allows specialized versions, returning a new instance or configured self
-        print(f"Placeholder: UIConverterTool configured with {kwargs}. Returning self for chaining.")
-        # In a real scenario, you might store kwargs or return a new configured instance.
+    def with_config(self, **kwargs): # This custom method remains
+        # In a real scenario, you might create a new instance with the config
+        # For this placeholder, we'll modify in place, but this is not ideal for true BaseTool usage
+        # if the same instance is reused.
+        new_instance = UIConverterToolPlaceholder()
+        new_instance.config = kwargs
+        # To make it chainable and properly configured if used like: tool.with_config(...).run(...)
+        # It might be better if with_config returned a *new* configured instance.
+        # However, for placeholder, this simple modification is fine.
         self.config = kwargs
-        return self
+        print(f"Placeholder: UIConverterTool instance configured with {kwargs}. Call run() on this instance.")
+        return self # Return self to allow method chaining if desired, though state is modified
 
 ui_converter = UIConverterToolPlaceholder()
 
-class SchemaGeneratorToolPlaceholder:
-    def __init__(self):
-        self.name = "Schema Generator Placeholder"
-        self.description = "Generates database or API schemas from descriptions. Needs real implementation."
+class SchemaGeneratorToolPlaceholder(BaseTool):
+    name: str = "Schema Generator Placeholder"
+    description: str = "Generates database or API schemas from descriptions. Needs real implementation."
 
-    def run(self, description: str, type: str = "database", **kwargs):
-        print(f"Placeholder: SchemaGeneratorTool generating {type} schema for: {description}, extras: {kwargs}")
-        return f"Placeholder: Generated {type} schema for {description}"
+    # For BaseTool, if the tool takes multiple arguments, an args_schema is preferred.
+    # For simplicity in this placeholder, we'll expect a single string argument.
+    # A more robust tool would define an Args schema like:
+    # class SchemaGeneratorArgs(BaseModel):
+    #     description: str = Field(description="Description of the schema.")
+    #     schema_type: str = Field(default="database", description="Type of schema (e.g., database, API).")
+    # args_schema: type[BaseModel] = SchemaGeneratorArgs
+
+    def _run(self, description_and_type: str) -> str: # e.g., "user activity, type: database"
+        # Placeholder: Parse or just print.
+        # In a real tool with args_schema: def _run(self, description: str, schema_type: str = "database")
+        print(f"Placeholder: SchemaGeneratorTool generating schema for: {description_and_type}")
+        return f"Placeholder: Generated schema for {description_and_type}"
 
 schema_generator = SchemaGeneratorToolPlaceholder()
 
-class SecurityScannerToolPlaceholder:
-    def __init__(self):
-        self.name = "Security Scanner Placeholder"
-        self.description = "Scans code or configurations for vulnerabilities. Needs real implementation."
+class SecurityScannerToolPlaceholder(BaseTool):
+    name: str = "Security Scanner Placeholder"
+    description: str = "Scans code or configurations for vulnerabilities. Needs real implementation."
 
-    def run(self, path_to_scan: str, **kwargs):
-        print(f"Placeholder: SecurityScannerTool scanning: {path_to_scan}, config: {kwargs}")
+    def _run(self, path_to_scan: str) -> str:
+        print(f"Placeholder: SecurityScannerTool scanning: {path_to_scan}")
         return f"Placeholder: No vulnerabilities found in {path_to_scan} (placeholder)"
 
 security_scanner = SecurityScannerToolPlaceholder()
 
-def ai_code_generator_func(task_description: str, framework: str):
+def ai_code_generator_func(task_description: str, framework: str): # This function remains as the core logic
     # Connect to your preferred AI service:
     # Option 1: Local LLM (LM Studio, Ollama)
     # Option 2: Cloud API (OpenAI, Anthropic, Mistral)
@@ -136,19 +150,21 @@ def ai_code_generator_func(task_description: str, framework: str):
     print(f"Placeholder: AI Code Generation for task: {task_description}, framework: {framework}")
     return f"# Placeholder code for {task_description} in {framework}\npass"
 
-class AICodeGeneratorToolWrapper:
-    def __init__(self, func_to_wrap):
-        self.name = "AI Code Generator"
-        self.description = "Generates code snippets based on task description and framework using an AI model."
-        self.func = func_to_wrap
-        # Make it usable as a crewai_tool (duck typing)
-        self.agent = None
-        self.crew = None
+class AICodeGeneratorArgs(BaseModel):
+   task_description: str = Field(..., description="Description of the coding task.")
+   framework: str = Field(..., description="The framework to generate code for.")
 
-    def run(self, task_description: str, framework: str, **kwargs): # Make it flexible
+class AICodeGeneratorToolWrapper(BaseTool):
+    name: str = "AI Code Generator"
+    description: str = "Generates code snippets based on task description and framework using an AI model."
+    args_schema: type[BaseModel] = AICodeGeneratorArgs
+    func = ai_code_generator_func # Store the original function
+
+    # _run should match the fields in args_schema
+    def _run(self, task_description: str, framework: str) -> str:
             return self.func(task_description, framework)
 
-ai_code_generator = AICodeGeneratorToolWrapper(ai_code_generator_func)
+ai_code_generator = AICodeGeneratorToolWrapper() # Instantiate the BaseTool wrapper
 
 # RAG Tool Configuration Function
 _configured_rag_tools = {}
