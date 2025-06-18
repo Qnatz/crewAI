@@ -1,10 +1,10 @@
 from crewai import Agent
-from ....llm_config import get_llm_for_agent
+from ....utils.llm_factory import get_llm # Corrected relative import path
 from mycrews.qrew.tools.agenttools import get_tools_for_agent, AgentName
 
 # Use the agent's role or a unique key for the lookup
 agent_identifier = "debugger_agent" # Matching the key in MODEL_BY_AGENT
-specific_llm = get_llm_for_agent(agent_identifier)
+specific_llm = get_llm(agent_identifier=agent_identifier) # Call the factory
 
 debugger_agent = Agent(
     role="Debugger",

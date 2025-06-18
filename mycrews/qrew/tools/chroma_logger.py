@@ -3,7 +3,7 @@ import os
 import uuid
 import datetime
 from ..tools.onnx_embedder import ONNXEmbedder # This is the refactored ONNXEmbedder
-from .chroma_wrapper import safe_add, safe_upsert # Import from refactored wrapper
+from ..utils.chroma_tool_wrapper import safe_add, safe_upsert # MODIFIED IMPORT
 from typing import List, Optional, Dict, Any
 import chromadb
 from chromadb.config import Settings
