@@ -12,7 +12,7 @@ from crewai_tools import (
     FileReadTool,
     FileWriterTool,
     CodeDocsSearchTool,
-    GithubSearchTool,
+    # GithubSearchTool, # Commented out or removed if only using the wrapper directly
     DirectoryReadTool,
     DirectorySearchTool,
     TXTSearchTool,
@@ -23,6 +23,8 @@ from crewai_tools import (
     SerperDevTool,
     RagTool,
 )
+from crewai_tools import GithubSearchTool as OriginalCrewAIGithubSearchTool # Import the original
+from .github_tool_wrapper import GithubSearchWrapperTool # Import our new wrapper tool class
 import os # Ensure os is imported
 import chromadb # Added chromadb import
 # from chromadb.utils.embedding_functions import OnnxEmbeddingFunction # Removed
@@ -44,17 +46,31 @@ directory_read_tool = DirectoryReadTool()
 directory_search_tool = DirectorySearchTool()
 code_docs_search_tool = CodeDocsSearchTool()
 
-# Robust initialization for GithubSearchTool
+# 1. Initialize the *original* GithubSearchTool from crewai_tools
+raw_github_search_tool: Optional[OriginalCrewAIGithubSearchTool] = None # Type hint for clarity
 if GITHUB_TOKEN:
     try:
-        github_search_tool = GithubSearchTool(gh_token=GITHUB_TOKEN, content_types=['code', 'repo', 'issue'])
-        print("GithubSearchTool initialized successfully.")
+        raw_github_search_tool = OriginalCrewAIGithubSearchTool(
+            gh_token=GITHUB_TOKEN,
+            content_types=['code', 'repo', 'issue'] # Default content types
+        )
+        print("Original CrewAI GithubSearchTool initialized successfully (for use by wrapper).")
     except Exception as e:
-        print(f"Warning: Failed to initialize GithubSearchTool (Token was present but init failed): {e}. Tool will be disabled.")
-        github_search_tool = None
+        print(f"Warning: Failed to initialize original CrewAI GithubSearchTool: {e}. It will be None.")
+        raw_github_search_tool = None
 else:
-    print("Warning: GITHUB_TOKEN not found in environment. GithubSearchTool will be disabled.")
-    github_search_tool = None
+    print("Warning: GITHUB_TOKEN not found. Original CrewAI GithubSearchTool will be None.")
+    raw_github_search_tool = None
+
+# 2. Now, create an instance of our wrapper tool.
+#    This GithubSearchWrapperTool will internally call run_github_search,
+#    which will need access to the raw_github_search_tool defined above.
+#    This requires github_tool_wrapper.py to import raw_github_search_tool.
+
+github_search_tool = GithubSearchWrapperTool() # This is the tool exposed to agents
+print("GithubSearchWrapperTool instance created to be used by agents.")
+if raw_github_search_tool is None:
+    print("Note: The underlying original GitHub search functionality for the wrapper is NOT available.")
 
 txt_search_tool = TXTSearchTool()
 pdf_search_tool = PDFSearchTool()
